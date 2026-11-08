@@ -8,6 +8,8 @@ import (
 
 	"github.com/xonoko/infra-monitor/internal/actions"
 	"github.com/xonoko/infra-monitor/internal/actions/amsilence"
+	"github.com/xonoko/infra-monitor/internal/actions/generic"
+	"github.com/xonoko/infra-monitor/internal/actions/gitops"
 	"github.com/xonoko/infra-monitor/internal/actions/k8s"
 	"github.com/xonoko/infra-monitor/internal/agent"
 	"github.com/xonoko/infra-monitor/internal/agent/holmes"
@@ -54,6 +56,24 @@ func (a *App) buildServices(ctx context.Context) error {
 		if err := reg.Register(e); err != nil {
 			return err
 		}
+	}
+	if cfg.Actions.Generic.Enabled {
+		for _, e := range generic.Executors(generic.NewBackend(k8sClients, cfg.Actions.Generic.ApprovedServiceAccount), cfg.Actions) {
+			if err := reg.Register(e); err != nil {
+				return err
+			}
+			reg.Enable(e.Type())
+		}
+	}
+	if cfg.Actions.GitOps.Enabled {
+		g, err := gitops.New(cfg.Actions.GitOps)
+		if err != nil {
+			return fmt.Errorf("gitops: %w", err)
+		}
+		if err := reg.Register(g); err != nil {
+			return err
+		}
+		reg.Enable(g.Type())
 	}
 	if err := reg.Register(amsilence.New(func(name string) (*alertmanager.Client, bool) {
 		c, ok := a.svc.amClients[name]

@@ -8,8 +8,13 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/xonoko/infra-monitor/internal/config"
@@ -28,6 +33,10 @@ type ClientSet struct {
 	cache map[string]kubernetes.Interface
 	// inCluster is replaceable in tests.
 	inCluster func() (*rest.Config, error)
+
+	extraMu  sync.Mutex
+	dynamics map[string]dynamic.Interface
+	mappers  map[string]meta.ResettableRESTMapper
 }
 
 // NewClients creates a lazy client set; nothing connects until For is called.
@@ -80,4 +89,97 @@ func (c *ClientSet) restConfig(cluster string) (*rest.Config, error) {
 		return rc, nil
 	}
 	return nil, fmt.Errorf("no kubernetes credentials configured for cluster %q (set actions.kubeconfigs or actions.in_cluster_name)", cluster)
+}
+
+// RESTConfig returns a copy of the cluster's REST config, optionally impersonating a user
+// (e.g. "system:serviceaccount:infra-monitor:infra-monitor-approved"). The copy is not traced:
+// callers that build HTTP clients wrap it themselves (exec streams must not be wrapped).
+func (c *ClientSet) RESTConfig(cluster, impersonate string) (*rest.Config, error) {
+	c.mu.Lock()
+	rc, err := c.restConfig(cluster)
+	c.mu.Unlock()
+	if err != nil {
+		return nil, err
+	}
+	rc = rest.CopyConfig(rc)
+	rc.UserAgent = "infra-monitor"
+	if impersonate != "" {
+		rc.Impersonate = rest.ImpersonationConfig{UserName: impersonate}
+	}
+	return rc, nil
+}
+
+// tracedConfig returns RESTConfig wrapped with otelhttp.
+func (c *ClientSet) tracedConfig(cluster, impersonate string) (*rest.Config, error) {
+	rc, err := c.RESTConfig(cluster, impersonate)
+	if err != nil {
+		return nil, err
+	}
+	rc.Wrap(func(rt http.RoundTripper) http.RoundTripper { return otelhttp.NewTransport(rt) })
+	return rc, nil
+}
+
+// Dynamic returns a cached dynamic client for cluster, optionally impersonating a user.
+func (c *ClientSet) Dynamic(cluster, impersonate string) (dynamic.Interface, error) {
+	key := cluster + "\x00" + impersonate
+	c.extraMu.Lock()
+	defer c.extraMu.Unlock()
+	if c.dynamics == nil {
+		c.dynamics = map[string]dynamic.Interface{}
+	}
+	if d, ok := c.dynamics[key]; ok {
+		return d, nil
+	}
+	rc, err := c.tracedConfig(cluster, impersonate)
+	if err != nil {
+		return nil, err
+	}
+	d, err := dynamic.NewForConfig(rc)
+	if err != nil {
+		return nil, fmt.Errorf("dynamic client for cluster %q: %w", cluster, err)
+	}
+	c.dynamics[key] = d
+	return d, nil
+}
+
+// Typed returns a typed clientset for cluster, optionally impersonating a user (not cached).
+func (c *ClientSet) Typed(cluster, impersonate string) (kubernetes.Interface, error) {
+	rc, err := c.tracedConfig(cluster, impersonate)
+	if err != nil {
+		return nil, err
+	}
+	return kubernetes.NewForConfig(rc)
+}
+
+// Mapper returns a cached discovery-backed REST mapper for cluster (discovery uses the pod's own
+// identity). Call ResetMapper after a NoKindMatch error to refresh it (new CRDs).
+func (c *ClientSet) Mapper(cluster string) (meta.ResettableRESTMapper, error) {
+	c.extraMu.Lock()
+	defer c.extraMu.Unlock()
+	if c.mappers == nil {
+		c.mappers = map[string]meta.ResettableRESTMapper{}
+	}
+	if m, ok := c.mappers[cluster]; ok {
+		return m, nil
+	}
+	rc, err := c.tracedConfig(cluster, "")
+	if err != nil {
+		return nil, err
+	}
+	dc, err := discovery.NewDiscoveryClientForConfig(rc)
+	if err != nil {
+		return nil, fmt.Errorf("discovery client for cluster %q: %w", cluster, err)
+	}
+	m := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
+	c.mappers[cluster] = m
+	return m, nil
+}
+
+// ResetMapper drops cached discovery for cluster.
+func (c *ClientSet) ResetMapper(cluster string) {
+	c.extraMu.Lock()
+	defer c.extraMu.Unlock()
+	if m, ok := c.mappers[cluster]; ok {
+		m.Reset()
+	}
 }

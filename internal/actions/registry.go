@@ -113,3 +113,13 @@ func (r *Registry) Validate(ctx context.Context, typ string, params map[string]a
 	}
 	return e.Validate(ctx, params, t)
 }
+
+// Enable adds types to the enabled set (for executors with their own on/off switch).
+func (r *Registry) Enable(types ...string) {
+	if r.enabled == nil {
+		return // everything is enabled
+	}
+	for _, t := range types {
+		r.enabled[t] = true
+	}
+}
