@@ -42,8 +42,24 @@ export interface Incident {
   url: string
 }
 
+export interface AICostLine {
+  calls: number
+  prompt_tokens: number
+  completion_tokens: number
+  usd: number
+}
+
+/** AI token cost: investigation (auto/manual/deep), remediation (investigations triggered by actions), chat (agent replies). */
+export interface AICost {
+  investigation: AICostLine
+  remediation: AICostLine
+  chat: AICostLine
+  total: AICostLine
+}
+
 export interface IncidentDetail extends Incident {
   latest_investigation?: Investigation | null
+  cost?: AICost | null
 }
 
 export interface Signal {
@@ -79,6 +95,7 @@ export interface Investigation {
   error: string
   prompt_tokens: number
   completion_tokens: number
+  cost_usd?: number
   created_at: Timestamp
   started_at?: Timestamp | null
   finished_at?: Timestamp | null
@@ -96,6 +113,11 @@ export interface Message {
   status: 'done' | 'pending' | 'failed'
   action_ids: ID[]
   created_at: Timestamp
+  /** agent replies only */
+  model?: string
+  prompt_tokens?: number
+  completion_tokens?: number
+  cost_usd?: number
 }
 
 export type ActionStatus = 'proposed' | 'approved' | 'rejected' | 'running' | 'succeeded' | 'failed' | 'expired'
@@ -292,6 +314,7 @@ export interface AgentStatus {
   budget_paused_until?: Timestamp | null
   storm_threshold?: number
   storm_window_seconds?: number
+  cost_last_24h?: AICost | null
 }
 export interface LeaseStatus {
   name: string

@@ -4,10 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import type { Action, IncidentDetail, Signal, TimelineEvent } from '@/api/types'
 import Chip from '../ui/Chip.vue'
 import Btn from '../ui/Btn.vue'
+import CostTable from '../ui/CostTable.vue'
 import Icon from '../ui/Icon.vue'
 import { useMe } from '@/composables/useMe'
 import { useActionDecisions } from '@/composables/useActionDecisions'
-import { absTime, age, countdown, duration, relTime, sevKey } from '@/lib/format'
+import { absTime, age, countdown, duration, relTime, sevKey, usd } from '@/lib/format'
 import { useNow } from '@/lib/now'
 
 const props = defineProps<{
@@ -102,7 +103,7 @@ const signalHint = (s: Signal) => s.labels.pod || s.labels.instance || s.labels.
     <button class="gl__toggle" :aria-expanded="more" @click="more = !more">
       <Icon :name="more ? 'chevronDown' : 'chevronRight'" :size="13" />
       <span>Details</span>
-      <span class="mono faint">{{ firing.length }}/{{ total }} firing · {{ dur }}</span>
+      <span class="mono faint">{{ firing.length }}/{{ total }} firing · {{ dur }}<template v-if="incident.cost?.total?.calls"> · AI {{ usd(incident.cost.total.usd, incident.cost.total.calls) }}</template></span>
     </button>
 
     <div class="gl__more">
@@ -132,6 +133,11 @@ const signalHint = (s: Signal) => s.labels.pod || s.labels.instance || s.labels.
             <dd>{{ incident.assignee.name }}</dd>
           </template>
         </dl>
+      </section>
+
+      <section class="gl__sec">
+        <h3 class="gl__h"><Icon name="sparkle" :size="12" /> AI cost</h3>
+        <CostTable :cost="incident.cost" />
       </section>
 
       <section class="gl__sec">

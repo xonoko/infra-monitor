@@ -79,7 +79,39 @@ const find = (id: number) => {
   if (!i) throw new HttpError(404, `incident ${id} not found`)
   return i
 }
-const detail = (i: Incident) => ({ ...i, latest_investigation: fx.investigations[i.id]?.[0] ?? null, duration_seconds: (Date.now() - new Date(i.opened_at).getTime()) / 1000 })
+type CostLine = { calls: number; prompt_tokens: number; completion_tokens: number; usd: number }
+const line = (): CostLine => ({ calls: 0, prompt_tokens: 0, completion_tokens: 0, usd: 0 })
+const add = (l: CostLine, p = 0, c = 0, u = 0) => {
+  l.calls++
+  l.prompt_tokens += p
+  l.completion_tokens += c
+  l.usd += u
+}
+/** Same aggregation as the Go API: investigation / remediation (action-triggered) / chat (agent replies). */
+function costFor(ids: number[], since = 0) {
+  const cost = { investigation: line(), remediation: line(), chat: line(), total: line() }
+  for (const id of ids) {
+    for (const inv of fx.investigations[id] ?? []) {
+      if (!inv.cost_usd && !inv.prompt_tokens) continue
+      if (new Date(inv.created_at).getTime() < since) continue
+      add(inv.trigger === 'action' ? cost.remediation : cost.investigation, inv.prompt_tokens, inv.completion_tokens, inv.cost_usd)
+      add(cost.total, inv.prompt_tokens, inv.completion_tokens, inv.cost_usd)
+    }
+    for (const msg of fx.messages[id] ?? []) {
+      if (msg.role !== 'agent' || !msg.cost_usd) continue
+      if (new Date(msg.created_at).getTime() < since) continue
+      add(cost.chat, msg.prompt_tokens, msg.completion_tokens, msg.cost_usd)
+      add(cost.total, msg.prompt_tokens, msg.completion_tokens, msg.cost_usd)
+    }
+  }
+  return cost
+}
+const detail = (i: Incident) => ({
+  ...i,
+  latest_investigation: fx.investigations[i.id]?.[0] ?? null,
+  duration_seconds: (Date.now() - new Date(i.opened_at).getTime()) / 1000,
+  cost: costFor([i.id]),
+})
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const syncPending = (id: number) => {
   const i = find(id)
@@ -232,6 +264,10 @@ route('POST', '/incidents/(\\d+)/messages', (m, _u, b) => {
       channel: 'system',
       content: `Looking at it now: the last 50 log lines of the previous container all end with \`password authentication failed\`. That matches the secret rotation at 11:14.\n\n- Restarting the deployment should fix it (proposal **#42**).\n- Longer term, add the reloader annotation.`,
       created_at: new Date().toISOString(),
+      model: 'investigate',
+      prompt_tokens: 23180,
+      completion_tokens: 236,
+      cost_usd: 0.0731,
     }
     fx.messages[id].push(reply)
     emit('progress', { incident_id: id, kind: 'done' })
@@ -398,6 +434,13 @@ route('DELETE', '/mutes/(\\d+)', (m) => {
 route('GET', '/status', () => ({
   ...fx.status,
   sources: fx.status.sources.map((s) => ({ ...s, last_received_at: new Date(Date.now() - 20e3).toISOString() })),
+  agent: {
+    ...fx.status.agent,
+    cost_last_24h: costFor(
+      fx.incidents.map((i) => i.id),
+      Date.now() - 86400e3,
+    ),
+  },
 }))
 route('GET', '/users', () => ({ items: fx.users }))
 route('POST', '/users', (_m, _u, b) => {

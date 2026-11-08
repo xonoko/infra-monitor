@@ -639,3 +639,30 @@ for (const mm of stormMembers) {
     ev(mm.id, 9, 'investigation_skipped', { payload: { reason: 'part of alert storm #150' } }),
   ]
 }
+
+// ---- AI cost ----
+investigations[142][0].cost_usd = 0.0741
+investigations[139][0].cost_usd = 0.0369
+investigations[150][0].cost_usd = 0.0741
+// #137: verification after the fix (remediation)
+investigations[137] = [
+  {
+    ...investigations[139][0],
+    id: 79,
+    trigger: 'action',
+    model: 'triage',
+    summary: 'Disk usage back to 61% after image GC; nothing left to do.',
+    root_cause: '',
+    analysis: '',
+    verdict: 'noise',
+    confidence: 0.9,
+    prompt_tokens: 4200,
+    completion_tokens: 210,
+    cost_usd: 0.0052,
+    created_at: ago(379),
+    started_at: ago(379),
+    finished_at: ago(378),
+  },
+  { ...investigations[142][0], id: 78, model: 'investigate', cost_usd: 0.0612, prompt_tokens: 15020, completion_tokens: 1100, created_at: ago(419), started_at: ago(419), finished_at: ago(417) },
+]
+Object.assign(messages[142][1], { model: 'investigate', prompt_tokens: 21410, completion_tokens: 412, cost_usd: 0.0704 })

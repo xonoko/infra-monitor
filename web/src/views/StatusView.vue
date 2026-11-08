@@ -8,7 +8,8 @@ import Skeleton from '@/components/ui/Skeleton.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Icon from '@/components/ui/Icon.vue'
 import Btn from '@/components/ui/Btn.vue'
-import { absTime, duration, relTime } from '@/lib/format'
+import CostTable from '@/components/ui/CostTable.vue'
+import { absTime, duration, relTime, usd } from '@/lib/format'
 import { useNow } from '@/lib/now'
 
 const now = useNow()
@@ -120,6 +121,13 @@ const capList = (c?: Record<string, unknown>) =>
           <template v-if="s.agent?.storm_threshold"><dt>storm mode</dt><dd>&gt; {{ s.agent.storm_threshold }} incidents / {{ Math.round((s.agent.storm_window_seconds ?? 0) / 60) }}m</dd></template>
           <template v-if="s.agent?.budget_paused_until"><dt>budget</dt><dd><span class="state state--silent">paused until {{ new Date(s.agent.budget_paused_until).toLocaleTimeString() }}</span></dd></template>
         </dl>
+        <template v-if="s.agent?.enabled || s.agent?.cost_last_24h">
+          <h3 class="box__sub section-title cost-h">
+            Cost (24h)
+            <span class="mono cost-h__total">{{ usd(s.agent?.cost_last_24h?.total?.usd, s.agent?.cost_last_24h?.total?.calls ?? 0) }}</span>
+          </h3>
+          <CostTable :cost="s.agent?.cost_last_24h" />
+        </template>
         <template v-if="leases.length">
           <h3 class="box__sub section-title">Leases on this replica</h3>
           <ul class="leases mono">
@@ -132,6 +140,17 @@ const capList = (c?: Record<string, unknown>) =>
 </template>
 
 <style scoped>
+.cost-h {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.cost-h__total {
+  font-size: var(--fs-md);
+  color: var(--text-strong);
+  text-transform: none;
+  letter-spacing: 0;
+}
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));

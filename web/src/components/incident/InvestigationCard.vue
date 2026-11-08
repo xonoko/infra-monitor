@@ -4,7 +4,7 @@ import type { Investigation } from '@/api/types'
 import Chip from '../ui/Chip.vue'
 import Icon from '../ui/Icon.vue'
 import Markdown from '../ui/Markdown.vue'
-import { duration, pct } from '@/lib/format'
+import { duration, pct, tok, usd } from '@/lib/format'
 import { useMe } from '@/composables/useMe'
 
 const props = withDefaults(
@@ -46,7 +46,8 @@ const tools = computed(() => (Array.isArray(props.inv?.tool_calls) ? props.inv!.
         <template v-if="inv?.trigger && inv.trigger !== 'auto'"> · {{ inv.trigger }}</template>
         <template v-if="took"> · {{ took }}</template>
         <template v-if="tools"> · {{ tools }} tool calls</template>
-        <template v-if="inv?.prompt_tokens"> · {{ (inv.prompt_tokens + inv.completion_tokens).toLocaleString() }} tok</template>
+        <span v-if="inv?.prompt_tokens" :title="`${inv.prompt_tokens.toLocaleString()} tokens in / ${inv.completion_tokens.toLocaleString()} out`"> · {{ tok(inv.prompt_tokens) }}/{{ tok(inv.completion_tokens) }} tok</span>
+        <span v-if="inv?.cost_usd" class="ic__cost"> · {{ usd(inv.cost_usd) }}</span>
       </span>
       <a v-if="inv?.trace_id && traceURL(inv.trace_id)" :href="traceURL(inv.trace_id)" target="_blank" rel="noopener" class="ic__trace mono"><Icon name="external" :size="11" />trace</a>
     </header>
@@ -108,6 +109,9 @@ const tools = computed(() => (Array.isArray(props.inv?.tool_calls) ? props.inv!.
 .ic__meta {
   font-size: var(--fs-xs);
   color: var(--text-faint);
+}
+.ic__cost {
+  color: var(--text-dim);
 }
 .ic__trace {
   margin-left: auto;

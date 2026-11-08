@@ -11,7 +11,7 @@ import { useIncidentMutations } from '@/composables/useIncident'
 import { useActionDecisions } from '@/composables/useActionDecisions'
 import { useMe } from '@/composables/useMe'
 import { markThinking, progressFor } from '@/lib/progress'
-import { absTime, clockTime, hhmm } from '@/lib/format'
+import { absTime, clockTime, hhmm, tok, usd } from '@/lib/format'
 import { describeEvent, originLabel, type Described } from '@/lib/timeline'
 import { streamFilter } from '@/lib/streamFilter'
 
@@ -300,6 +300,13 @@ const suggestions = ['What changed right before this started?', 'Show the logs o
                 <a v-if="row.ev?.trace_id && traceURL(row.ev.trace_id)" :href="traceURL(row.ev.trace_id)" target="_blank" rel="noopener" class="msg__trace mono" title="View trace"><Icon name="external" :size="10" />trace</a>
               </header>
               <div class="msg__body"><Markdown :source="row.msg.content" /></div>
+              <div
+                v-if="row.msg.role === 'agent' && (row.msg.cost_usd ?? 0) > 0"
+                class="msg__cost mono"
+                :title="`${(row.msg.prompt_tokens ?? 0).toLocaleString()} tokens in / ${(row.msg.completion_tokens ?? 0).toLocaleString()} out`"
+              >
+                <template v-if="row.msg.model">{{ row.msg.model }} · </template>{{ tok(row.msg.prompt_tokens) }}/{{ tok(row.msg.completion_tokens) }} tok · {{ usd(row.msg.cost_usd) }}
+              </div>
             </div>
           </article>
 
@@ -535,6 +542,12 @@ const suggestions = ['What changed right before this started?', 'Show the logs o
 .msg--agent .msg__body {
   border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 6%, var(--bg-panel)), var(--bg-panel));
+}
+.msg__cost {
+  margin-top: 3px;
+  padding-left: 2px;
+  font-size: 10px;
+  color: var(--text-faint);
 }
 .msg--system .msg__body,
 .msg--failed .msg__body {

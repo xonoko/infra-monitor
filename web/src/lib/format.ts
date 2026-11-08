@@ -79,3 +79,21 @@ export function pct(n: number): string {
 export function hhmm(ts: string): string {
   return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
+
+/** "$0.0031", "$0.42", "$12.30", "< $0.0001"; "—" when nothing was called. */
+export function usd(n?: number | null, calls?: number): string {
+  if (calls === 0 || n == null || !Number.isFinite(n)) return '—'
+  if (n <= 0) return calls ? '$0' : '—'
+  if (n < 0.0001) return '< $0.0001'
+  if (n < 0.01) return `$${n.toFixed(4)}`
+  return `$${n.toFixed(2)}`
+}
+
+/** Compact token count: 840, 1.2k, 23k, 1.4M. */
+export function tok(n?: number | null): string {
+  if (!n) return '0'
+  if (n < 1000) return String(n)
+  if (n < 10_000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`
+  if (n < 1_000_000) return `${Math.round(n / 1000)}k`
+  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+}
