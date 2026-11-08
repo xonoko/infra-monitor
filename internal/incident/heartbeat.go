@@ -105,7 +105,11 @@ func (s *Service) pingHeartbeat(ctx context.Context, key string) error {
 		outcome = "failure"
 	}
 	s.m.pings.Add(ctx, 1, metric.WithAttributes(attribute.String("outcome", outcome)))
-	prev := s.lastPingOK.Swap(int32(map[bool]int32{true: 1, false: 2}[pingErr == ""]))
+	state := int32(1)
+	if pingErr != "" {
+		state = 2
+	}
+	prev := s.lastPingOK.Swap(state)
 	switch {
 	case pingErr != "":
 		s.log.WarnContext(ctx, "heartbeat ping failed", "key", key, "error", pingErr)
