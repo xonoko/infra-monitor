@@ -91,19 +91,25 @@ func cardHash(c channel.Card) string {
 
 func proposalMessage(a *ent.Action, caps channel.Capabilities, url string) channel.Message {
 	var b strings.Builder
-	fmt.Fprintf(&b, "**Proposed action #%d** (%s risk)\n`%s`\n", a.ID, a.Risk, a.Summary)
-	if a.Rationale != "" {
-		fmt.Fprintf(&b, "\n%s\n", a.Rationale)
-	}
-	if p := incsvc.PreparedOf(a); p != nil {
+	p := incsvc.PreparedOf(a)
+	if p != nil {
 		writePrepared(&b, a, p)
-	} else if params, err := json.Marshal(a.Params); err == nil && len(params) > 2 {
-		fmt.Fprintf(&b, "\n```\n%s\n```", params)
+	} else {
+		fmt.Fprintf(&b, "**#%d %s** · %s · %s risk\n`%s`\n", a.ID, a.Type, proposerName(a), a.Risk, a.Summary)
+		if a.Rationale != "" {
+			fmt.Fprintf(&b, "%s\n", truncateText(a.Rationale, 280))
+		}
+		if params, err := json.Marshal(a.Params); err == nil && len(params) > 2 {
+			fmt.Fprintf(&b, "```json\n%s\n```", params)
+		}
 	}
-	m := channel.Message{Kind: channel.KindProposal, Author: proposerName(a), Body: b.String(), URL: url}
+	m := channel.Message{Kind: channel.KindProposal, Body: b.String(), URL: url}
 	switch a.Status {
 	case "proposed":
-		m.Footer = "Expires " + a.ExpiresAt.UTC().Format("15:04 UTC")
+		m.Footer = "expires " + a.ExpiresAt.UTC().Format("15:04 UTC")
+		if a.PayloadHash != "" {
+			m.Footer = "hash " + hashPrefix(a.PayloadHash) + " · " + m.Footer
+		}
 		if caps.Buttons {
 			m.Buttons = []channel.Button{
 				{Label: "✅ Approve", Style: channel.StylePrimary, Action: &channel.ButtonAction{Op: "approve", ActionID: a.ID, Arg: hashPrefix(a.PayloadHash)}},
@@ -121,11 +127,11 @@ func proposalMessage(a *ent.Action, caps channel.Capabilities, url string) chann
 func proposerName(a *ent.Action) string {
 	switch a.ProposedBy {
 	case "agent":
-		return "🤖 Agent"
+		return "agent"
 	case "system":
 		return "infra-monitor"
 	default:
-		return "User proposal"
+		return "user"
 	}
 }
 
@@ -218,37 +224,40 @@ func hashPrefix(h string) string {
 }
 
 // payloadInlineMax is how much of a payload goes inline in a chat proposal; the rest is attached.
-const payloadInlineMax = 1200
+const payloadInlineMax = 900
 
-// writePrepared renders the precise proposal: target, operation, dry-run, effect, rollback, hash, payload.
+// writePrepared renders a compact precise proposal for chat: header, exact target, effect, warnings and the
+// full payload in a highlighted code block (dry-run diff, rollback and rationale live in the UI / attachment).
 func writePrepared(b *strings.Builder, a *ent.Action, p *actions.Prepared) {
-	if p.CoreInfrastructure {
-		b.WriteString("\n⚠️ **Core infrastructure**\n")
+	dry := "dry-run ✅"
+	if !p.DryRunOK {
+		dry = "dry-run ❌ (can't be approved)"
 	}
-	fmt.Fprintf(b, "\n**Target**: `%s`\n**Operation**: %s\n", p.Target, p.Operation)
-	if p.ArgoManaged != "" {
-		fmt.Fprintf(b, "⚠️ Managed by Argo CD app `%s`: a live change is reverted by selfHeal\n", p.ArgoManaged)
-	}
-	for _, w := range p.Warnings {
-		fmt.Fprintf(b, "⚠️ %s\n", w)
-	}
-	if p.DryRunOK {
-		b.WriteString("**Dry-run**: ✅ accepted by the server\n")
-	} else {
-		fmt.Fprintf(b, "**Dry-run**: ❌ failed, can't be approved\n```\n%s\n```\n", truncateText(p.DryRun, 400))
-	}
+	fmt.Fprintf(b, "**#%d %s** · %s · %s risk · %s\n", a.ID, a.Type, proposerName(a), a.Risk, dry)
+	fmt.Fprintf(b, "`%s`\n", p.Target)
 	if p.Effect != "" {
-		fmt.Fprintf(b, "**Effect**: %s\n", p.Effect)
+		fmt.Fprintf(b, "%s\n", truncateText(p.Effect, 300))
 	}
-	if p.Rollback != "" {
-		fmt.Fprintf(b, "**Rollback**: %s\n", p.Rollback)
+	if p.CoreInfrastructure {
+		b.WriteString("⚠️ core infrastructure\n")
 	}
-	fmt.Fprintf(b, "**Payload hash**: `%s`\n", hashPrefix(a.PayloadHash))
+	if p.ArgoManaged != "" {
+		fmt.Fprintf(b, "⚠️ managed by Argo CD app `%s`: a live change is reverted on sync\n", p.ArgoManaged)
+	} else if strings.HasPrefix(a.Type, "k8s.") {
+		b.WriteString("ℹ️ not managed by GitOps (applied manually): live change\n")
+	}
+	if !p.DryRunOK {
+		fmt.Fprintf(b, "```\n%s\n```\n", truncateText(p.DryRun, 300))
+	}
 	payload := p.Payload
 	if len(payload) > payloadInlineMax {
-		payload = truncateText(payload, payloadInlineMax) + "\n… (full payload attached and in the UI)"
+		payload = truncateText(payload, payloadInlineMax) + "\n… (full payload attached)"
 	}
-	fmt.Fprintf(b, "\n```\n%s\n```", payload)
+	lang := p.PayloadFormat
+	if lang == "text" {
+		lang = ""
+	}
+	fmt.Fprintf(b, "```%s\n%s\n```", lang, payload)
 }
 
 func truncateText(s string, n int) string {

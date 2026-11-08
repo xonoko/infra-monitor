@@ -327,7 +327,7 @@ func (d *Dispatcher) post(ctx context.Context, ch channel.Channel, t *ent.Channe
 }
 
 func (d *Dispatcher) postProposal(ctx context.Context, ch channel.Channel, t *ent.ChannelThread, a *ent.Action, eventID *int) error {
-	if p := incsvc.PreparedOf(a); p != nil && len(p.Payload)+len(p.DryRun) > payloadInlineMax {
+	if p := incsvc.PreparedOf(a); p != nil && len(p.Payload) > payloadInlineMax {
 		if fs, ok := ch.(channel.FileSender); ok {
 			name, content := attachment(a, p)
 			if _, err := fs.SendFile(ctx, threadRef(t), name, content, fmt.Sprintf("Full payload of proposed action #%d (hash %s)", a.ID, hashPrefix(a.PayloadHash))); err != nil {
@@ -438,11 +438,9 @@ func (d *Dispatcher) deliver(ctx context.Context, ch channel.Channel, inc *ent.I
 		}
 		return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry, Body: msg, URL: url}, &evID)
 	case domain.EventInvestigationCompleted:
-		body := fmt.Sprintf("**AI investigation**: %s (confidence %.0f%%)\n%s", str(p, "verdict"), toFloat(p["confidence"])*100, str(p, "summary"))
-		if rc := str(p, "root_cause"); rc != "" {
-			body += "\n\n**Root cause**: " + rc
-		}
-		return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry, Author: "🤖 Agent", Body: body, URL: url}, &evID)
+		// One line: the card carries the summary, the UI the full analysis.
+		body := fmt.Sprintf("🔎 **%s** (%.0f%%) · %s", str(p, "verdict"), toFloat(p["confidence"])*100, truncateText(str(p, "summary"), 220))
+		return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry, Body: body, URL: url}, &evID)
 	case domain.EventInvestigationFailed:
 		return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry, Body: "⚠️ AI investigation unavailable: " + str(p, "error")}, &evID)
 	case domain.EventStatusChanged:
