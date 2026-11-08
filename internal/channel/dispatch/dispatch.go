@@ -432,6 +432,9 @@ func (d *Dispatcher) deliver(ctx context.Context, ch channel.Channel, inc *ent.I
 		return nil
 	case domain.EventActionSucceeded, domain.EventActionFailed:
 		id := intVal(p, "action_id")
+		if str(p, "type") == "agent.reinvestigate" && ev.Type == domain.EventActionSucceeded {
+			return nil // the new investigation result is posted instead
+		}
 		if err := d.updateProposal(ctx, ch, t, id, nil); err != nil {
 			return err
 		}
@@ -447,7 +450,7 @@ func (d *Dispatcher) deliver(ctx context.Context, ch channel.Channel, inc *ent.I
 		return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry, Body: msg, URL: url}, &evID)
 	case domain.EventInvestigationCompleted:
 		// One line: the card carries the summary, the UI the full analysis.
-		body := fmt.Sprintf("🔎 **%s** (%.0f%%) · %s", str(p, "verdict"), toFloat(p["confidence"])*100, truncateText(str(p, "summary"), 220))
+		body := fmt.Sprintf("🔎 **%s** (%.0f%%) · %s", str(p, "verdict"), toFloat(p["confidence"])*100, sentences(str(p, "summary"), 280))
 		return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry, Body: body, URL: url}, &evID)
 	case domain.EventInvestigationFailed:
 		return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry, Body: "⚠️ AI investigation unavailable: " + str(p, "error")}, &evID)

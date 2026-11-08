@@ -102,6 +102,8 @@ func (s *Service) RegisterJobs(q *queue.Queue) {
 		return s.executeAction(ctx, p.ActionID)
 	}, queue.HandlerOpts{Concurrency: 2, Timeout: s.cfg.Actions.Timeout + time.Minute})
 
+	s.registerCorrectionJob(q)
+
 	q.Register(JobHeartbeatPing, func(ctx context.Context, j *queue.Job) error {
 		var p heartbeatPayload
 		if err := j.Decode(&p); err != nil {

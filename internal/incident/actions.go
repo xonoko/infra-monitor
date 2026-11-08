@@ -30,6 +30,8 @@ type actionInput struct {
 	Risk            string
 	ProposedBy      string // agent | user | system
 	InvestigationID *int
+	// DropIfDryRunFails: agent proposals that fail the server dry-run are not created (never shown to humans).
+	DropIfDryRunFails bool
 }
 
 // Target derives the action scope from an incident.
@@ -81,6 +83,9 @@ func (s *Service) createAction(ctx context.Context, tx *ent.Tx, inc *ent.Inciden
 	prep, err := s.prepare(ctx, exec, in.Params, t)
 	if err != nil {
 		return nil, err
+	}
+	if prep != nil && !prep.DryRunOK && in.DropIfDryRunFails {
+		return nil, fmt.Errorf("%w: server dry-run failed: %s", ErrInvalid, truncate(redact.Text(prep.DryRun), 1500))
 	}
 	payloadHash := ""
 	summary := exec.Summary(in.Params, t)

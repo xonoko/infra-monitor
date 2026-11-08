@@ -106,11 +106,13 @@ func proposalMessage(a *ent.Action, caps channel.Capabilities, url string) chann
 	m := channel.Message{Kind: channel.KindProposal, Body: b.String(), URL: url}
 	switch a.Status {
 	case "proposed":
-		m.Footer = "expires " + a.ExpiresAt.UTC().Format("15:04 UTC")
+		m.Footer = "expires " + expiryText(a.ExpiresAt)
 		if a.PayloadHash != "" {
 			m.Footer = "hash " + hashPrefix(a.PayloadHash) + " · " + m.Footer
 		}
-		if caps.Buttons {
+		if p != nil && !p.DryRunOK {
+			m.Buttons = []channel.Button{{Label: "✖ Reject", Style: channel.StyleDanger, Action: &channel.ButtonAction{Op: "reject", ActionID: a.ID}}}
+		} else if caps.Buttons {
 			m.Buttons = []channel.Button{
 				{Label: "✅ Approve", Style: channel.StylePrimary, Action: &channel.ButtonAction{Op: "approve", ActionID: a.ID, Arg: hashPrefix(a.PayloadHash)}},
 				{Label: "✖ Reject", Style: channel.StyleDanger, Action: &channel.ButtonAction{Op: "reject", ActionID: a.ID}},
@@ -285,4 +287,29 @@ func attachment(a *ent.Action, p *actions.Prepared) (string, []byte) {
 		fmt.Fprintf(&b, "\n# ---- rollback ----\n# %s\n", p.Rollback)
 	}
 	return fmt.Sprintf("action-%d.%s", a.ID, ext), []byte(b.String())
+}
+
+// expiryText shows the time, with the date when it isn't within the next 20 hours.
+func expiryText(t time.Time) string {
+	t = t.UTC()
+	if time.Until(t) > 20*time.Hour {
+		return t.Format("Jan 2 15:04 UTC")
+	}
+	return t.Format("15:04 UTC")
+}
+
+// sentences cuts s at the last sentence end within n characters (or at n with an ellipsis).
+func sentences(s string, n int) string {
+	s = strings.TrimSpace(s)
+	if len(s) <= n {
+		return s
+	}
+	cut := s[:n]
+	if i := strings.LastIndexAny(cut, ".!?"); i > n/3 {
+		return cut[:i+1]
+	}
+	if i := strings.LastIndexByte(cut, ' '); i > 0 {
+		cut = cut[:i]
+	}
+	return cut + "…"
 }

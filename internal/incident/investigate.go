@@ -318,7 +318,14 @@ func normalizeVerdict(v string) string {
 
 // proposeFromAgent validates and stores agent proposals; invalid ones are logged on the timeline.
 func (s *Service) proposeFromAgent(ctx context.Context, tx *ent.Tx, inc *ent.Incident, proposals []agent.ProposedAction, invID *int, actor domain.Actor) ([]int, error) {
+	return s.proposeFromAgentOpts(ctx, tx, inc, proposals, invID, actor, false)
+}
+
+// proposeFromAgentOpts stores valid agent proposals. Invalid ones (schema, policy, failed server dry-run) are
+// never shown to humans; unless this already is a correction, the agent gets one chance to fix them.
+func (s *Service) proposeFromAgentOpts(ctx context.Context, tx *ent.Tx, inc *ent.Incident, proposals []agent.ProposedAction, invID *int, actor domain.Actor, correction bool) ([]int, error) {
 	var ids []int
+	var failures []proposalFailure
 	// An investigation triggered by an action may not ask for another re-investigation (no loops).
 	fromAction := false
 	if invID != nil {
@@ -332,7 +339,7 @@ func (s *Service) proposeFromAgent(ctx context.Context, tx *ent.Tx, inc *ent.Inc
 		}
 		a, err := s.createAction(ctx, tx, inc, actionInput{
 			Type: pa.Type, Params: pa.Params, Rationale: pa.Rationale, Risk: pa.Risk,
-			ProposedBy: "agent", InvestigationID: invID,
+			ProposedBy: "agent", InvestigationID: invID, DropIfDryRunFails: true,
 		}, actor)
 		if err == nil {
 			ids = append(ids, a.ID)
@@ -340,6 +347,7 @@ func (s *Service) proposeFromAgent(ctx context.Context, tx *ent.Tx, inc *ent.Inc
 		}
 		if errors.Is(err, ErrInvalid) || errors.Is(err, actions.ErrUnknownType) {
 			s.log.WarnContext(ctx, "agent proposed an invalid action", "incident_id", inc.ID, "type", pa.Type, "error", err)
+			failures = append(failures, proposalFailure{Type: pa.Type, Params: pa.Params, Error: truncate(err.Error(), 1500)})
 			if _, err := s.addEvent(ctx, tx, inc, domain.EventActionRejected, domain.System, map[string]any{
 				"type": pa.Type, "summary": "invalid proposal ignored", "reason": truncate(err.Error(), 500), "invalid": true,
 			}); err != nil {
@@ -348,6 +356,12 @@ func (s *Service) proposeFromAgent(ctx context.Context, tx *ent.Tx, inc *ent.Inc
 			continue
 		}
 		return nil, err
+	}
+	if len(failures) > 0 && !correction && s.agent != nil {
+		if err := enqueue(ctx, tx, JobCorrectProposals, correctionPayload{IncidentID: inc.ID, InvestigationID: invID, Failures: failures},
+			queue.Opts{MaxAttempts: 1}); err != nil {
+			return nil, err
+		}
 	}
 	return ids, nil
 }

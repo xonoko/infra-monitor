@@ -36,8 +36,9 @@ func (e *patchExec) Execute(context.Context, map[string]any, actions.Target) (st
 	return "", nil
 }
 func (e *patchExec) Prepare(_ context.Context, p map[string]any, t actions.Target) (*actions.Prepared, error) {
+	ok := p["name"] != "bad"
 	return &actions.Prepared{Target: t.Namespace + "/" + p["name"].(string), Operation: "strategic-merge patch",
-		Payload: "spec: {}", DryRun: "-a\n+b", DryRunOK: true, Risk: "high", Precondition: e.rv,
+		Payload: "spec: {}", DryRun: "-a\n+b", DryRunOK: ok, Risk: "high", Precondition: e.rv,
 		CoreInfrastructure: t.Namespace == "kube-system"}, nil
 }
 func (e *patchExec) ExecutePrepared(_ context.Context, _ map[string]any, _ actions.Target, p *actions.Prepared) (string, error) {
@@ -185,4 +186,22 @@ func TestFinalReviewUnavailableFailsClosed(t *testing.T) {
 	a, _ = e.svc.GetAction(ctx, a.ID)
 	require.Equal(t, "succeeded", string(a.Status))
 	require.Equal(t, 1, e.exec.runs)
+}
+
+func TestInvalidAgentProposalIsCorrected(t *testing.T) {
+	pe := &patchExec{rv: "1"}
+	e := newEnv(t, true)
+	require.NoError(t, e.svc.Registry().Register(pe))
+	e.agent.result.ProposedActions = []agent.ProposedAction{{Type: "k8s.patch", Params: map[string]any{"name": "bad", "patch": map[string]any{}}}}
+	e.agent.chat = &agent.ChatResult{Reply: "fixed", ProposedActions: []agent.ProposedAction{{Type: "k8s.patch", Params: map[string]any{"name": "good", "patch": map[string]any{}}}}}
+	ctx := context.Background()
+	e.ingest(alert("OOM", "demo", "firing", "o"))
+	e.drain()
+	inc := e.onlyIncident()
+	acts, err := e.svc.Actions(ctx, inc.ID)
+	require.NoError(t, err)
+	require.Len(t, acts, 1, "the failing proposal was never created; only the corrected one")
+	require.Equal(t, "demo/good", incident.PreparedOf(acts[0]).Target)
+	require.True(t, incident.PreparedOf(acts[0]).DryRunOK)
+	require.Contains(t, e.agent.lastReq.Message, "server dry-run failed", "the agent got the exact error")
 }
