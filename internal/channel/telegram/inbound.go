@@ -264,6 +264,8 @@ func parseCommand(text string) (string, []string) {
 
 func (c *Channel) handleMessage(ctx context.Context, m *models.Message, sink channel.InboundSink) {
 	ev, ok := c.MapMessage(m)
+	c.log.InfoContext(ctx, "telegram message received", "channel", c.cfg.Name, "chat_id", m.Chat.ID, "chat_type", string(m.Chat.Type),
+		"is_reply", m.ReplyToMessage != nil, "is_command", strings.HasPrefix(strings.TrimSpace(m.Text), "/"), "text_len", len(m.Text), "accepted", ok)
 	if !ok {
 		return
 	}

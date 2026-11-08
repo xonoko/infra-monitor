@@ -473,6 +473,8 @@ func (d *Dispatcher) Handle(ctx context.Context, ev channel.InboundEvent) channe
 		return channel.Response{Silent: true}
 	}
 	resp, err := d.handle(ctx, ch, ev)
+	d.log.InfoContext(ctx, "inbound event", "channel", ev.Channel, "kind", ev.Kind, "command", ev.Command, "reply_to", ev.ReplyToMessageID,
+		"external_user", ev.User.ID, "error", err, "silent", resp.Silent)
 	if err != nil {
 		telemetry.RecordError(span, err)
 		d.log.WarnContext(ctx, "inbound event failed", "channel", ev.Channel, "kind", ev.Kind, "error", err)
@@ -551,6 +553,7 @@ func (d *Dispatcher) handle(ctx context.Context, ch channel.Channel, ev channel.
 	case channel.InboundMessage:
 		incID, ok := d.incidentFor(ctx, ch, ev)
 		if !ok {
+			d.log.InfoContext(ctx, "reply does not match an incident thread", "channel", ev.Channel, "chat_id", ev.ChatID, "reply_to", ev.ReplyToMessageID)
 			return channel.Response{Silent: true}, nil
 		}
 		actor, err := d.actor(ctx, ch, ev)
