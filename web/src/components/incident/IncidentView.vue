@@ -1,25 +1,28 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, toRef, watch } from 'vue'
-import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger, TabsContent, TabsIndicator, TabsList, TabsRoot, TabsTrigger } from 'reka-ui'
+import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from 'reka-ui'
 import Chip from '../ui/Chip.vue'
 import Btn from '../ui/Btn.vue'
 import Icon from '../ui/Icon.vue'
 import Tip from '../ui/Tip.vue'
+import Modal from '../ui/Modal.vue'
 import Skeleton from '../ui/Skeleton.vue'
 import EmptyState from '../ui/EmptyState.vue'
-import OverviewTab from './OverviewTab.vue'
-import TimelineTab from './TimelineTab.vue'
+import IncidentStream from './IncidentStream.vue'
+import IncidentGlance from './IncidentGlance.vue'
 import SignalsTab from './SignalsTab.vue'
-import ActionsTab from './ActionsTab.vue'
-import ChatTab from './ChatTab.vue'
-import { useIncidentData, useIncidentMutations } from '@/composables/useIncident'
+import DetailsTab from './DetailsTab.vue'
+import ProposeActionForm from './ProposeActionForm.vue'
+import { useActionTypes, useIncidentData, useIncidentMutations } from '@/composables/useIncident'
 import { useMe } from '@/composables/useMe'
 import { startIncidentStream } from '@/api/sse'
 import { absTime, duration, relTime, sevKey } from '@/lib/format'
 import { useNow } from '@/lib/now'
+import { streamFilter } from '@/lib/streamFilter'
 import { ApiError, errorMessage } from '@/api/client'
 
-const props = withDefaults(defineProps<{ id: number; mode?: 'drawer' | 'page'; initialTab?: string }>(), { mode: 'drawer', initialTab: 'overview' })
+type View = 'activity' | 'signals' | 'details'
+const props = withDefaults(defineProps<{ id: number; mode?: 'drawer' | 'page'; initialTab?: string }>(), { mode: 'drawer', initialTab: 'activity' })
 const emit = defineEmits<{ close: []; expand: [] }>()
 
 const id = toRef(props, 'id')
@@ -27,10 +30,12 @@ const data = useIncidentData(id)
 const m = useIncidentMutations(id)
 const { isOperator } = useMe()
 const now = useNow()
+const actionTypes = useActionTypes()
 
 const inc = computed(() => data.incident.data.value)
-const tab = ref(props.initialTab)
-watch(id, () => (tab.value = 'overview'))
+const asView = (v: string): View => (v === 'signals' || v === 'details' ? v : 'activity')
+const view = ref<View>(asView(props.initialTab))
+watch(id, () => (view.value = 'activity'))
 
 // per-incident live stream for agent progress
 let stop: (() => void) | null = null
@@ -44,9 +49,9 @@ watch(
 )
 onBeforeUnmount(() => stop?.())
 
-const pendingActions = computed(() => (data.actions.data.value ?? []).filter((a) => a.status === 'proposed').length)
 const firing = computed(() => (data.signals.data.value ?? []).filter((s) => s.status === 'firing').length)
 const isClosed = computed(() => inc.value?.status === 'resolved' || inc.value?.status === 'closed')
+const investigating = computed(() => inc.value?.investigation_state === 'running' || inc.value?.investigation_state === 'pending')
 const dur = computed(() => {
   const i = inc.value
   if (!i) return ''
@@ -54,11 +59,18 @@ const dur = computed(() => {
   return duration((end - new Date(i.opened_at).getTime()) / 1000)
 })
 const notFound = computed(() => data.incident.error.value instanceof ApiError && data.incident.error.value.status === 404)
-
 const muteOptions = ['30m', '1h', '4h', '24h']
 
+const proposing = ref(false)
+const proposeDefaults = computed(() => ({ namespace: inc.value?.namespace ?? '', cluster: inc.value?.cluster ?? '' }))
+function propose(v: { type: string; params: Record<string, unknown>; rationale?: string }) {
+  m.propose.mutate(v, { onSuccess: () => (proposing.value = false) })
+}
+
+const stream = ref<InstanceType<typeof IncidentStream>>()
 function openChat() {
-  tab.value = 'chat'
+  view.value = 'activity'
+  stream.value?.focusComposer()
 }
 defineExpose({ openChat })
 </script>
@@ -81,6 +93,7 @@ defineExpose({ openChat })
           <Chip kind="severity" :value="inc.severity || 'none'" />
           <Chip kind="status" :value="inc.status" />
           <Chip v-if="inc.verdict !== 'unknown'" kind="verdict" :value="inc.verdict" />
+          <span v-if="inc.is_storm" class="iv__flag iv__flag--storm"><Icon name="incidents" :size="12" />storm</span>
           <span v-if="inc.muted" class="iv__flag"><Icon name="mute" :size="13" />muted</span>
           <span v-if="inc.reopen_count" class="iv__flag mono" :title="`reopened ${inc.reopen_count}×`"><Icon name="refresh" :size="12" />{{ inc.reopen_count }}</span>
           <span class="iv__spacer" />
@@ -97,7 +110,6 @@ defineExpose({ openChat })
           <span v-if="inc.namespace"><span class="faint">ns</span> {{ inc.namespace }}</span>
           <span :title="absTime(inc.opened_at)"><span class="faint">opened</span> {{ relTime(inc.opened_at, now) }}</span>
           <span><span class="faint">{{ isClosed ? 'lasted' : 'for' }}</span> {{ dur }}</span>
-          <span v-if="inc.source"><span class="faint">source</span> {{ inc.source }}</span>
         </div>
         <div class="iv__actions">
           <Btn
@@ -112,24 +124,21 @@ defineExpose({ openChat })
           >
           <Btn v-if="!isClosed" size="sm" icon="check" :disabled="!isOperator" :loading="m.resolve.isPending.value" @click="m.resolve.mutate(undefined)">Resolve</Btn>
           <Btn v-else size="sm" icon="refresh" :disabled="!isOperator" :loading="m.reopen.isPending.value" @click="m.reopen.mutate(undefined)">Reopen</Btn>
-          <Btn
-            size="sm"
-            icon="sparkle"
-            :disabled="!isOperator || inc.investigation_state === 'running' || inc.investigation_state === 'pending'"
-            :loading="m.reinvestigate.isPending.value"
-            @click="m.reinvestigate.mutate(false)"
-            >{{ inc.investigation_state === 'running' ? 'Investigating…' : 'Reinvestigate' }}</Btn
-          >
-          <DropdownMenuRoot>
-            <DropdownMenuTrigger as-child>
-              <Btn size="sm" icon="chevronDown" :disabled="!isOperator || inc.investigation_state === 'running' || inc.investigation_state === 'pending'" title="More investigation options" aria-label="More investigation options" />
-            </DropdownMenuTrigger>
-            <DropdownMenuPortal>
-              <DropdownMenuContent class="menu" align="start" :side-offset="4">
-                <DropdownMenuItem class="menu__item" @select="m.reinvestigate.mutate(true)">Dig deeper (bigger model, costs more)</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenuPortal>
-          </DropdownMenuRoot>
+          <span class="split">
+            <Btn size="sm" icon="sparkle" :disabled="!isOperator || investigating" :loading="m.reinvestigate.isPending.value" @click="m.reinvestigate.mutate(false)">{{
+              investigating ? 'Investigating…' : 'Reinvestigate'
+            }}</Btn>
+            <DropdownMenuRoot>
+              <DropdownMenuTrigger as-child>
+                <Btn size="sm" icon="chevronDown" :disabled="!isOperator || investigating" title="More investigation options" aria-label="More investigation options" />
+              </DropdownMenuTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuContent class="menu" align="start" :side-offset="4">
+                  <DropdownMenuItem class="menu__item" @select="m.reinvestigate.mutate(true)"><Icon name="sparkle" />Dig deeper (bigger model, costs more)</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenuPortal>
+            </DropdownMenuRoot>
+          </span>
           <DropdownMenuRoot>
             <DropdownMenuTrigger as-child>
               <Btn size="sm" icon="mute" :disabled="!isOperator" :loading="m.mute.isPending.value">Mute <Icon name="chevronDown" :size="12" /></Btn>
@@ -144,23 +153,67 @@ defineExpose({ openChat })
         </div>
       </header>
 
-      <TabsRoot v-model="tab" class="iv__tabs">
-        <TabsList class="tabs" aria-label="Incident sections">
-          <TabsTrigger value="overview" class="tab">Overview</TabsTrigger>
-          <TabsTrigger value="timeline" class="tab">Timeline<span class="tab__n mono">{{ data.timeline.data.value?.length ?? '' }}</span></TabsTrigger>
-          <TabsTrigger value="signals" class="tab">Signals<span class="tab__n mono" :class="{ 'tab__n--hot': firing }">{{ firing }}/{{ data.signals.data.value?.length ?? inc.signal_count }}</span></TabsTrigger>
-          <TabsTrigger value="actions" class="tab">Actions<span v-if="pendingActions" class="tab__n tab__n--warn mono">{{ pendingActions }}</span></TabsTrigger>
-          <TabsTrigger value="chat" class="tab">Chat<span class="tab__n mono">{{ data.messages.data.value?.length || '' }}</span></TabsTrigger>
-          <TabsIndicator class="tabs__ind" />
-        </TabsList>
-        <div class="iv__body">
-          <TabsContent value="overview" class="tabpane"><OverviewTab :incident="inc" :data="data" @goto="(t: string) => (tab = t)" /></TabsContent>
-          <TabsContent value="timeline" class="tabpane"><TimelineTab :events="data.timeline.data.value" :loading="data.timeline.isPending.value" /></TabsContent>
-          <TabsContent value="signals" class="tabpane"><SignalsTab :signals="data.signals.data.value" :loading="data.signals.isPending.value" /></TabsContent>
-          <TabsContent value="actions" class="tabpane"><ActionsTab :incident="inc" :actions="data.actions.data.value" :loading="data.actions.isPending.value" /></TabsContent>
-          <TabsContent value="chat" class="tabpane tabpane--chat"><ChatTab :incident="inc" :messages="data.messages.data.value" :loading="data.messages.isPending.value" /></TabsContent>
+      <div class="iv__main">
+        <div class="iv__grid">
+          <div class="iv__glance">
+            <IncidentGlance
+              :incident="inc"
+              :actions="data.actions.data.value"
+              :signals="data.signals.data.value"
+              :timeline="data.timeline.data.value"
+              @goto="(v: string) => (view = asView(v))"
+              @propose="proposing = true"
+            />
+          </div>
+          <section class="iv__content">
+            <nav class="vstrip" aria-label="Incident views">
+              <div class="vstrip__views" role="tablist">
+                <button role="tab" class="vtab" :aria-selected="view === 'activity'" :class="{ on: view === 'activity' }" @click="view = 'activity'">
+                  <Icon name="message" :size="13" />Activity
+                </button>
+                <button role="tab" class="vtab" :aria-selected="view === 'signals'" :class="{ on: view === 'signals' }" @click="view = 'signals'">
+                  Signals <span class="mono vtab__n" :class="{ hot: firing }">{{ firing }}/{{ data.signals.data.value?.length ?? inc.signal_count }}</span>
+                </button>
+                <button role="tab" class="vtab" :aria-selected="view === 'details'" :class="{ on: view === 'details' }" @click="view = 'details'">Details</button>
+              </div>
+              <div v-if="view === 'activity'" class="seg" role="radiogroup" aria-label="Show">
+                <button role="radio" :aria-checked="streamFilter === 'all'" :class="{ on: streamFilter === 'all' }" @click="streamFilter = 'all'">Everything</button>
+                <button role="radio" :aria-checked="streamFilter === 'conversation'" :class="{ on: streamFilter === 'conversation' }" @click="streamFilter = 'conversation'">
+                  Conversation
+                </button>
+              </div>
+            </nav>
+            <div class="iv__view">
+              <IncidentStream
+                v-if="view === 'activity'"
+                ref="stream"
+                :incident="inc"
+                :timeline="data.timeline.data.value"
+                :messages="data.messages.data.value"
+                :actions="data.actions.data.value"
+                :investigations="data.investigations.data.value"
+                :loading="data.timeline.isPending.value || data.messages.isPending.value"
+              />
+              <div v-else class="iv__scroll">
+                <SignalsTab v-if="view === 'signals'" :signals="data.signals.data.value" :loading="data.signals.isPending.value" />
+                <DetailsTab v-else :incident="inc" :investigations="data.investigations.data.value" :loading="data.investigations.isPending.value" />
+              </div>
+            </div>
+          </section>
         </div>
-      </TabsRoot>
+      </div>
+
+      <Modal v-model:open="proposing" title="Propose an action" description="It still needs approval by an operator before it runs." :width="520">
+        <ProposeActionForm
+          v-if="actionTypes.data.value?.length"
+          :types="actionTypes.data.value"
+          :defaults="proposeDefaults"
+          :busy="m.propose.isPending.value"
+          @submit="propose"
+          @cancel="proposing = false"
+        />
+        <p v-else class="muted">No action type is enabled on this server.</p>
+      </Modal>
     </template>
   </div>
 </template>
@@ -181,10 +234,11 @@ defineExpose({ openChat })
 }
 .iv__head {
   --sev: var(--sev-other);
-  padding: 12px 18px 12px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: linear-gradient(180deg, color-mix(in srgb, var(--sev) 7%, transparent), transparent 70%);
   border-top: 2px solid var(--sev);
+  flex: none;
 }
 .iv__head--critical {
   --sev: var(--sev-critical);
@@ -213,19 +267,22 @@ defineExpose({ openChat })
   font-size: var(--fs-xs);
   color: var(--text-dim);
 }
+.iv__flag--storm {
+  color: var(--sev-info);
+}
 .iv__spacer {
   flex: 1;
 }
 .iv__title {
   font-size: var(--fs-xl);
   line-height: 1.3;
-  margin: 8px 0 6px;
+  margin: 6px 0 4px;
   overflow-wrap: anywhere;
 }
 .iv__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: 2px 16px;
   font-size: var(--fs-sm);
   color: var(--text);
 }
@@ -234,90 +291,146 @@ defineExpose({ openChat })
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: 10px;
+}
+.split {
+  display: inline-flex;
+}
+.split > :first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.split > :last-child {
+  margin-left: -1px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 .iv__ro {
   font-size: var(--fs-xs);
   margin-left: 4px;
 }
-.iv__tabs {
-  display: flex;
-  flex-direction: column;
+
+/* body: glance panel + views. Layout depends on the width of the incident view itself. */
+.iv__main {
   flex: 1;
   min-height: 0;
+  container: incident / inline-size;
 }
-.tabs {
-  position: relative;
+.iv__grid {
+  height: 100%;
   display: flex;
-  gap: 2px;
-  padding: 0 12px;
+  flex-direction: column;
+}
+.iv__glance {
+  flex: none;
+  max-height: 45%;
+  overflow-y: auto;
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
+  background: var(--bg-elev);
+}
+.iv__content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+@container incident (min-width: 900px) {
+  .iv__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 310px;
+  }
+  .iv__glance {
+    order: 2;
+    max-height: none;
+    height: 100%;
+    border-bottom: 0;
+    border-left: 1px solid var(--border);
+  }
+  .iv__content {
+    order: 1;
+    height: 100%;
+  }
+}
+
+.vstrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px;
+  height: 36px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elev);
   flex: none;
 }
-.tab {
+.vstrip__views {
+  display: flex;
+  gap: 2px;
+  height: 100%;
+}
+.vtab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   border: 0;
   background: none;
-  padding: 10px 8px;
+  padding: 0 8px;
   color: var(--text-dim);
   font-weight: 500;
+  font-size: var(--fs-sm);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   white-space: nowrap;
 }
-.tab:hover {
+.vtab:hover {
   color: var(--text-strong);
 }
-.tab[data-state='active'] {
+.vtab.on {
   color: var(--text-strong);
+  border-bottom-color: var(--accent);
 }
-.tab__n {
+.vtab__n {
   font-size: 10px;
   color: var(--text-faint);
 }
-.tab__n--hot {
+.hot {
   color: var(--sev-critical);
 }
-.tab__n--warn {
-  color: var(--text-inverse);
-  background: var(--sev-warning);
-  border-radius: 8px;
-  padding: 0 5px;
-  line-height: 15px;
-  font-weight: 600;
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  flex: none;
 }
-.tabs__ind {
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  height: 2px;
-  width: var(--reka-tabs-indicator-size);
-  transform: translateX(var(--reka-tabs-indicator-position));
-  background: var(--accent);
-  border-radius: 2px;
-  transition: transform 180ms var(--ease), width 180ms var(--ease);
+.seg button {
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  padding: 0 9px;
+  height: 22px;
+  font-size: var(--fs-xs);
 }
-.iv__body {
+.seg button.on {
+  background: var(--bg-active);
+  color: var(--text-strong);
+}
+.iv__view {
   flex: 1;
   min-height: 0;
-  overflow: auto;
 }
-.tabpane {
-  padding: 16px 18px 28px;
-  outline: none;
-}
-.tabpane--chat {
-  padding: 0;
+.iv__scroll {
   height: 100%;
+  overflow: auto;
+  padding: 14px 16px 24px;
 }
 .iv--page .iv__head {
-  padding: 16px 24px;
+  padding: 14px 24px;
 }
-.iv--page .tabpane {
-  padding: 18px 24px 32px;
-}
-.iv--page .tabpane--chat {
-  padding: 0;
+@media (max-width: 420px) {
+  .seg button {
+    padding: 0 6px;
+  }
 }
 </style>

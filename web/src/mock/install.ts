@@ -257,11 +257,11 @@ function setStatus(id: number, to: Incident['status'], reason?: string) {
 route('POST', '/incidents/(\\d+)/ack', (m) => setStatus(Number(m[1]), 'acknowledged'))
 route('POST', '/incidents/(\\d+)/resolve', (m, _u, b) => setStatus(Number(m[1]), 'resolved', b?.reason))
 route('POST', '/incidents/(\\d+)/reopen', (m) => setStatus(Number(m[1]), 'open'))
-route('POST', '/incidents/(\\d+)/reinvestigate', (m) => {
+route('POST', '/incidents/(\\d+)/reinvestigate', (m, _u, b) => {
   const id = Number(m[1])
   const i = find(id)
   i.investigation_state = 'running'
-  addEvent(id, 'investigation_started', { ...userActor(), payload: { trigger: 'manual' } })
+  addEvent(id, 'investigation_started', { ...userActor(), payload: { trigger: 'manual', deep: !!b?.deep } })
   void (async () => {
     for (const s of [
       { kind: 'tool_call', tool: 'kubectl_describe', text: 'deployment' },
@@ -274,11 +274,11 @@ route('POST', '/incidents/(\\d+)/reinvestigate', (m) => {
     await sleep(900)
     i.investigation_state = 'done'
     i.verdict = 'actionable'
-    const inv = { ...(fx.investigations[142][0] ?? {}), id: fx.nextId(), trigger: 'manual' as const, created_at: new Date().toISOString(), started_at: new Date(Date.now() - 3000).toISOString(), finished_at: new Date().toISOString() }
+    const inv = { ...(fx.investigations[142][0] ?? {}), id: fx.nextId(), trigger: 'manual' as const, model: b?.deep ? 'deep' : 'investigate', created_at: new Date().toISOString(), started_at: new Date(Date.now() - 3000).toISOString(), finished_at: new Date().toISOString() }
     ;(fx.investigations[id] ??= []).unshift(inv)
     i.summary = inv.summary
     emit('progress', { incident_id: id, kind: 'done' })
-    addEvent(id, 'investigation_completed', { actor_type: 'agent', actor_name: 'holmes', payload: { verdict: 'actionable', confidence: inv.confidence, summary: inv.summary } })
+    addEvent(id, 'investigation_completed', { actor_type: 'agent', actor_name: 'holmes', payload: { investigation_id: inv.id, verdict: 'actionable', confidence: inv.confidence, summary: inv.summary } })
   })()
   return detail(i)
 })

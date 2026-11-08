@@ -532,3 +532,110 @@ export const status: Status = {
   agent: { enabled: true, type: 'holmes', model: 'investigate', url_host: 'holmes-holmes.holmes.svc.cluster.local', max_concurrent: 2, max_per_hour: 20 },
   leases: [{ name: 'channel:telegram:telegram-infra:poller', held: true }, { name: 'scheduler', held: true }],
 }
+
+// ---- scenarios for the unified incident stream ----
+
+// #142: link the completed investigation, plus a flapping run of repeated notifications to collapse.
+for (const e of timeline[142]) if (e.type === 'investigation_completed') e.payload.investigation_id = 77
+const firstMsg = timeline[142].findIndex((e) => e.type === 'message')
+timeline[142].splice(
+  firstMsg,
+  0,
+  ...[17.6, 17.4, 17.2, 17, 16.8, 16.6, 16.4].map((min) => ev(142, min, 'signal_firing', { payload: { name: 'KubePodCrashLooping', fingerprint: '4f3a9c1e8b2d7a60' } })),
+)
+timeline[142].forEach((e, i) => (e.id = 5000 + i))
+
+// #140: agent refused (hourly cap), shown as a failed system message.
+Object.assign(incidents.find((i) => i.id === 140)!, { investigation_note: 'AI investigation timed out after 4m; notified with the raw alert' })
+messages[140] = [
+  {
+    id: 601,
+    incident_id: 140,
+    role: 'system',
+    author_name: '',
+    channel: 'system',
+    channel_name: '',
+    content: 'The agent is not available: hourly AI cap reached (20/20). Try again in 22 min.',
+    status: 'failed',
+    action_ids: [],
+    created_at: ago(5),
+  },
+]
+
+// #138: skipped because the daily budget was reached, plus flapping signals.
+Object.assign(incidents.find((i) => i.id === 138)!, { investigation_state: 'skipped', investigation_note: 'AI budget reached' })
+timeline[138] = [
+  ev(138, 300, 'incident_opened'),
+  ...[300, 240, 180, 120].map((min) => ev(138, min, 'signal_firing', { payload: { name: 'CPUThrottlingHigh' } })),
+  ev(138, 299, 'investigation_skipped', { payload: { reason: 'AI budget reached' } }),
+  ev(138, 60, 'mute_created', { actor_type: 'user', actor_name: 'Lucas', channel: 'telegram', channel_name: 'telegram-infra', payload: { ends_at: later(180), reason: 'Nightly re-encode' } }),
+  ...[50, 45, 40].map((min) => ev(138, min, 'signal_firing', { payload: { name: 'CPUThrottlingHigh' } })),
+].sort((a, b) => a.created_at.localeCompare(b.created_at))
+timeline[138].forEach((e, i) => (e.id = 6000 + i))
+
+// Alert storm #150 grouping #147-#149: investigated once at the storm level.
+const stormMembers = [
+  { id: 147, title: 'KubePodNotReady: checkout-7f9c', severity: 'critical' },
+  { id: 148, title: 'KubePodNotReady: cart-5d2a', severity: 'critical' },
+  { id: 149, title: 'HighErrorRate: storefront', severity: 'warning' },
+]
+incidents.unshift(
+  inc({
+    id: 150,
+    title: 'Alert storm: 3 incidents in prod/shop within 2m',
+    severity: 'critical',
+    cluster: 'prod',
+    namespace: 'shop',
+    is_storm: true,
+    verdict: 'actionable',
+    summary: 'Node pool prod-b lost 2 nodes; shop pods are rescheduling.',
+    opened_at: ago(9),
+    last_signal_at: ago(3),
+    signal_count: 3,
+    firing_count: 3,
+    notify_channels: ['telegram-infra'],
+    labels: { alertname: 'AlertStorm', cluster: 'prod', namespace: 'shop', severity: 'critical' },
+  }),
+  ...stormMembers.map((mm) =>
+    inc({
+      id: mm.id,
+      title: mm.title,
+      severity: mm.severity,
+      cluster: 'prod',
+      namespace: 'shop',
+      storm_id: 150,
+      investigation_state: 'skipped',
+      investigation_note: 'part of alert storm #150',
+      opened_at: ago(9),
+      last_signal_at: ago(4),
+      labels: { alertname: mm.title.split(':')[0], cluster: 'prod', namespace: 'shop', severity: mm.severity },
+    }),
+  ),
+)
+investigations[150] = [
+  {
+    ...investigations[142][0],
+    id: 80,
+    summary: 'Node pool prod-b lost 2 nodes; shop pods are rescheduling.',
+    root_cause: 'Nodes `prod-b-3` and `prod-b-4` went `NotReady` at 12:16 (cloud provider maintenance). Pods of `checkout` and `cart` are pending on the remaining nodes.',
+    analysis: '## Findings\n\n- 2/4 nodes in pool `prod-b` NotReady since 12:16.\n- 14 pods Pending with `Insufficient cpu`.\n\n## Recommendation\n\nScale the node pool or wait for the maintenance to finish (~15 min).',
+    confidence: 0.78,
+    created_at: ago(8),
+    started_at: ago(8),
+    finished_at: ago(7),
+  },
+]
+timeline[150] = [
+  ev(150, 9, 'incident_opened'),
+  ...stormMembers.map((mm, i) => ev(150, 9 - i * 0.2, 'storm_member', { payload: { incident_id: mm.id, title: mm.title, severity: mm.severity } })),
+  ev(150, 8, 'investigation_started', { actor_type: 'agent', actor_name: 'holmes', payload: { trigger: 'auto' } }),
+  ev(150, 7, 'investigation_completed', { actor_type: 'agent', actor_name: 'holmes', payload: { investigation_id: 80, verdict: 'actionable', confidence: 0.78 } }),
+  ev(150, 7, 'notification_routed', { payload: { channels: ['telegram-infra'], reason: 'storm' } }),
+]
+for (const mm of stormMembers) {
+  timeline[mm.id] = [
+    ev(mm.id, 9, 'incident_opened'),
+    ev(mm.id, 9, 'signal_firing', { payload: { name: mm.title.split(':')[0] } }),
+    ev(mm.id, 9, 'investigation_skipped', { payload: { reason: 'part of alert storm #150' } }),
+  ]
+}
