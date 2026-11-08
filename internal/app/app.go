@@ -34,6 +34,8 @@ type App struct {
 	Leases    *lease.Manager
 	Server    *api.Server
 
+	svc *services
+
 	// runners are long-running loops started by Run.
 	runners []runner
 	closers []func(context.Context) error
