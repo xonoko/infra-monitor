@@ -147,6 +147,10 @@ func (s *Service) recordUsage(ctx context.Context, kind, model string, u agent.U
 	attrs := metric.WithAttributes(attribute.String("kind", kind), attribute.String("model", model))
 	s.m.tokens.Add(ctx, int64(u.PromptTokens), metric.WithAttributes(attribute.String("type", "prompt"), attribute.String("model", model)))
 	s.m.tokens.Add(ctx, int64(u.CompletionTokens), metric.WithAttributes(attribute.String("type", "completion"), attribute.String("model", model)))
-	cost := float64(u.PromptTokens)/1e6*s.cfg.Agent.PriceInputPerMTok + float64(u.CompletionTokens)/1e6*s.cfg.Agent.PriceOutputPerMTok
+	in, out := s.cfg.Agent.PriceInputPerMTok, s.cfg.Agent.PriceOutputPerMTok
+	if p, ok := s.cfg.Agent.ModelPrices[model]; ok {
+		in, out = p.Input, p.Output
+	}
+	cost := float64(u.PromptTokens)/1e6*in + float64(u.CompletionTokens)/1e6*out
 	s.m.cost.Add(ctx, cost, attrs)
 }

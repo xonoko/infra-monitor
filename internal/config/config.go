@@ -190,8 +190,16 @@ type AgentConfig struct {
 	// Prices (USD per million tokens) for the cost estimate metric.
 	PriceInputPerMTok  float64 `mapstructure:"price_input_per_mtok"`
 	PriceOutputPerMTok float64 `mapstructure:"price_output_per_mtok"`
-	ExtraPrompt        string  `mapstructure:"extra_prompt"`
-	StructuredOutput   bool    `mapstructure:"structured_output"`
+	// ModelPrices overrides the prices per model name (e.g. the deep model).
+	ModelPrices      map[string]ModelPrice `mapstructure:"model_prices"`
+	ExtraPrompt      string                `mapstructure:"extra_prompt"`
+	StructuredOutput bool                  `mapstructure:"structured_output"`
+}
+
+// ModelPrice is USD per million tokens.
+type ModelPrice struct {
+	Input  float64 `mapstructure:"input"`
+	Output float64 `mapstructure:"output"`
 }
 
 // StormConfig: when more than Threshold incidents open within Window, they are grouped into one

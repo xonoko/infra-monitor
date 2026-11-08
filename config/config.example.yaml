@@ -121,8 +121,10 @@ agent:
     threshold: 5
     window: 10m
   budget_pause: 1h         # after a budget / rate-limit error (LiteLLM 400 budget_exceeded, 429): no agent calls
-  price_input_per_mtok: 1.0    # USD per million tokens, for the infra_monitor_agent_cost_usd estimate
-  price_output_per_mtok: 5.0
+  price_input_per_mtok: 0.1    # USD per million tokens (default model), for the infra_monitor_agent_cost_usd estimate
+  price_output_per_mtok: 0.5
+  model_prices:                # per-model overrides
+    claude-sonnet-5-5: { input: 2, output: 10 }
   extra_prompt: ""
   structured_output: true  # use response_format json_schema (falls back to a fenced JSON block)
 
