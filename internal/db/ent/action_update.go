@@ -359,6 +359,73 @@ func (_u *ActionUpdate) SetNillableSummary(v *string) *ActionUpdate {
 	return _u
 }
 
+// SetPrepared sets the "prepared" field.
+func (_u *ActionUpdate) SetPrepared(v map[string]interface{}) *ActionUpdate {
+	_u.mutation.SetPrepared(v)
+	return _u
+}
+
+// ClearPrepared clears the value of the "prepared" field.
+func (_u *ActionUpdate) ClearPrepared() *ActionUpdate {
+	_u.mutation.ClearPrepared()
+	return _u
+}
+
+// SetPayloadHash sets the "payload_hash" field.
+func (_u *ActionUpdate) SetPayloadHash(v string) *ActionUpdate {
+	_u.mutation.SetPayloadHash(v)
+	return _u
+}
+
+// SetNillablePayloadHash sets the "payload_hash" field if the given value is not nil.
+func (_u *ActionUpdate) SetNillablePayloadHash(v *string) *ActionUpdate {
+	if v != nil {
+		_u.SetPayloadHash(*v)
+	}
+	return _u
+}
+
+// SetRequiresApproval sets the "requires_approval" field.
+func (_u *ActionUpdate) SetRequiresApproval(v bool) *ActionUpdate {
+	_u.mutation.SetRequiresApproval(v)
+	return _u
+}
+
+// SetNillableRequiresApproval sets the "requires_approval" field if the given value is not nil.
+func (_u *ActionUpdate) SetNillableRequiresApproval(v *bool) *ActionUpdate {
+	if v != nil {
+		_u.SetRequiresApproval(*v)
+	}
+	return _u
+}
+
+// SetSupersededBy sets the "superseded_by" field.
+func (_u *ActionUpdate) SetSupersededBy(v int) *ActionUpdate {
+	_u.mutation.ResetSupersededBy()
+	_u.mutation.SetSupersededBy(v)
+	return _u
+}
+
+// SetNillableSupersededBy sets the "superseded_by" field if the given value is not nil.
+func (_u *ActionUpdate) SetNillableSupersededBy(v *int) *ActionUpdate {
+	if v != nil {
+		_u.SetSupersededBy(*v)
+	}
+	return _u
+}
+
+// AddSupersededBy adds value to the "superseded_by" field.
+func (_u *ActionUpdate) AddSupersededBy(v int) *ActionUpdate {
+	_u.mutation.AddSupersededBy(v)
+	return _u
+}
+
+// ClearSupersededBy clears the value of the "superseded_by" field.
+func (_u *ActionUpdate) ClearSupersededBy() *ActionUpdate {
+	_u.mutation.ClearSupersededBy()
+	return _u
+}
+
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_u *ActionUpdate) SetIncident(v *Incident) *ActionUpdate {
 	return _u.SetIncidentID(v.ID)
@@ -540,6 +607,27 @@ func (_u *ActionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Summary(); ok {
 		_spec.SetField(action.FieldSummary, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Prepared(); ok {
+		_spec.SetField(action.FieldPrepared, field.TypeJSON, value)
+	}
+	if _u.mutation.PreparedCleared() {
+		_spec.ClearField(action.FieldPrepared, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.PayloadHash(); ok {
+		_spec.SetField(action.FieldPayloadHash, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.RequiresApproval(); ok {
+		_spec.SetField(action.FieldRequiresApproval, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SupersededBy(); ok {
+		_spec.SetField(action.FieldSupersededBy, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedSupersededBy(); ok {
+		_spec.AddField(action.FieldSupersededBy, field.TypeInt, value)
+	}
+	if _u.mutation.SupersededByCleared() {
+		_spec.ClearField(action.FieldSupersededBy, field.TypeInt)
 	}
 	if _u.mutation.IncidentCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -949,6 +1037,73 @@ func (_u *ActionUpdateOne) SetNillableSummary(v *string) *ActionUpdateOne {
 	return _u
 }
 
+// SetPrepared sets the "prepared" field.
+func (_u *ActionUpdateOne) SetPrepared(v map[string]interface{}) *ActionUpdateOne {
+	_u.mutation.SetPrepared(v)
+	return _u
+}
+
+// ClearPrepared clears the value of the "prepared" field.
+func (_u *ActionUpdateOne) ClearPrepared() *ActionUpdateOne {
+	_u.mutation.ClearPrepared()
+	return _u
+}
+
+// SetPayloadHash sets the "payload_hash" field.
+func (_u *ActionUpdateOne) SetPayloadHash(v string) *ActionUpdateOne {
+	_u.mutation.SetPayloadHash(v)
+	return _u
+}
+
+// SetNillablePayloadHash sets the "payload_hash" field if the given value is not nil.
+func (_u *ActionUpdateOne) SetNillablePayloadHash(v *string) *ActionUpdateOne {
+	if v != nil {
+		_u.SetPayloadHash(*v)
+	}
+	return _u
+}
+
+// SetRequiresApproval sets the "requires_approval" field.
+func (_u *ActionUpdateOne) SetRequiresApproval(v bool) *ActionUpdateOne {
+	_u.mutation.SetRequiresApproval(v)
+	return _u
+}
+
+// SetNillableRequiresApproval sets the "requires_approval" field if the given value is not nil.
+func (_u *ActionUpdateOne) SetNillableRequiresApproval(v *bool) *ActionUpdateOne {
+	if v != nil {
+		_u.SetRequiresApproval(*v)
+	}
+	return _u
+}
+
+// SetSupersededBy sets the "superseded_by" field.
+func (_u *ActionUpdateOne) SetSupersededBy(v int) *ActionUpdateOne {
+	_u.mutation.ResetSupersededBy()
+	_u.mutation.SetSupersededBy(v)
+	return _u
+}
+
+// SetNillableSupersededBy sets the "superseded_by" field if the given value is not nil.
+func (_u *ActionUpdateOne) SetNillableSupersededBy(v *int) *ActionUpdateOne {
+	if v != nil {
+		_u.SetSupersededBy(*v)
+	}
+	return _u
+}
+
+// AddSupersededBy adds value to the "superseded_by" field.
+func (_u *ActionUpdateOne) AddSupersededBy(v int) *ActionUpdateOne {
+	_u.mutation.AddSupersededBy(v)
+	return _u
+}
+
+// ClearSupersededBy clears the value of the "superseded_by" field.
+func (_u *ActionUpdateOne) ClearSupersededBy() *ActionUpdateOne {
+	_u.mutation.ClearSupersededBy()
+	return _u
+}
+
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_u *ActionUpdateOne) SetIncident(v *Incident) *ActionUpdateOne {
 	return _u.SetIncidentID(v.ID)
@@ -1160,6 +1315,27 @@ func (_u *ActionUpdateOne) sqlSave(ctx context.Context) (_node *Action, err erro
 	}
 	if value, ok := _u.mutation.Summary(); ok {
 		_spec.SetField(action.FieldSummary, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Prepared(); ok {
+		_spec.SetField(action.FieldPrepared, field.TypeJSON, value)
+	}
+	if _u.mutation.PreparedCleared() {
+		_spec.ClearField(action.FieldPrepared, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.PayloadHash(); ok {
+		_spec.SetField(action.FieldPayloadHash, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.RequiresApproval(); ok {
+		_spec.SetField(action.FieldRequiresApproval, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SupersededBy(); ok {
+		_spec.SetField(action.FieldSupersededBy, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedSupersededBy(); ok {
+		_spec.AddField(action.FieldSupersededBy, field.TypeInt, value)
+	}
+	if _u.mutation.SupersededByCleared() {
+		_spec.ClearField(action.FieldSupersededBy, field.TypeInt)
 	}
 	if _u.mutation.IncidentCleared() {
 		edge := &sqlgraph.EdgeSpec{

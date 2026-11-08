@@ -12,3 +12,5 @@ service:
     traefik.ingress.kubernetes.io/service.serverstransport: infra-monitor-infra-monitor@kubernetescrd
 secrets:
   existingSecret: infra-monitor
+approvedActions:
+  enabled: true

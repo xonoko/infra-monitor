@@ -80,6 +80,9 @@ func (s *Service) runChatReply(ctx context.Context, p chatPayload) error {
 	if err != nil {
 		return err
 	}
+	if m := firstNonEmpty(s.cfg.Agent.ChatModel, s.cfg.Agent.DeepModel); m != "" && m != s.agent.Model() {
+		ic.Model = m // chat follow-ups use the stronger model
+	}
 	actx, cancel := context.WithTimeout(ctx, s.cfg.Agent.Timeout)
 	defer cancel()
 	actx, span := telemetry.Tracer().Start(actx, "agent.chat")

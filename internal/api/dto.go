@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/xonoko/infra-monitor/internal/actions"
+
 	"github.com/xonoko/infra-monitor/internal/db/ent"
 	"github.com/xonoko/infra-monitor/internal/domain"
 	"github.com/xonoko/infra-monitor/internal/incident"
@@ -180,6 +182,11 @@ type Action struct {
 	Output        string         `json:"output"`
 	Error         string         `json:"error"`
 	CreatedAt     time.Time      `json:"created_at"`
+	// Prepared is the exact proposal (target, operation, full payload, dry-run, effect, rollback) for precise approval.
+	Prepared         *actions.Prepared `json:"prepared,omitempty"`
+	PayloadHash      string            `json:"payload_hash,omitempty" doc:"Send it back (or its first 8+ chars) when approving"`
+	RequiresApproval bool              `json:"requires_approval"`
+	SupersededBy     *int              `json:"superseded_by,omitempty"`
 }
 
 func toAction(a *ent.Action) Action {
@@ -190,7 +197,8 @@ func toAction(a *ent.Action) Action {
 	return Action{ID: a.ID, IncidentID: a.IncidentID, Type: a.Type, Params: p, Rationale: a.Rationale, Risk: string(a.Risk),
 		ProposedBy: string(a.ProposedBy), Status: string(a.Status), Summary: a.Summary, DecidedByName: a.DecidedByName,
 		DecidedVia: a.DecidedVia, DecidedAt: a.DecidedAt, ExpiresAt: a.ExpiresAt, StartedAt: a.StartedAt,
-		FinishedAt: a.FinishedAt, Output: a.Output, Error: a.Error, CreatedAt: a.CreatedAt}
+		FinishedAt: a.FinishedAt, Output: a.Output, Error: a.Error, CreatedAt: a.CreatedAt,
+		Prepared: incident.PreparedOf(a), PayloadHash: a.PayloadHash, RequiresApproval: a.RequiresApproval, SupersededBy: a.SupersededBy}
 }
 
 type TimelineEvent struct {

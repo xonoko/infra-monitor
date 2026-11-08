@@ -59,6 +59,10 @@ var (
 		{Name: "error", Type: field.TypeString, Size: 2147483647, Default: ""},
 		{Name: "idempotency_key", Type: field.TypeString, Unique: true},
 		{Name: "summary", Type: field.TypeString, Default: ""},
+		{Name: "prepared", Type: field.TypeJSON, Nullable: true},
+		{Name: "payload_hash", Type: field.TypeString, Default: ""},
+		{Name: "requires_approval", Type: field.TypeBool, Default: false},
+		{Name: "superseded_by", Type: field.TypeInt, Nullable: true},
 		{Name: "incident_id", Type: field.TypeInt},
 		{Name: "decided_by_id", Type: field.TypeInt, Nullable: true},
 	}
@@ -70,13 +74,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "actions_incidents_actions",
-				Columns:    []*schema.Column{ActionsColumns[21]},
+				Columns:    []*schema.Column{ActionsColumns[25]},
 				RefColumns: []*schema.Column{IncidentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "actions_users_decided_actions",
-				Columns:    []*schema.Column{ActionsColumns[22]},
+				Columns:    []*schema.Column{ActionsColumns[26]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -85,7 +89,7 @@ var (
 			{
 				Name:    "action_incident_id",
 				Unique:  false,
-				Columns: []*schema.Column{ActionsColumns[21]},
+				Columns: []*schema.Column{ActionsColumns[25]},
 			},
 			{
 				Name:    "action_status_expires_at",

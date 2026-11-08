@@ -177,6 +177,13 @@ type MuteIncidentInput struct {
 
 type MuteOutput struct{ Body Mute }
 
+type ApproveInput struct {
+	ID   int `path:"id"`
+	Body *struct {
+		PayloadHash string `json:"payload_hash,omitempty" doc:"The payload hash shown on the proposal (required for precise proposals)"`
+	}
+}
+
 type RejectInput struct {
 	ID   int `path:"id"`
 	Body *struct {
@@ -390,9 +397,13 @@ func (s *Server) registerActions() {
 		return
 	}
 	tag := "Actions"
-	huma.Register(s.api, op(http.MethodPost, "/actions/{id}/approve", "approve-action", "Approve a proposed action", domain.RoleOperator, tag),
-		func(ctx context.Context, in *IDInput) (*ActionOutput, error) {
-			a, err := svc.Approve(ctx, actor(ctx), in.ID)
+	huma.Register(s.api, op(http.MethodPost, "/actions/{id}/approve", "approve-action", "Approve a proposed action (precise proposals need payload_hash)", domain.RoleOperator, tag),
+		func(ctx context.Context, in *ApproveInput) (*ActionOutput, error) {
+			hash := ""
+			if in.Body != nil {
+				hash = in.Body.PayloadHash
+			}
+			a, err := svc.ApproveWithHash(ctx, actor(ctx), in.ID, hash)
 			if err != nil {
 				return nil, apiErr(err)
 			}

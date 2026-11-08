@@ -58,7 +58,11 @@ func (d *Dispatcher) command(ctx context.Context, ch channel.Channel, ev channel
 		if err != nil {
 			return channel.Response{Text: "Usage: /" + ev.Command + " ACTION_ID"}, nil
 		}
-		return d.button(ctx, *actor, channel.ButtonAction{Op: ev.Command, ActionID: id})
+		b := channel.ButtonAction{Op: ev.Command, ActionID: id}
+		if len(ev.Args) > 1 {
+			b.Arg = ev.Args[1] // payload hash for precise proposals: /approve 42 1a2b3c4d
+		}
+		return d.button(ctx, *actor, b)
 	case "ack", "resolve", "reinvestigate", "mute":
 		incID, rest := d.targetIncident(ctx, ch, ev)
 		if incID == 0 {

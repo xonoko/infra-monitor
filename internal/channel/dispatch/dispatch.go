@@ -327,6 +327,14 @@ func (d *Dispatcher) post(ctx context.Context, ch channel.Channel, t *ent.Channe
 }
 
 func (d *Dispatcher) postProposal(ctx context.Context, ch channel.Channel, t *ent.ChannelThread, a *ent.Action, eventID *int) error {
+	if p := incsvc.PreparedOf(a); p != nil && len(p.Payload)+len(p.DryRun) > payloadInlineMax {
+		if fs, ok := ch.(channel.FileSender); ok {
+			name, content := attachment(a, p)
+			if _, err := fs.SendFile(ctx, threadRef(t), name, content, fmt.Sprintf("Full payload of proposed action #%d (hash %s)", a.ID, hashPrefix(a.PayloadHash))); err != nil {
+				d.log.WarnContext(ctx, "attach payload failed", "action_id", a.ID, "error", err)
+			}
+		}
+	}
 	ref, err := ch.Post(ctx, threadRef(t), proposalMessage(a, ch.Capabilities(), d.svc.IncidentURL(a.IncidentID)))
 	if err != nil {
 		return err
@@ -592,7 +600,7 @@ func (d *Dispatcher) button(ctx context.Context, actor domain.Actor, b channel.B
 	msg := ""
 	switch b.Op {
 	case "approve":
-		_, err = d.svc.Approve(ctx, actor, b.ActionID)
+		_, err = d.svc.ApproveWithHash(ctx, actor, b.ActionID, b.Arg)
 		msg = fmt.Sprintf("Action #%d approved", b.ActionID)
 	case "reject":
 		_, err = d.svc.Reject(ctx, actor, b.ActionID, "rejected via chat")

@@ -83,6 +83,14 @@ func init() {
 	actionDescSummary := actionFields[19].Descriptor()
 	// action.DefaultSummary holds the default value on creation for the summary field.
 	action.DefaultSummary = actionDescSummary.Default.(string)
+	// actionDescPayloadHash is the schema descriptor for payload_hash field.
+	actionDescPayloadHash := actionFields[21].Descriptor()
+	// action.DefaultPayloadHash holds the default value on creation for the payload_hash field.
+	action.DefaultPayloadHash = actionDescPayloadHash.Default.(string)
+	// actionDescRequiresApproval is the schema descriptor for requires_approval field.
+	actionDescRequiresApproval := actionFields[22].Descriptor()
+	// action.DefaultRequiresApproval holds the default value on creation for the requires_approval field.
+	action.DefaultRequiresApproval = actionDescRequiresApproval.Default.(bool)
 	channelmessageMixin := schema.ChannelMessage{}.Mixin()
 	channelmessageMixinFields0 := channelmessageMixin[0].Fields()
 	_ = channelmessageMixinFields0

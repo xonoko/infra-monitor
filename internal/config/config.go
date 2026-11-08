@@ -181,6 +181,8 @@ type AgentConfig struct {
 	Cooldown      time.Duration `mapstructure:"cooldown"`
 	// DeepModel is used only when a user explicitly asks for a deeper investigation.
 	DeepModel string `mapstructure:"deep_model"`
+	// ChatModel answers chat follow-ups (default: deep_model).
+	ChatModel string `mapstructure:"chat_model"`
 	MaxPerDay int    `mapstructure:"max_per_day"`
 	// InvestigateSeverities gates automatic investigations (manual ones are always allowed).
 	InvestigateSeverities []string    `mapstructure:"investigate_severities"`
@@ -368,6 +370,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("agent.api_key_file", "")
 	v.SetDefault("agent.model", "claude-haiku-5-5")
 	v.SetDefault("agent.deep_model", "claude-sonnet-5-5")
+	v.SetDefault("agent.chat_model", "")
 	v.SetDefault("agent.max_per_day", 50)
 	v.SetDefault("agent.investigate_severities", []string{"critical", "warning"})
 	v.SetDefault("agent.storm.enabled", true)

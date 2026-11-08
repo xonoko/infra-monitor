@@ -64,6 +64,14 @@ type Action struct {
 	IdempotencyKey string `json:"idempotency_key,omitempty"`
 	// Summary holds the value of the "summary" field.
 	Summary string `json:"summary,omitempty"`
+	// Prepared holds the value of the "prepared" field.
+	Prepared map[string]interface{} `json:"prepared,omitempty"`
+	// PayloadHash holds the value of the "payload_hash" field.
+	PayloadHash string `json:"payload_hash,omitempty"`
+	// RequiresApproval holds the value of the "requires_approval" field.
+	RequiresApproval bool `json:"requires_approval,omitempty"`
+	// SupersededBy holds the value of the "superseded_by" field.
+	SupersededBy *int `json:"superseded_by,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ActionQuery when eager-loading is set.
 	Edges        ActionEdges `json:"edges"`
@@ -108,11 +116,13 @@ func (*Action) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case action.FieldParams:
+		case action.FieldParams, action.FieldPrepared:
 			values[i] = new([]byte)
-		case action.FieldID, action.FieldIncidentID, action.FieldProposerID, action.FieldInvestigationID, action.FieldDecidedByID:
+		case action.FieldRequiresApproval:
+			values[i] = new(sql.NullBool)
+		case action.FieldID, action.FieldIncidentID, action.FieldProposerID, action.FieldInvestigationID, action.FieldDecidedByID, action.FieldSupersededBy:
 			values[i] = new(sql.NullInt64)
-		case action.FieldType, action.FieldRationale, action.FieldRisk, action.FieldProposedBy, action.FieldStatus, action.FieldDecidedByName, action.FieldDecidedVia, action.FieldOutput, action.FieldError, action.FieldIdempotencyKey, action.FieldSummary:
+		case action.FieldType, action.FieldRationale, action.FieldRisk, action.FieldProposedBy, action.FieldStatus, action.FieldDecidedByName, action.FieldDecidedVia, action.FieldOutput, action.FieldError, action.FieldIdempotencyKey, action.FieldSummary, action.FieldPayloadHash:
 			values[i] = new(sql.NullString)
 		case action.FieldCreatedAt, action.FieldUpdatedAt, action.FieldDecidedAt, action.FieldStartedAt, action.FieldFinishedAt, action.FieldExpiresAt:
 			values[i] = new(sql.NullTime)
@@ -277,6 +287,33 @@ func (_m *Action) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Summary = value.String
 			}
+		case action.FieldPrepared:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field prepared", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.Prepared); err != nil {
+					return fmt.Errorf("unmarshal field prepared: %w", err)
+				}
+			}
+		case action.FieldPayloadHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field payload_hash", values[i])
+			} else if value.Valid {
+				_m.PayloadHash = value.String
+			}
+		case action.FieldRequiresApproval:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field requires_approval", values[i])
+			} else if value.Valid {
+				_m.RequiresApproval = value.Bool
+			}
+		case action.FieldSupersededBy:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field superseded_by", values[i])
+			} else if value.Valid {
+				_m.SupersededBy = new(int)
+				*_m.SupersededBy = int(value.Int64)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -400,6 +437,20 @@ func (_m *Action) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("summary=")
 	builder.WriteString(_m.Summary)
+	builder.WriteString(", ")
+	builder.WriteString("prepared=")
+	builder.WriteString(fmt.Sprintf("%v", _m.Prepared))
+	builder.WriteString(", ")
+	builder.WriteString("payload_hash=")
+	builder.WriteString(_m.PayloadHash)
+	builder.WriteString(", ")
+	builder.WriteString("requires_approval=")
+	builder.WriteString(fmt.Sprintf("%v", _m.RequiresApproval))
+	builder.WriteString(", ")
+	if v := _m.SupersededBy; v != nil {
+		builder.WriteString("superseded_by=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

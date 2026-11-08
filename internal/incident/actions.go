@@ -75,6 +75,22 @@ func (s *Service) createAction(ctx context.Context, tx *ent.Tx, inc *ent.Inciden
 	if riskRank(exec.Risk()) > riskRank(risk) {
 		risk = exec.Risk()
 	}
+	supervised := requiresApproval(exec)
+	prep, err := s.prepare(ctx, exec, in.Params, t)
+	if err != nil {
+		return nil, err
+	}
+	payloadHash := ""
+	summary := exec.Summary(in.Params, t)
+	if prep != nil {
+		if riskRank(prep.Risk) > riskRank(risk) {
+			risk = prep.Risk
+		}
+		payloadHash = actions.PayloadHash(in.Type, in.Params, prep.Precondition)
+		if prep.CoreInfrastructure {
+			summary = "[core infrastructure] " + summary
+		}
+	}
 	proposedBy := action.ProposedBy(in.ProposedBy)
 	a, err := tx.Action.Create().
 		SetIncidentID(inc.ID).SetType(in.Type).SetParams(in.Params).SetRationale(truncate(in.Rationale, 4000)).
@@ -82,16 +98,18 @@ func (s *Service) createAction(ctx context.Context, tx *ent.Tx, inc *ent.Inciden
 		SetNillableInvestigationID(in.InvestigationID).
 		SetExpiresAt(s.now().Add(s.cfg.Actions.ProposalTTL)).
 		SetIdempotencyKey(uuid.NewString()).
-		SetSummary(truncate(exec.Summary(in.Params, t), 300)).
+		SetSummary(truncate(summary, 300)).
+		SetPrepared(preparedMap(prep)).SetPayloadHash(payloadHash).SetRequiresApproval(supervised).
 		Save(ctx)
 	if err != nil {
 		return nil, err
 	}
 	s.m.actions.Add(ctx, 1, metric.WithAttributes(attribute.String("type", a.Type), attribute.String("status", "proposed")))
-	if _, err := s.addEvent(ctx, tx, inc, domain.EventActionProposed, actor, actionEventPayload(a, nil)); err != nil {
+	if _, err := s.addEvent(ctx, tx, inc, domain.EventActionProposed, actor, actionEventPayload(a, preparedAudit(prep, payloadHash))); err != nil {
 		return nil, err
 	}
-	if pol := s.autoPolicy(ctx, inc); pol.allows(a.Type) {
+	// Generic and gitops actions are never auto-approved, whatever auto_approve says.
+	if pol := s.autoPolicy(ctx, inc); !supervised && pol.allows(a.Type) {
 		// Loop guard: at most maxAutoPerHour automatic executions per incident, then a human decides.
 		auto, err := tx.Action.Query().Where(action.IncidentID(inc.ID), action.DecidedByNameEQ(domain.System.Name),
 			action.DecidedAtGT(s.now().Add(-time.Hour))).Count(ctx)
@@ -157,19 +175,56 @@ func (s *Service) lockAction(ctx context.Context, tx *ent.Tx, id int) (*ent.Acti
 
 // Approve approves a proposal and queues its execution.
 func (s *Service) Approve(ctx context.Context, actor domain.Actor, actionID int) (*ent.Action, error) {
+	return s.ApproveWithHash(ctx, actor, actionID, "")
+}
+
+// ApproveWithHash approves a proposal. Precise proposals (generic / gitops) require the payload hash the
+// approver saw; the target is re-checked and, if it changed, the proposal is re-prepared for a new review.
+func (s *Service) ApproveWithHash(ctx context.Context, actor domain.Actor, actionID int, hash string) (*ent.Action, error) {
 	if err := require(actor, domain.RoleOperator); err != nil {
 		return nil, err
 	}
 	var out *ent.Action
+	var supersede *ent.Action
 	err := s.tx(ctx, func(tx *ent.Tx) error {
 		a, inc, err := s.lockAction(ctx, tx, actionID)
 		if err != nil {
 			return err
 		}
+		if err := checkApprovalHash(a, hash); err != nil {
+			return err
+		}
+		if p := PreparedOf(a); p != nil {
+			if !p.DryRunOK {
+				return fmt.Errorf("%w: the dry-run failed for this proposal; it can't be approved", ErrConflict)
+			}
+			if a.Status == action.StatusProposed {
+				if exec, ok := s.registry.Get(a.Type); ok {
+					fresh, perr := s.prepare(ctx, exec, a.Params, Target(inc))
+					if perr != nil {
+						return perr
+					}
+					if fresh != nil && fresh.Precondition != p.Precondition {
+						supersede = a
+						return nil
+					}
+				}
+			}
+		}
 		out, err = s.approveLocked(ctx, tx, inc, a, actor, "")
 		return err
 	})
-	return out, err
+	if err != nil {
+		return nil, err
+	}
+	if supersede != nil {
+		n, err := s.reprepare(ctx, supersede, "target changed before approval")
+		if err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%w: the target changed since this proposal was prepared; review the updated proposal #%d", ErrConflict, n.ID)
+	}
+	return out, nil
 }
 
 func (s *Service) approveLocked(ctx context.Context, tx *ent.Tx, inc *ent.Incident, a *ent.Action, actor domain.Actor, note string) (*ent.Action, error) {
@@ -301,10 +356,24 @@ func (s *Service) executeAction(ctx context.Context, id int) error {
 		ectx, cancel := context.WithTimeout(ctx, s.cfg.Actions.Timeout)
 		ectx, span := telemetry.Tracer().Start(ectx, "action.execute")
 		span.SetAttributes(attribute.String("action.type", a.Type), attribute.Int("action.id", a.ID), attribute.Int("incident.id", a.IncidentID))
-		out, rerr = exec.Execute(ectx, a.Params, Target(inc))
+		if pe, ok := exec.(actions.PreconditionExecutor); ok && PreparedOf(a) != nil {
+			out, rerr = pe.ExecutePrepared(ectx, a.Params, Target(inc), PreparedOf(a))
+		} else if requiresApproval(exec) {
+			rerr = errors.New("this action needs a prepared proposal")
+		} else {
+			out, rerr = exec.Execute(ectx, a.Params, Target(inc))
+		}
 		telemetry.RecordError(span, rerr)
 		span.End()
 		cancel()
+	}
+	if errors.Is(rerr, actions.ErrPreconditionChanged) {
+		ctx = context.WithoutCancel(ctx)
+		if err := s.finishAction(ctx, a.ID, out, fmt.Errorf("refused: %w; a fresh proposal needs your approval", rerr)); err != nil {
+			return err
+		}
+		_, err := s.reprepare(ctx, a, "target changed after approval")
+		return err
 	}
 	return s.finishAction(context.WithoutCancel(ctx), a.ID, out, rerr)
 }

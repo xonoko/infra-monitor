@@ -84,6 +84,18 @@ tls:
     renewBefore: 360h
     extraDnsNames: []
 
+# Approved generic actions (k8s.patch / k8s.apply / k8s.delete / kubectl.exec): a separate ServiceAccount, impersonated by
+# infra-monitor ONLY after a human approved the exact payload. Never used for automatic actions.
+approvedActions:
+  enabled: false
+  serviceAccountName: ""
+  # -- Built-in ClusterRole bound cluster-wide (edit = namespaced writes, no RBAC, no secret reads).
+  clusterRole: edit
+  # -- Read-only on cluster-scoped objects (nodes, namespaces, PVs, storage/ingress/priority classes, CRDs).
+  clusterRead: true
+  # -- Allow kubectl.exec proposals (pods/exec is part of the edit role).
+  exec: true
+
 # Ingress-only NetworkPolicy (egress is not restricted).
 networkPolicy:
   enabled: false

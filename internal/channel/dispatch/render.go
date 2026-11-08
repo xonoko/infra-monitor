@@ -8,9 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/xonoko/infra-monitor/internal/actions"
 	"github.com/xonoko/infra-monitor/internal/channel"
 	"github.com/xonoko/infra-monitor/internal/db/ent"
 	"github.com/xonoko/infra-monitor/internal/db/ent/incident"
+	incsvc "github.com/xonoko/infra-monitor/internal/incident"
 )
 
 // cardInput is everything the card shows.
@@ -93,7 +95,9 @@ func proposalMessage(a *ent.Action, caps channel.Capabilities, url string) chann
 	if a.Rationale != "" {
 		fmt.Fprintf(&b, "\n%s\n", a.Rationale)
 	}
-	if params, err := json.Marshal(a.Params); err == nil && len(params) > 2 {
+	if p := incsvc.PreparedOf(a); p != nil {
+		writePrepared(&b, a, p)
+	} else if params, err := json.Marshal(a.Params); err == nil && len(params) > 2 {
 		fmt.Fprintf(&b, "\n```\n%s\n```", params)
 	}
 	m := channel.Message{Kind: channel.KindProposal, Author: proposerName(a), Body: b.String(), URL: url}
@@ -102,11 +106,11 @@ func proposalMessage(a *ent.Action, caps channel.Capabilities, url string) chann
 		m.Footer = "Expires " + a.ExpiresAt.UTC().Format("15:04 UTC")
 		if caps.Buttons {
 			m.Buttons = []channel.Button{
-				{Label: "✅ Approve", Style: channel.StylePrimary, Action: &channel.ButtonAction{Op: "approve", ActionID: a.ID}},
+				{Label: "✅ Approve", Style: channel.StylePrimary, Action: &channel.ButtonAction{Op: "approve", ActionID: a.ID, Arg: hashPrefix(a.PayloadHash)}},
 				{Label: "✖ Reject", Style: channel.StyleDanger, Action: &channel.ButtonAction{Op: "reject", ActionID: a.ID}},
 			}
 		} else {
-			m.Footer += fmt.Sprintf(" · reply /approve %d or /reject %d", a.ID, a.ID)
+			m.Footer += fmt.Sprintf(" · reply /approve %d %s or /reject %d", a.ID, hashPrefix(a.PayloadHash), a.ID)
 		}
 	default:
 		m.Footer = actionStatusLine(a)
@@ -204,4 +208,69 @@ func originLabel(ev *ent.TimelineEvent) string {
 		return name + " via " + ev.Channel
 	}
 	return name
+}
+
+func hashPrefix(h string) string {
+	if len(h) > 8 {
+		return h[:8]
+	}
+	return h
+}
+
+// payloadInlineMax is how much of a payload goes inline in a chat proposal; the rest is attached.
+const payloadInlineMax = 1200
+
+// writePrepared renders the precise proposal: target, operation, dry-run, effect, rollback, hash, payload.
+func writePrepared(b *strings.Builder, a *ent.Action, p *actions.Prepared) {
+	if p.CoreInfrastructure {
+		b.WriteString("\n⚠️ **Core infrastructure**\n")
+	}
+	fmt.Fprintf(b, "\n**Target**: `%s`\n**Operation**: %s\n", p.Target, p.Operation)
+	if p.ArgoManaged != "" {
+		fmt.Fprintf(b, "⚠️ Managed by Argo CD app `%s`: a live change is reverted by selfHeal\n", p.ArgoManaged)
+	}
+	for _, w := range p.Warnings {
+		fmt.Fprintf(b, "⚠️ %s\n", w)
+	}
+	if p.DryRunOK {
+		b.WriteString("**Dry-run**: ✅ accepted by the server\n")
+	} else {
+		fmt.Fprintf(b, "**Dry-run**: ❌ failed, can't be approved\n```\n%s\n```\n", truncateText(p.DryRun, 400))
+	}
+	if p.Effect != "" {
+		fmt.Fprintf(b, "**Effect**: %s\n", p.Effect)
+	}
+	if p.Rollback != "" {
+		fmt.Fprintf(b, "**Rollback**: %s\n", p.Rollback)
+	}
+	fmt.Fprintf(b, "**Payload hash**: `%s`\n", hashPrefix(a.PayloadHash))
+	payload := p.Payload
+	if len(payload) > payloadInlineMax {
+		payload = truncateText(payload, payloadInlineMax) + "\n… (full payload attached and in the UI)"
+	}
+	fmt.Fprintf(b, "\n```\n%s\n```", payload)
+}
+
+func truncateText(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n]
+}
+
+// attachment is the full payload + dry-run as a file, for channels that support files.
+func attachment(a *ent.Action, p *actions.Prepared) (string, []byte) {
+	ext := map[string]string{"diff": "diff", "yaml": "yaml", "json": "json"}[p.PayloadFormat]
+	if ext == "" {
+		ext = "txt"
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "# infra-monitor action #%d (%s)\n# target: %s\n# operation: %s\n# payload hash: %s\n\n%s\n", a.ID, a.Type, p.Target, p.Operation, a.PayloadHash, p.Payload)
+	if p.DryRun != "" && p.DryRun != p.Payload {
+		fmt.Fprintf(&b, "\n# ---- dry-run result ----\n%s\n", p.DryRun)
+	}
+	if p.Rollback != "" {
+		fmt.Fprintf(&b, "\n# ---- rollback ----\n# %s\n", p.Rollback)
+	}
+	return fmt.Sprintf("action-%d.%s", a.ID, ext), []byte(b.String())
 }

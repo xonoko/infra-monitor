@@ -284,6 +284,54 @@ func (_c *ActionCreate) SetNillableSummary(v *string) *ActionCreate {
 	return _c
 }
 
+// SetPrepared sets the "prepared" field.
+func (_c *ActionCreate) SetPrepared(v map[string]interface{}) *ActionCreate {
+	_c.mutation.SetPrepared(v)
+	return _c
+}
+
+// SetPayloadHash sets the "payload_hash" field.
+func (_c *ActionCreate) SetPayloadHash(v string) *ActionCreate {
+	_c.mutation.SetPayloadHash(v)
+	return _c
+}
+
+// SetNillablePayloadHash sets the "payload_hash" field if the given value is not nil.
+func (_c *ActionCreate) SetNillablePayloadHash(v *string) *ActionCreate {
+	if v != nil {
+		_c.SetPayloadHash(*v)
+	}
+	return _c
+}
+
+// SetRequiresApproval sets the "requires_approval" field.
+func (_c *ActionCreate) SetRequiresApproval(v bool) *ActionCreate {
+	_c.mutation.SetRequiresApproval(v)
+	return _c
+}
+
+// SetNillableRequiresApproval sets the "requires_approval" field if the given value is not nil.
+func (_c *ActionCreate) SetNillableRequiresApproval(v *bool) *ActionCreate {
+	if v != nil {
+		_c.SetRequiresApproval(*v)
+	}
+	return _c
+}
+
+// SetSupersededBy sets the "superseded_by" field.
+func (_c *ActionCreate) SetSupersededBy(v int) *ActionCreate {
+	_c.mutation.SetSupersededBy(v)
+	return _c
+}
+
+// SetNillableSupersededBy sets the "superseded_by" field if the given value is not nil.
+func (_c *ActionCreate) SetNillableSupersededBy(v *int) *ActionCreate {
+	if v != nil {
+		_c.SetSupersededBy(*v)
+	}
+	return _c
+}
+
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_c *ActionCreate) SetIncident(v *Incident) *ActionCreate {
 	return _c.SetIncidentID(v.ID)
@@ -373,6 +421,14 @@ func (_c *ActionCreate) defaults() {
 		v := action.DefaultSummary
 		_c.mutation.SetSummary(v)
 	}
+	if _, ok := _c.mutation.PayloadHash(); !ok {
+		v := action.DefaultPayloadHash
+		_c.mutation.SetPayloadHash(v)
+	}
+	if _, ok := _c.mutation.RequiresApproval(); !ok {
+		v := action.DefaultRequiresApproval
+		_c.mutation.SetRequiresApproval(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -439,6 +495,12 @@ func (_c *ActionCreate) check() error {
 	}
 	if _, ok := _c.mutation.Summary(); !ok {
 		return &ValidationError{Name: "summary", err: errors.New(`ent: missing required field "Action.summary"`)}
+	}
+	if _, ok := _c.mutation.PayloadHash(); !ok {
+		return &ValidationError{Name: "payload_hash", err: errors.New(`ent: missing required field "Action.payload_hash"`)}
+	}
+	if _, ok := _c.mutation.RequiresApproval(); !ok {
+		return &ValidationError{Name: "requires_approval", err: errors.New(`ent: missing required field "Action.requires_approval"`)}
 	}
 	if len(_c.mutation.IncidentIDs()) == 0 {
 		return &ValidationError{Name: "incident", err: errors.New(`ent: missing required edge "Action.incident"`)}
@@ -549,6 +611,22 @@ func (_c *ActionCreate) createSpec() (*Action, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Summary(); ok {
 		_spec.SetField(action.FieldSummary, field.TypeString, value)
 		_node.Summary = value
+	}
+	if value, ok := _c.mutation.Prepared(); ok {
+		_spec.SetField(action.FieldPrepared, field.TypeJSON, value)
+		_node.Prepared = value
+	}
+	if value, ok := _c.mutation.PayloadHash(); ok {
+		_spec.SetField(action.FieldPayloadHash, field.TypeString, value)
+		_node.PayloadHash = value
+	}
+	if value, ok := _c.mutation.RequiresApproval(); ok {
+		_spec.SetField(action.FieldRequiresApproval, field.TypeBool, value)
+		_node.RequiresApproval = value
+	}
+	if value, ok := _c.mutation.SupersededBy(); ok {
+		_spec.SetField(action.FieldSupersededBy, field.TypeInt, value)
+		_node.SupersededBy = &value
 	}
 	if nodes := _c.mutation.IncidentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -933,6 +1011,72 @@ func (u *ActionUpsert) SetSummary(v string) *ActionUpsert {
 // UpdateSummary sets the "summary" field to the value that was provided on create.
 func (u *ActionUpsert) UpdateSummary() *ActionUpsert {
 	u.SetExcluded(action.FieldSummary)
+	return u
+}
+
+// SetPrepared sets the "prepared" field.
+func (u *ActionUpsert) SetPrepared(v map[string]interface{}) *ActionUpsert {
+	u.Set(action.FieldPrepared, v)
+	return u
+}
+
+// UpdatePrepared sets the "prepared" field to the value that was provided on create.
+func (u *ActionUpsert) UpdatePrepared() *ActionUpsert {
+	u.SetExcluded(action.FieldPrepared)
+	return u
+}
+
+// ClearPrepared clears the value of the "prepared" field.
+func (u *ActionUpsert) ClearPrepared() *ActionUpsert {
+	u.SetNull(action.FieldPrepared)
+	return u
+}
+
+// SetPayloadHash sets the "payload_hash" field.
+func (u *ActionUpsert) SetPayloadHash(v string) *ActionUpsert {
+	u.Set(action.FieldPayloadHash, v)
+	return u
+}
+
+// UpdatePayloadHash sets the "payload_hash" field to the value that was provided on create.
+func (u *ActionUpsert) UpdatePayloadHash() *ActionUpsert {
+	u.SetExcluded(action.FieldPayloadHash)
+	return u
+}
+
+// SetRequiresApproval sets the "requires_approval" field.
+func (u *ActionUpsert) SetRequiresApproval(v bool) *ActionUpsert {
+	u.Set(action.FieldRequiresApproval, v)
+	return u
+}
+
+// UpdateRequiresApproval sets the "requires_approval" field to the value that was provided on create.
+func (u *ActionUpsert) UpdateRequiresApproval() *ActionUpsert {
+	u.SetExcluded(action.FieldRequiresApproval)
+	return u
+}
+
+// SetSupersededBy sets the "superseded_by" field.
+func (u *ActionUpsert) SetSupersededBy(v int) *ActionUpsert {
+	u.Set(action.FieldSupersededBy, v)
+	return u
+}
+
+// UpdateSupersededBy sets the "superseded_by" field to the value that was provided on create.
+func (u *ActionUpsert) UpdateSupersededBy() *ActionUpsert {
+	u.SetExcluded(action.FieldSupersededBy)
+	return u
+}
+
+// AddSupersededBy adds v to the "superseded_by" field.
+func (u *ActionUpsert) AddSupersededBy(v int) *ActionUpsert {
+	u.Add(action.FieldSupersededBy, v)
+	return u
+}
+
+// ClearSupersededBy clears the value of the "superseded_by" field.
+func (u *ActionUpsert) ClearSupersededBy() *ActionUpsert {
+	u.SetNull(action.FieldSupersededBy)
 	return u
 }
 
@@ -1328,6 +1472,83 @@ func (u *ActionUpsertOne) SetSummary(v string) *ActionUpsertOne {
 func (u *ActionUpsertOne) UpdateSummary() *ActionUpsertOne {
 	return u.Update(func(s *ActionUpsert) {
 		s.UpdateSummary()
+	})
+}
+
+// SetPrepared sets the "prepared" field.
+func (u *ActionUpsertOne) SetPrepared(v map[string]interface{}) *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.SetPrepared(v)
+	})
+}
+
+// UpdatePrepared sets the "prepared" field to the value that was provided on create.
+func (u *ActionUpsertOne) UpdatePrepared() *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.UpdatePrepared()
+	})
+}
+
+// ClearPrepared clears the value of the "prepared" field.
+func (u *ActionUpsertOne) ClearPrepared() *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.ClearPrepared()
+	})
+}
+
+// SetPayloadHash sets the "payload_hash" field.
+func (u *ActionUpsertOne) SetPayloadHash(v string) *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.SetPayloadHash(v)
+	})
+}
+
+// UpdatePayloadHash sets the "payload_hash" field to the value that was provided on create.
+func (u *ActionUpsertOne) UpdatePayloadHash() *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.UpdatePayloadHash()
+	})
+}
+
+// SetRequiresApproval sets the "requires_approval" field.
+func (u *ActionUpsertOne) SetRequiresApproval(v bool) *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.SetRequiresApproval(v)
+	})
+}
+
+// UpdateRequiresApproval sets the "requires_approval" field to the value that was provided on create.
+func (u *ActionUpsertOne) UpdateRequiresApproval() *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.UpdateRequiresApproval()
+	})
+}
+
+// SetSupersededBy sets the "superseded_by" field.
+func (u *ActionUpsertOne) SetSupersededBy(v int) *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.SetSupersededBy(v)
+	})
+}
+
+// AddSupersededBy adds v to the "superseded_by" field.
+func (u *ActionUpsertOne) AddSupersededBy(v int) *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.AddSupersededBy(v)
+	})
+}
+
+// UpdateSupersededBy sets the "superseded_by" field to the value that was provided on create.
+func (u *ActionUpsertOne) UpdateSupersededBy() *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.UpdateSupersededBy()
+	})
+}
+
+// ClearSupersededBy clears the value of the "superseded_by" field.
+func (u *ActionUpsertOne) ClearSupersededBy() *ActionUpsertOne {
+	return u.Update(func(s *ActionUpsert) {
+		s.ClearSupersededBy()
 	})
 }
 
@@ -1889,6 +2110,83 @@ func (u *ActionUpsertBulk) SetSummary(v string) *ActionUpsertBulk {
 func (u *ActionUpsertBulk) UpdateSummary() *ActionUpsertBulk {
 	return u.Update(func(s *ActionUpsert) {
 		s.UpdateSummary()
+	})
+}
+
+// SetPrepared sets the "prepared" field.
+func (u *ActionUpsertBulk) SetPrepared(v map[string]interface{}) *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.SetPrepared(v)
+	})
+}
+
+// UpdatePrepared sets the "prepared" field to the value that was provided on create.
+func (u *ActionUpsertBulk) UpdatePrepared() *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.UpdatePrepared()
+	})
+}
+
+// ClearPrepared clears the value of the "prepared" field.
+func (u *ActionUpsertBulk) ClearPrepared() *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.ClearPrepared()
+	})
+}
+
+// SetPayloadHash sets the "payload_hash" field.
+func (u *ActionUpsertBulk) SetPayloadHash(v string) *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.SetPayloadHash(v)
+	})
+}
+
+// UpdatePayloadHash sets the "payload_hash" field to the value that was provided on create.
+func (u *ActionUpsertBulk) UpdatePayloadHash() *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.UpdatePayloadHash()
+	})
+}
+
+// SetRequiresApproval sets the "requires_approval" field.
+func (u *ActionUpsertBulk) SetRequiresApproval(v bool) *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.SetRequiresApproval(v)
+	})
+}
+
+// UpdateRequiresApproval sets the "requires_approval" field to the value that was provided on create.
+func (u *ActionUpsertBulk) UpdateRequiresApproval() *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.UpdateRequiresApproval()
+	})
+}
+
+// SetSupersededBy sets the "superseded_by" field.
+func (u *ActionUpsertBulk) SetSupersededBy(v int) *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.SetSupersededBy(v)
+	})
+}
+
+// AddSupersededBy adds v to the "superseded_by" field.
+func (u *ActionUpsertBulk) AddSupersededBy(v int) *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.AddSupersededBy(v)
+	})
+}
+
+// UpdateSupersededBy sets the "superseded_by" field to the value that was provided on create.
+func (u *ActionUpsertBulk) UpdateSupersededBy() *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.UpdateSupersededBy()
+	})
+}
+
+// ClearSupersededBy clears the value of the "superseded_by" field.
+func (u *ActionUpsertBulk) ClearSupersededBy() *ActionUpsertBulk {
+	return u.Update(func(s *ActionUpsert) {
+		s.ClearSupersededBy()
 	})
 }
 

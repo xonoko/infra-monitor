@@ -1,0 +1,98 @@
+{{- if .Values.approvedActions.enabled }}
+{{- $fullname := include "infra-monitor.fullname" . }}
+{{- $sa := include "infra-monitor.approvedServiceAccountName" . }}
+# Identity used ONLY for actions a human approved precisely (k8s.patch/apply/delete, kubectl.exec).
+# No pod runs as it: infra-monitor impersonates it after approval. Automatic actions keep the main account.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $sa }}
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+automountServiceAccountToken: false
+---
+# Namespaced writes everywhere through the built-in "{{ .Values.approvedActions.clusterRole }}" role.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $fullname }}-approved-{{ .Values.approvedActions.clusterRole }}
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ .Values.approvedActions.clusterRole }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $sa }}
+    namespace: {{ .Release.Namespace }}
+{{- if .Values.approvedActions.clusterRead }}
+---
+# Read-only on cluster-scoped objects (to inspect targets and render diffs).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $fullname }}-approved-cluster-read
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [nodes, namespaces, persistentvolumes]
+    verbs: [get, list, watch]
+  - apiGroups: [storage.k8s.io]
+    resources: [storageclasses, csidrivers, volumeattachments]
+    verbs: [get, list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingressclasses]
+    verbs: [get, list, watch]
+  - apiGroups: [scheduling.k8s.io]
+    resources: [priorityclasses]
+    verbs: [get, list, watch]
+  - apiGroups: [apiextensions.k8s.io]
+    resources: [customresourcedefinitions]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $fullname }}-approved-cluster-read
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $fullname }}-approved-cluster-read
+subjects:
+  - kind: ServiceAccount
+    name: {{ $sa }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+---
+# The main account may impersonate the approved account, nothing else.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $fullname }}-impersonate-approved
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [serviceaccounts]
+    resourceNames: [{{ $sa }}]
+    verbs: [impersonate]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $fullname }}-impersonate-approved
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $fullname }}-impersonate-approved
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "infra-monitor.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

@@ -34,6 +34,14 @@ func (Action) Fields() []ent.Field {
 		field.Text("error").Default(""),
 		field.String("idempotency_key").Unique(),
 		field.String("summary").Default(""), // human readable one-liner, e.g. "rollout restart deploy/foo -n bar"
+		// Prepared is the exact proposal shown for approval (target, payload, dry-run, rollback...).
+		field.JSON("prepared", map[string]any{}).Optional(),
+		// PayloadHash binds an approval to the exact payload and target state.
+		field.String("payload_hash").Default(""),
+		// RequiresApproval: never auto-approved (generic and gitops actions).
+		field.Bool("requires_approval").Default(false),
+		// SupersededBy points to the re-prepared proposal when the target changed.
+		field.Int("superseded_by").Optional().Nillable(),
 	}
 }
 

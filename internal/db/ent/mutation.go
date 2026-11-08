@@ -987,6 +987,11 @@ type ActionMutation struct {
 	error               *string
 	idempotency_key     *string
 	summary             *string
+	prepared            *map[string]interface{}
+	payload_hash        *string
+	requires_approval   *bool
+	superseded_by       *int
+	addsuperseded_by    *int
 	clearedFields       map[string]struct{}
 	incident            *int
 	clearedincident     bool
@@ -2007,6 +2012,197 @@ func (m *ActionMutation) ResetSummary() {
 	m.summary = nil
 }
 
+// SetPrepared sets the "prepared" field.
+func (m *ActionMutation) SetPrepared(value map[string]interface{}) {
+	m.prepared = &value
+}
+
+// Prepared returns the value of the "prepared" field in the mutation.
+func (m *ActionMutation) Prepared() (r map[string]interface{}, exists bool) {
+	v := m.prepared
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrepared returns the old "prepared" field's value of the Action entity.
+// If the Action object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActionMutation) OldPrepared(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrepared is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrepared requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrepared: %w", err)
+	}
+	return oldValue.Prepared, nil
+}
+
+// ClearPrepared clears the value of the "prepared" field.
+func (m *ActionMutation) ClearPrepared() {
+	m.prepared = nil
+	m.clearedFields[action.FieldPrepared] = struct{}{}
+}
+
+// PreparedCleared returns if the "prepared" field was cleared in this mutation.
+func (m *ActionMutation) PreparedCleared() bool {
+	_, ok := m.clearedFields[action.FieldPrepared]
+	return ok
+}
+
+// ResetPrepared resets all changes to the "prepared" field.
+func (m *ActionMutation) ResetPrepared() {
+	m.prepared = nil
+	delete(m.clearedFields, action.FieldPrepared)
+}
+
+// SetPayloadHash sets the "payload_hash" field.
+func (m *ActionMutation) SetPayloadHash(s string) {
+	m.payload_hash = &s
+}
+
+// PayloadHash returns the value of the "payload_hash" field in the mutation.
+func (m *ActionMutation) PayloadHash() (r string, exists bool) {
+	v := m.payload_hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayloadHash returns the old "payload_hash" field's value of the Action entity.
+// If the Action object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActionMutation) OldPayloadHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayloadHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayloadHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayloadHash: %w", err)
+	}
+	return oldValue.PayloadHash, nil
+}
+
+// ResetPayloadHash resets all changes to the "payload_hash" field.
+func (m *ActionMutation) ResetPayloadHash() {
+	m.payload_hash = nil
+}
+
+// SetRequiresApproval sets the "requires_approval" field.
+func (m *ActionMutation) SetRequiresApproval(b bool) {
+	m.requires_approval = &b
+}
+
+// RequiresApproval returns the value of the "requires_approval" field in the mutation.
+func (m *ActionMutation) RequiresApproval() (r bool, exists bool) {
+	v := m.requires_approval
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRequiresApproval returns the old "requires_approval" field's value of the Action entity.
+// If the Action object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActionMutation) OldRequiresApproval(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRequiresApproval is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRequiresApproval requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRequiresApproval: %w", err)
+	}
+	return oldValue.RequiresApproval, nil
+}
+
+// ResetRequiresApproval resets all changes to the "requires_approval" field.
+func (m *ActionMutation) ResetRequiresApproval() {
+	m.requires_approval = nil
+}
+
+// SetSupersededBy sets the "superseded_by" field.
+func (m *ActionMutation) SetSupersededBy(i int) {
+	m.superseded_by = &i
+	m.addsuperseded_by = nil
+}
+
+// SupersededBy returns the value of the "superseded_by" field in the mutation.
+func (m *ActionMutation) SupersededBy() (r int, exists bool) {
+	v := m.superseded_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSupersededBy returns the old "superseded_by" field's value of the Action entity.
+// If the Action object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ActionMutation) OldSupersededBy(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSupersededBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSupersededBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSupersededBy: %w", err)
+	}
+	return oldValue.SupersededBy, nil
+}
+
+// AddSupersededBy adds i to the "superseded_by" field.
+func (m *ActionMutation) AddSupersededBy(i int) {
+	if m.addsuperseded_by != nil {
+		*m.addsuperseded_by += i
+	} else {
+		m.addsuperseded_by = &i
+	}
+}
+
+// AddedSupersededBy returns the value that was added to the "superseded_by" field in this mutation.
+func (m *ActionMutation) AddedSupersededBy() (r int, exists bool) {
+	v := m.addsuperseded_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSupersededBy clears the value of the "superseded_by" field.
+func (m *ActionMutation) ClearSupersededBy() {
+	m.superseded_by = nil
+	m.addsuperseded_by = nil
+	m.clearedFields[action.FieldSupersededBy] = struct{}{}
+}
+
+// SupersededByCleared returns if the "superseded_by" field was cleared in this mutation.
+func (m *ActionMutation) SupersededByCleared() bool {
+	_, ok := m.clearedFields[action.FieldSupersededBy]
+	return ok
+}
+
+// ResetSupersededBy resets all changes to the "superseded_by" field.
+func (m *ActionMutation) ResetSupersededBy() {
+	m.superseded_by = nil
+	m.addsuperseded_by = nil
+	delete(m.clearedFields, action.FieldSupersededBy)
+}
+
 // ClearIncident clears the "incident" edge to the Incident entity.
 func (m *ActionMutation) ClearIncident() {
 	m.clearedincident = true
@@ -2095,7 +2291,7 @@ func (m *ActionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ActionMutation) Fields() []string {
-	fields := make([]string, 0, 22)
+	fields := make([]string, 0, 26)
 	if m.created_at != nil {
 		fields = append(fields, action.FieldCreatedAt)
 	}
@@ -2162,6 +2358,18 @@ func (m *ActionMutation) Fields() []string {
 	if m.summary != nil {
 		fields = append(fields, action.FieldSummary)
 	}
+	if m.prepared != nil {
+		fields = append(fields, action.FieldPrepared)
+	}
+	if m.payload_hash != nil {
+		fields = append(fields, action.FieldPayloadHash)
+	}
+	if m.requires_approval != nil {
+		fields = append(fields, action.FieldRequiresApproval)
+	}
+	if m.superseded_by != nil {
+		fields = append(fields, action.FieldSupersededBy)
+	}
 	return fields
 }
 
@@ -2214,6 +2422,14 @@ func (m *ActionMutation) Field(name string) (ent.Value, bool) {
 		return m.IdempotencyKey()
 	case action.FieldSummary:
 		return m.Summary()
+	case action.FieldPrepared:
+		return m.Prepared()
+	case action.FieldPayloadHash:
+		return m.PayloadHash()
+	case action.FieldRequiresApproval:
+		return m.RequiresApproval()
+	case action.FieldSupersededBy:
+		return m.SupersededBy()
 	}
 	return nil, false
 }
@@ -2267,6 +2483,14 @@ func (m *ActionMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldIdempotencyKey(ctx)
 	case action.FieldSummary:
 		return m.OldSummary(ctx)
+	case action.FieldPrepared:
+		return m.OldPrepared(ctx)
+	case action.FieldPayloadHash:
+		return m.OldPayloadHash(ctx)
+	case action.FieldRequiresApproval:
+		return m.OldRequiresApproval(ctx)
+	case action.FieldSupersededBy:
+		return m.OldSupersededBy(ctx)
 	}
 	return nil, fmt.Errorf("unknown Action field %s", name)
 }
@@ -2430,6 +2654,34 @@ func (m *ActionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetSummary(v)
 		return nil
+	case action.FieldPrepared:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrepared(v)
+		return nil
+	case action.FieldPayloadHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayloadHash(v)
+		return nil
+	case action.FieldRequiresApproval:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRequiresApproval(v)
+		return nil
+	case action.FieldSupersededBy:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSupersededBy(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Action field %s", name)
 }
@@ -2444,6 +2696,9 @@ func (m *ActionMutation) AddedFields() []string {
 	if m.addinvestigation_id != nil {
 		fields = append(fields, action.FieldInvestigationID)
 	}
+	if m.addsuperseded_by != nil {
+		fields = append(fields, action.FieldSupersededBy)
+	}
 	return fields
 }
 
@@ -2456,6 +2711,8 @@ func (m *ActionMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedProposerID()
 	case action.FieldInvestigationID:
 		return m.AddedInvestigationID()
+	case action.FieldSupersededBy:
+		return m.AddedSupersededBy()
 	}
 	return nil, false
 }
@@ -2478,6 +2735,13 @@ func (m *ActionMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddInvestigationID(v)
+		return nil
+	case action.FieldSupersededBy:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSupersededBy(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Action numeric field %s", name)
@@ -2504,6 +2768,12 @@ func (m *ActionMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(action.FieldFinishedAt) {
 		fields = append(fields, action.FieldFinishedAt)
+	}
+	if m.FieldCleared(action.FieldPrepared) {
+		fields = append(fields, action.FieldPrepared)
+	}
+	if m.FieldCleared(action.FieldSupersededBy) {
+		fields = append(fields, action.FieldSupersededBy)
 	}
 	return fields
 }
@@ -2536,6 +2806,12 @@ func (m *ActionMutation) ClearField(name string) error {
 		return nil
 	case action.FieldFinishedAt:
 		m.ClearFinishedAt()
+		return nil
+	case action.FieldPrepared:
+		m.ClearPrepared()
+		return nil
+	case action.FieldSupersededBy:
+		m.ClearSupersededBy()
 		return nil
 	}
 	return fmt.Errorf("unknown Action nullable field %s", name)
@@ -2610,6 +2886,18 @@ func (m *ActionMutation) ResetField(name string) error {
 		return nil
 	case action.FieldSummary:
 		m.ResetSummary()
+		return nil
+	case action.FieldPrepared:
+		m.ResetPrepared()
+		return nil
+	case action.FieldPayloadHash:
+		m.ResetPayloadHash()
+		return nil
+	case action.FieldRequiresApproval:
+		m.ResetRequiresApproval()
+		return nil
+	case action.FieldSupersededBy:
+		m.ResetSupersededBy()
 		return nil
 	}
 	return fmt.Errorf("unknown Action field %s", name)

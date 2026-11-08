@@ -145,6 +145,21 @@ func Summary(v string) predicate.Action {
 	return predicate.Action(sql.FieldEQ(FieldSummary, v))
 }
 
+// PayloadHash applies equality check predicate on the "payload_hash" field. It's identical to PayloadHashEQ.
+func PayloadHash(v string) predicate.Action {
+	return predicate.Action(sql.FieldEQ(FieldPayloadHash, v))
+}
+
+// RequiresApproval applies equality check predicate on the "requires_approval" field. It's identical to RequiresApprovalEQ.
+func RequiresApproval(v bool) predicate.Action {
+	return predicate.Action(sql.FieldEQ(FieldRequiresApproval, v))
+}
+
+// SupersededBy applies equality check predicate on the "superseded_by" field. It's identical to SupersededByEQ.
+func SupersededBy(v int) predicate.Action {
+	return predicate.Action(sql.FieldEQ(FieldSupersededBy, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Action {
 	return predicate.Action(sql.FieldEQ(FieldCreatedAt, v))
@@ -1143,6 +1158,141 @@ func SummaryEqualFold(v string) predicate.Action {
 // SummaryContainsFold applies the ContainsFold predicate on the "summary" field.
 func SummaryContainsFold(v string) predicate.Action {
 	return predicate.Action(sql.FieldContainsFold(FieldSummary, v))
+}
+
+// PreparedIsNil applies the IsNil predicate on the "prepared" field.
+func PreparedIsNil() predicate.Action {
+	return predicate.Action(sql.FieldIsNull(FieldPrepared))
+}
+
+// PreparedNotNil applies the NotNil predicate on the "prepared" field.
+func PreparedNotNil() predicate.Action {
+	return predicate.Action(sql.FieldNotNull(FieldPrepared))
+}
+
+// PayloadHashEQ applies the EQ predicate on the "payload_hash" field.
+func PayloadHashEQ(v string) predicate.Action {
+	return predicate.Action(sql.FieldEQ(FieldPayloadHash, v))
+}
+
+// PayloadHashNEQ applies the NEQ predicate on the "payload_hash" field.
+func PayloadHashNEQ(v string) predicate.Action {
+	return predicate.Action(sql.FieldNEQ(FieldPayloadHash, v))
+}
+
+// PayloadHashIn applies the In predicate on the "payload_hash" field.
+func PayloadHashIn(vs ...string) predicate.Action {
+	return predicate.Action(sql.FieldIn(FieldPayloadHash, vs...))
+}
+
+// PayloadHashNotIn applies the NotIn predicate on the "payload_hash" field.
+func PayloadHashNotIn(vs ...string) predicate.Action {
+	return predicate.Action(sql.FieldNotIn(FieldPayloadHash, vs...))
+}
+
+// PayloadHashGT applies the GT predicate on the "payload_hash" field.
+func PayloadHashGT(v string) predicate.Action {
+	return predicate.Action(sql.FieldGT(FieldPayloadHash, v))
+}
+
+// PayloadHashGTE applies the GTE predicate on the "payload_hash" field.
+func PayloadHashGTE(v string) predicate.Action {
+	return predicate.Action(sql.FieldGTE(FieldPayloadHash, v))
+}
+
+// PayloadHashLT applies the LT predicate on the "payload_hash" field.
+func PayloadHashLT(v string) predicate.Action {
+	return predicate.Action(sql.FieldLT(FieldPayloadHash, v))
+}
+
+// PayloadHashLTE applies the LTE predicate on the "payload_hash" field.
+func PayloadHashLTE(v string) predicate.Action {
+	return predicate.Action(sql.FieldLTE(FieldPayloadHash, v))
+}
+
+// PayloadHashContains applies the Contains predicate on the "payload_hash" field.
+func PayloadHashContains(v string) predicate.Action {
+	return predicate.Action(sql.FieldContains(FieldPayloadHash, v))
+}
+
+// PayloadHashHasPrefix applies the HasPrefix predicate on the "payload_hash" field.
+func PayloadHashHasPrefix(v string) predicate.Action {
+	return predicate.Action(sql.FieldHasPrefix(FieldPayloadHash, v))
+}
+
+// PayloadHashHasSuffix applies the HasSuffix predicate on the "payload_hash" field.
+func PayloadHashHasSuffix(v string) predicate.Action {
+	return predicate.Action(sql.FieldHasSuffix(FieldPayloadHash, v))
+}
+
+// PayloadHashEqualFold applies the EqualFold predicate on the "payload_hash" field.
+func PayloadHashEqualFold(v string) predicate.Action {
+	return predicate.Action(sql.FieldEqualFold(FieldPayloadHash, v))
+}
+
+// PayloadHashContainsFold applies the ContainsFold predicate on the "payload_hash" field.
+func PayloadHashContainsFold(v string) predicate.Action {
+	return predicate.Action(sql.FieldContainsFold(FieldPayloadHash, v))
+}
+
+// RequiresApprovalEQ applies the EQ predicate on the "requires_approval" field.
+func RequiresApprovalEQ(v bool) predicate.Action {
+	return predicate.Action(sql.FieldEQ(FieldRequiresApproval, v))
+}
+
+// RequiresApprovalNEQ applies the NEQ predicate on the "requires_approval" field.
+func RequiresApprovalNEQ(v bool) predicate.Action {
+	return predicate.Action(sql.FieldNEQ(FieldRequiresApproval, v))
+}
+
+// SupersededByEQ applies the EQ predicate on the "superseded_by" field.
+func SupersededByEQ(v int) predicate.Action {
+	return predicate.Action(sql.FieldEQ(FieldSupersededBy, v))
+}
+
+// SupersededByNEQ applies the NEQ predicate on the "superseded_by" field.
+func SupersededByNEQ(v int) predicate.Action {
+	return predicate.Action(sql.FieldNEQ(FieldSupersededBy, v))
+}
+
+// SupersededByIn applies the In predicate on the "superseded_by" field.
+func SupersededByIn(vs ...int) predicate.Action {
+	return predicate.Action(sql.FieldIn(FieldSupersededBy, vs...))
+}
+
+// SupersededByNotIn applies the NotIn predicate on the "superseded_by" field.
+func SupersededByNotIn(vs ...int) predicate.Action {
+	return predicate.Action(sql.FieldNotIn(FieldSupersededBy, vs...))
+}
+
+// SupersededByGT applies the GT predicate on the "superseded_by" field.
+func SupersededByGT(v int) predicate.Action {
+	return predicate.Action(sql.FieldGT(FieldSupersededBy, v))
+}
+
+// SupersededByGTE applies the GTE predicate on the "superseded_by" field.
+func SupersededByGTE(v int) predicate.Action {
+	return predicate.Action(sql.FieldGTE(FieldSupersededBy, v))
+}
+
+// SupersededByLT applies the LT predicate on the "superseded_by" field.
+func SupersededByLT(v int) predicate.Action {
+	return predicate.Action(sql.FieldLT(FieldSupersededBy, v))
+}
+
+// SupersededByLTE applies the LTE predicate on the "superseded_by" field.
+func SupersededByLTE(v int) predicate.Action {
+	return predicate.Action(sql.FieldLTE(FieldSupersededBy, v))
+}
+
+// SupersededByIsNil applies the IsNil predicate on the "superseded_by" field.
+func SupersededByIsNil() predicate.Action {
+	return predicate.Action(sql.FieldIsNull(FieldSupersededBy))
+}
+
+// SupersededByNotNil applies the NotNil predicate on the "superseded_by" field.
+func SupersededByNotNil() predicate.Action {
+	return predicate.Action(sql.FieldNotNull(FieldSupersededBy))
 }
 
 // HasIncident applies the HasEdge predicate on the "incident" edge.

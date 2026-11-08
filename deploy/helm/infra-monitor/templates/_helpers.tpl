@@ -79,6 +79,15 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- define "infra-monitor.config" -}}
 {{- $cfg := deepCopy .Values.config -}}
 {{- $_ := set $cfg "database" (include "infra-monitor.databaseConfig" . | fromYaml) -}}
+{{- if .Values.approvedActions.enabled -}}
+{{- $actions := default dict (get $cfg "actions") -}}
+{{- $generic := default dict (get $actions "generic") -}}
+{{- $_ := set $generic "enabled" true -}}
+{{- $_ := set $generic "approved_service_account" (printf "system:serviceaccount:%s:%s" .Release.Namespace (include "infra-monitor.approvedServiceAccountName" .)) -}}
+{{- $_ := set $generic "exec_enabled" .Values.approvedActions.exec -}}
+{{- $_ := set $actions "generic" $generic -}}
+{{- $_ := set $cfg "actions" $actions -}}
+{{- end -}}
 {{- if .Values.tls.enabled -}}
 {{- $server := default dict (get $cfg "server") -}}
 {{- $_ := set $server "tls" (dict "cert_file" (printf "%s/tls.crt" .Values.tls.mountPath) "key_file" (printf "%s/tls.key" .Values.tls.mountPath)) -}}
@@ -105,4 +114,8 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- $_ := set $p.httpGet "scheme" (index . 1) -}}
 {{- end -}}
 {{- toYaml $p -}}
+{{- end -}}
+
+{{- define "infra-monitor.approvedServiceAccountName" -}}
+{{- default (printf "%s-approved" (include "infra-monitor.fullname" .)) .Values.approvedActions.serviceAccountName -}}
 {{- end -}}

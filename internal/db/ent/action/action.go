@@ -59,6 +59,14 @@ const (
 	FieldIdempotencyKey = "idempotency_key"
 	// FieldSummary holds the string denoting the summary field in the database.
 	FieldSummary = "summary"
+	// FieldPrepared holds the string denoting the prepared field in the database.
+	FieldPrepared = "prepared"
+	// FieldPayloadHash holds the string denoting the payload_hash field in the database.
+	FieldPayloadHash = "payload_hash"
+	// FieldRequiresApproval holds the string denoting the requires_approval field in the database.
+	FieldRequiresApproval = "requires_approval"
+	// FieldSupersededBy holds the string denoting the superseded_by field in the database.
+	FieldSupersededBy = "superseded_by"
 	// EdgeIncident holds the string denoting the incident edge name in mutations.
 	EdgeIncident = "incident"
 	// EdgeDecidedBy holds the string denoting the decided_by edge name in mutations.
@@ -106,6 +114,10 @@ var Columns = []string{
 	FieldError,
 	FieldIdempotencyKey,
 	FieldSummary,
+	FieldPrepared,
+	FieldPayloadHash,
+	FieldRequiresApproval,
+	FieldSupersededBy,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -139,6 +151,10 @@ var (
 	DefaultError string
 	// DefaultSummary holds the default value on creation for the "summary" field.
 	DefaultSummary string
+	// DefaultPayloadHash holds the default value on creation for the "payload_hash" field.
+	DefaultPayloadHash string
+	// DefaultRequiresApproval holds the default value on creation for the "requires_approval" field.
+	DefaultRequiresApproval bool
 )
 
 // Risk defines the type for the "risk" enum field.
@@ -334,6 +350,21 @@ func ByIdempotencyKey(opts ...sql.OrderTermOption) OrderOption {
 // BySummary orders the results by the summary field.
 func BySummary(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSummary, opts...).ToFunc()
+}
+
+// ByPayloadHash orders the results by the payload_hash field.
+func ByPayloadHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPayloadHash, opts...).ToFunc()
+}
+
+// ByRequiresApproval orders the results by the requires_approval field.
+func ByRequiresApproval(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRequiresApproval, opts...).ToFunc()
+}
+
+// BySupersededBy orders the results by the superseded_by field.
+func BySupersededBy(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSupersededBy, opts...).ToFunc()
 }
 
 // ByIncidentField orders the results by incident field.

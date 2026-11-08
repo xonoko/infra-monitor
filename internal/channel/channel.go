@@ -163,3 +163,9 @@ type Response struct {
 	// Silent: nothing to say (the action result will appear through the normal fan-out).
 	Silent bool
 }
+
+// FileSender is optionally implemented by channels that can attach files to a thread
+// (used for full action payloads/diffs that don't fit in a message).
+type FileSender interface {
+	SendFile(ctx context.Context, thread ThreadRef, filename string, content []byte, caption string) (MessageRef, error)
+}
