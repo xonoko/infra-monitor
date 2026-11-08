@@ -12,9 +12,11 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/xonoko/infra-monitor/internal/actions"
@@ -68,6 +70,8 @@ type Service struct {
 	heartbeatMatchers []domain.Matcher
 	routes            []route
 
+	lastPingOK atomic.Int32 // 0 unknown, 1 ok, 2 failing (log transitions only)
+
 	// Typing is called while the agent works on an incident (channels show "typing...").
 	Typing func(ctx context.Context, incidentID int)
 
@@ -83,6 +87,7 @@ type metrics struct {
 	skipped        metric.Int64Counter
 	tokens         metric.Int64Counter
 	cost           metric.Float64Counter
+	pings          metric.Int64Counter
 }
 
 func New(d Deps) (*Service, error) {
@@ -118,6 +123,23 @@ func New(d Deps) (*Service, error) {
 	s.m.skipped, _ = meter.Int64Counter("infra_monitor_investigations_skipped", metric.WithDescription("Investigations not run, by reason (storm, cap, budget, severity, cooldown, state)"))
 	s.m.tokens, _ = meter.Int64Counter("infra_monitor_agent_tokens", metric.WithDescription("LLM tokens reported by the agent"))
 	s.m.cost, _ = meter.Float64Counter("infra_monitor_agent_cost_usd", metric.WithDescription("Estimated LLM cost (agent.price_*_per_mtok)"))
+	s.m.pings, _ = meter.Int64Counter("infra_monitor_heartbeat_pings", metric.WithDescription("Outbound dead-man's-switch pings by outcome"))
+	_, _ = meter.Float64ObservableGauge("infra_monitor_heartbeat_last_seen_timestamp_seconds", metric.WithDescription("Last heartbeat (Watchdog) received per source"),
+		metric.WithFloat64Callback(func(ctx context.Context, o metric.Float64Observer) error {
+			rows, err := s.db.Pool.Query(ctx, "SELECT key, state, extract(epoch from last_seen_at) FROM heartbeats WHERE last_seen_at IS NOT NULL")
+			if err != nil {
+				return nil
+			}
+			defer rows.Close()
+			for rows.Next() {
+				var key, state string
+				var ts float64
+				if rows.Scan(&key, &state, &ts) == nil {
+					o.Observe(ts, metric.WithAttributes(attribute.String("source", key), attribute.String("state", state)))
+				}
+			}
+			return nil
+		}))
 	_, _ = meter.Int64ObservableGauge("infra_monitor_open_incidents", metric.WithDescription("Open or acknowledged incidents"),
 		metric.WithInt64Callback(func(ctx context.Context, o metric.Int64Observer) error {
 			var n int64

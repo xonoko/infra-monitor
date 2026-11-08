@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+
 	"github.com/xonoko/infra-monitor/internal/db/ent"
 	"github.com/xonoko/infra-monitor/internal/db/ent/heartbeat"
 	"github.com/xonoko/infra-monitor/internal/db/ent/incident"
@@ -97,8 +100,19 @@ func (s *Service) pingHeartbeat(ctx context.Context, key string) error {
 	if uerr := s.ent.Heartbeat.Update().Where(heartbeat.Key(key)).SetLastPingAt(now).SetLastPingError(pingErr).Exec(ctx); uerr != nil {
 		return uerr
 	}
+	outcome := "success"
 	if pingErr != "" {
+		outcome = "failure"
+	}
+	s.m.pings.Add(ctx, 1, metric.WithAttributes(attribute.String("outcome", outcome)))
+	prev := s.lastPingOK.Swap(int32(map[bool]int32{true: 1, false: 2}[pingErr == ""]))
+	switch {
+	case pingErr != "":
 		s.log.WarnContext(ctx, "heartbeat ping failed", "key", key, "error", pingErr)
+	case prev == 0:
+		s.log.InfoContext(ctx, "heartbeat ping ok (first on this replica)", "key", key)
+	case prev == 2:
+		s.log.InfoContext(ctx, "heartbeat ping recovered", "key", key)
 	}
 	return nil
 }
