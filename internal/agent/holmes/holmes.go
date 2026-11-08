@@ -188,12 +188,20 @@ func (c *Client) Chat(ctx context.Context, req agent.ChatRequest, progress func(
 		AdditionalSystemPrompt: chatSystemPrompt(req.Incident.ActionTypes, c.cfg.StructuredOutput, c.cfg.ExtraPrompt),
 	}
 	if hasHistory {
-		cr.ConversationHistory = req.Conversation
+		cr.ConversationHistory = sanitizeHistory(req.Conversation)
 	}
 	if c.cfg.StructuredOutput {
 		cr.ResponseFormat = responseFormat("infra_monitor_chat", chatSchema(req.Incident.ActionTypes))
 	}
 	resp, toolCalls, err := c.call(ctx, cr, progress)
+	if err != nil && hasHistory && historyRejected(err) {
+		// The provider refused the replayed history (e.g. thinking blocks bound to another prompt):
+		// answer from a fresh context with the full incident description instead.
+		c.log.WarnContext(ctx, "holmes rejected the conversation history, retrying without it", "error", err)
+		cr.ConversationHistory = nil
+		cr.Ask = chatAsk(req, false)
+		resp, toolCalls, err = c.call(ctx, cr, progress)
+	}
 	if err != nil {
 		telemetry.RecordError(span, err)
 		return nil, err
