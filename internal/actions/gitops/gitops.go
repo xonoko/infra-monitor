@@ -53,7 +53,7 @@ func New(cfg config.GitOpsConfig) (*Executor, error) {
 		cfg.AuthorEmail = "infra-monitor@users.noreply.github.com"
 	}
 	return &Executor{cfg: cfg, gh: &githubClient{
-		api: strings.TrimRight(cfg.APIURL, "/"), owner: owner, repo: repo, branch: cfg.Branch, token: cfg.Token,
+		api: strings.TrimRight(cfg.APIURL, "/"), owner: owner, repo: repo, branch: cfg.Branch, token: cfg.Token, tokenFile: cfg.TokenFile,
 		authorName: cfg.AuthorName, authorEmail: cfg.AuthorEmail, http: newHTTPClient(),
 	}}, nil
 }

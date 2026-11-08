@@ -10,7 +10,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -24,6 +26,10 @@ import (
 var errAbsent = errors.New("file absent")
 
 type githubClient struct {
+	// tokenFile is re-read (at most every 30s) so rotated tokens (e.g. External Secrets generators) are picked up.
+	tokenFile                       string
+	tokenMu                         sync.Mutex
+	tokenAt                         time.Time
 	api, owner, repo, branch, token string
 	authorName, authorEmail         string
 	http                            *http.Client
@@ -55,7 +61,7 @@ func (g *githubClient) do(ctx context.Context, method, u string, body any) (int,
 	if err != nil {
 		return 0, nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+g.token)
+	req.Header.Set("Authorization", "Bearer "+g.currentToken())
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	req.Header.Set("User-Agent", "infra-monitor")
@@ -216,3 +222,22 @@ func (g *githubClient) put(ctx context.Context, path, content, sha, message stri
 }
 
 func newHTTPClient() *http.Client { return telemetry.HTTPClient(30 * time.Second) }
+
+// currentToken returns the token, re-reading token_file when it may have rotated.
+func (g *githubClient) currentToken() string {
+	if g.tokenFile == "" {
+		return g.token
+	}
+	g.tokenMu.Lock()
+	defer g.tokenMu.Unlock()
+	if time.Since(g.tokenAt) < 30*time.Second {
+		return g.token
+	}
+	if b, err := os.ReadFile(g.tokenFile); err == nil {
+		if t := strings.TrimSpace(string(b)); t != "" {
+			g.token = t
+		}
+	}
+	g.tokenAt = time.Now()
+	return g.token
+}
