@@ -1,0 +1,15 @@
+/infra-monitor
+/bin/
+/dist/
+*.out
+coverage.*
+.env
+/config.yaml
+/config/local*.yaml
+.idea/workspace.xml
+.idea/tasks.xml
+web/node_modules/
+web/dist/*
+!web/dist/.gitkeep
+web/openapi.json
+.DS_Store
