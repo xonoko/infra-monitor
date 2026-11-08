@@ -190,7 +190,7 @@ type UnlinkInput struct {
 }
 
 func (s *Server) sessionCookie(tok string, expires time.Time) http.Cookie {
-	return http.Cookie{Name: sessionCookie, Value: tok, Path: "/", HttpOnly: true, Secure: s.cfg.CookieSecure(),
+	return http.Cookie{Name: sessionCookie, Value: tok, Path: "/", HttpOnly: true, Secure: s.cfg.CookieSecure(), //nolint:gosec // Secure is on for https public_url (or auth.cookie_secure)
 		SameSite: http.SameSiteLaxMode, Expires: expires}
 }
 
@@ -257,7 +257,7 @@ func (s *Server) registerAuth() {
 			if p, ok := principal(ctx); ok && p.SessionID != 0 {
 				_ = a.Logout(ctx, p.SessionID)
 			}
-			c := s.sessionCookie("", time.Unix(0, 0))
+			c := s.sessionCookie("", time.Unix(0, 0)) //nolint:gosec // clearing cookie, same attributes as sessionCookie
 			c.MaxAge = -1
 			return &LogoutOutput{SetCookie: c}, nil
 		})

@@ -45,7 +45,7 @@ func New(cfg *config.Config, log *slog.Logger, deps Deps) *Server {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	if cfg.Server.TrustProxy {
-		r.Use(middleware.RealIP)
+		r.Use(forwardedFor)
 	}
 	r.Use(middleware.Recoverer)
 	r.Use(spanNamer)

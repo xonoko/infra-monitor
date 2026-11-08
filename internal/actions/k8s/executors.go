@@ -337,7 +337,7 @@ func (e *Scale) Execute(ctx context.Context, p map[string]any, t actions.Target)
 			return "", fmt.Errorf("get scale of deployment/%s in %s: %w", name, ns, err)
 		}
 		from = sc.Spec.Replicas
-		sc.Spec.Replicas = int32(n) //nolint:gosec // bounded by policy
+		sc.Spec.Replicas = int32(n)
 		if _, err := apps.Deployments(ns).UpdateScale(ctx, name, sc, metav1.UpdateOptions{FieldManager: fieldManager}); err != nil {
 			telemetry.RecordError(span, err)
 			return "", fmt.Errorf("scale deployment/%s in %s: %w", name, ns, err)
@@ -349,7 +349,7 @@ func (e *Scale) Execute(ctx context.Context, p map[string]any, t actions.Target)
 			return "", fmt.Errorf("get scale of statefulset/%s in %s: %w", name, ns, err)
 		}
 		from = sc.Spec.Replicas
-		sc.Spec.Replicas = int32(n) //nolint:gosec // bounded by policy
+		sc.Spec.Replicas = int32(n)
 		if _, err := apps.StatefulSets(ns).UpdateScale(ctx, name, sc, metav1.UpdateOptions{FieldManager: fieldManager}); err != nil {
 			telemetry.RecordError(span, err)
 			return "", fmt.Errorf("scale statefulset/%s in %s: %w", name, ns, err)

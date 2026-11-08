@@ -112,9 +112,10 @@ func (a *App) apiDeps() api.Deps {
 	return d
 }
 
-// Run serves HTTP and runs every loop until ctx is cancelled, then shuts down gracefully.
+// Run serves HTTP and runs every loop until ctx is canceled, then shuts down gracefully.
 func (a *App) Run(ctx context.Context) error {
-	ln, err := net.Listen("tcp", a.Cfg.Server.Listen)
+	var lc net.ListenConfig
+	ln, err := lc.Listen(ctx, "tcp", a.Cfg.Server.Listen)
 	if err != nil {
 		return err
 	}

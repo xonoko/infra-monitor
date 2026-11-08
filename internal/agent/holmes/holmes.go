@@ -223,7 +223,7 @@ func (c *Client) call(ctx context.Context, req chatRequest, progress func(agent.
 	if err != nil {
 		return nil, nil, fmt.Errorf("holmes: request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode/100 != 2 {
 		return nil, nil, readHTTPError(resp)
 	}

@@ -20,7 +20,8 @@ func ParseMatcher(s string) (Matcher, error) {
 	for _, op := range []string{"=~", "!~", "!=", "="} {
 		if i := strings.Index(s, op); i > 0 {
 			m := Matcher{Name: strings.TrimSpace(s[:i]), Op: op, Value: strings.Trim(strings.TrimSpace(s[i+len(op):]), `"`)}
-			return m, m.compile()
+			err := m.compile()
+			return m, err
 		}
 	}
 	return Matcher{}, fmt.Errorf("invalid matcher %q", s)

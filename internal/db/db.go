@@ -33,7 +33,7 @@ func Open(ctx context.Context, cfg config.DatabaseConfig, log *slog.Logger) (*DB
 	if cfg.MaxConns > 0 {
 		pcfg.MaxConns = cfg.MaxConns
 	}
-	pcfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
+	pcfg.ConnConfig.Tracer = otelpgx.NewTracer()
 	pcfg.MaxConnIdleTime = 5 * time.Minute
 	pool, err := pgxpool.NewWithConfig(ctx, pcfg)
 	if err != nil {

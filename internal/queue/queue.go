@@ -175,7 +175,7 @@ func (q *Queue) Register(kind string, h Handler, o HandlerOpts) {
 	q.handlers[kind] = &registration{h: h, opts: o, sem: make(chan struct{}, o.Concurrency)}
 }
 
-// Run dispatches jobs until ctx is cancelled, then waits for running jobs.
+// Run dispatches jobs until ctx is canceled, then waits for running jobs.
 func (q *Queue) Run(ctx context.Context) error {
 	var wake <-chan string
 	if q.listener != nil {

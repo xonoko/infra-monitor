@@ -1,6 +1,6 @@
 // Package lease runs singleton work (exactly one replica) using PostgreSQL session
 // advisory locks held on a dedicated connection. If the connection dies, the lock is
-// released by Postgres and the work context is cancelled here.
+// released by Postgres and the work context is canceled here.
 package lease
 
 import (
@@ -51,7 +51,7 @@ func NewManager(pool *pgxpool.Pool, log *slog.Logger) *Manager {
 func Key(name string) int64 {
 	h := fnv.New64a()
 	_, _ = h.Write([]byte("infra-monitor:" + name))
-	return int64(h.Sum64()) //nolint:gosec // wrap-around is fine for a lock key
+	return int64(h.Sum64())
 }
 
 // Held reports whether this replica currently holds the lease.
@@ -68,7 +68,7 @@ func (m *Manager) setHeld(name string, v bool) {
 }
 
 // Run blocks until ctx is done. Whenever it holds the lease it runs fn with a context that is
-// cancelled when the lease is lost. fn should return when its context is done.
+// canceled when the lease is lost. fn should return when its context is done.
 func (m *Manager) Run(ctx context.Context, name string, fn func(ctx context.Context) error) {
 	m.setHeld(name, false)
 	for ctx.Err() == nil {

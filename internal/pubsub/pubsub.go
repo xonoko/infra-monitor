@@ -110,7 +110,7 @@ func (l *Listener) listen(ctx context.Context, onReady func()) error {
 	}
 	// The connection is in LISTEN state: never return it to the pool.
 	pc := conn.Hijack()
-	defer pc.Close(context.Background())
+	defer func() { _ = pc.Close(context.Background()) }()
 	for _, c := range l.channels {
 		if _, err := pc.Exec(ctx, "LISTEN "+pgx.Identifier{c}.Sanitize()); err != nil {
 			return err

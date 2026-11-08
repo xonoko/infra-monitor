@@ -94,7 +94,7 @@ func (c *Channel) getUpdates(ctx context.Context, offset int64) ([]models.Update
 	if err != nil {
 		return nil, c.redact(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(resp.Body, 16<<20))
 	if err != nil {
 		return nil, c.redact(err)

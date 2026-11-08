@@ -60,7 +60,7 @@ func scratchDB(ctx context.Context, adminURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 	const dbName = "infra_monitor_atlas_dev"
 	if _, err := conn.Exec(ctx, "DROP DATABASE IF EXISTS "+dbName); err != nil {
 		return "", err

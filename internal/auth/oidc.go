@@ -213,7 +213,7 @@ func (s *Service) provisionOIDCUser(ctx context.Context, issuer, subject, email,
 		}
 		if u.RoleManagedByOidc || u.PasswordHash == nil {
 			upd.SetRole(user.Role(role)).SetRoleManagedByOidc(true)
-		} else if domain.Role(role).Level() > domain.Role(u.Role).Level() {
+		} else if role.Level() > domain.Role(u.Role).Level() {
 			upd.SetRole(user.Role(role))
 		}
 		out, err = upd.Save(ctx)
