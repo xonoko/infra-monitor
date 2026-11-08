@@ -102,10 +102,19 @@ Legend: `[ ]` todo, `[x]` done.
 - [x] End-to-end local run (docker-compose + fake Holmes + webhook replay)
 
 ## Deployment (manager cluster, with the infra-argocd session)
-- [ ] Image pushed to ghcr
-- [ ] Hand-off doc: env/secret keys, chart values
-- [ ] infra side: DB, secrets, Authentik provider, Argo app, Alertmanager route, Holmes/LiteLLM, heartbeat check
-- [ ] Verify in cluster: webhook ingestion, heartbeat, investigation, Telegram card + buttons + replies, UI login (OIDC), actions
+- [x] Image pushed to ghcr (private, ghcr-pull-secret), Argo app manager-infra-monitor (ApplicationSet), ns infra-monitor
+- [x] Hand-off doc: env/secret keys, chart values (docs/deployment.md)
+- [x] infra side: CNPG DB, ExternalSecrets from Vault, Authentik OIDC, Alertmanager route (https), Holmes + LiteLLM (TLS), healthchecks.io ping
+- [x] TLS everywhere: app HTTPS (ca-issuer), Traefik ServersTransport, Postgres sslmode=require, Holmes over HTTPS
+- [x] Verified: webhook ingestion + heartbeat, SSO login (admin), Telegram card / /link / buttons / replies, Holmes investigation (Haiku, k8s tools)
+- [x] Verified: auto-approve executes in plain namespaces, waits for a human in namespaces annotated `none` (Kyverno)
+- [x] Alertmanager switch-over: infra-monitor owns all non-camera notifications
+- [x] Chat follow-up with Holmes (thinking blocks stripped from replayed history)
+
+## Auto-remediation (added 2026-11-08)
+- [x] auto_approve: agent.reinvestigate, k8s.delete_pod, k8s.rollout_restart (global config)
+- [x] Per-namespace override with annotations (infra-monitor.xonoko.com/auto-approve, /max-auto-per-hour)
+- [x] Loop guards: max_auto_per_hour per incident, no re-investigation chains
 
 ## TLS everywhere (added 2026-11-08)
 - [x] App serves HTTPS (`server.tls.cert_file/key_file`, hot reload on renewal), probes and /metrics over HTTPS
