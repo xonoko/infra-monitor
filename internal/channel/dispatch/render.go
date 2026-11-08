@@ -110,14 +110,15 @@ func proposalMessage(a *ent.Action, caps channel.Capabilities, url string) chann
 		if a.PayloadHash != "" {
 			m.Footer = "hash " + hashPrefix(a.PayloadHash) + " · " + m.Footer
 		}
-		if p != nil && !p.DryRunOK {
+		switch {
+		case p != nil && !p.DryRunOK:
 			m.Buttons = []channel.Button{{Label: "✖ Reject", Style: channel.StyleDanger, Action: &channel.ButtonAction{Op: "reject", ActionID: a.ID}}}
-		} else if caps.Buttons {
+		case caps.Buttons:
 			m.Buttons = []channel.Button{
 				{Label: "✅ Approve", Style: channel.StylePrimary, Action: &channel.ButtonAction{Op: "approve", ActionID: a.ID, Arg: hashPrefix(a.PayloadHash)}},
 				{Label: "✖ Reject", Style: channel.StyleDanger, Action: &channel.ButtonAction{Op: "reject", ActionID: a.ID}},
 			}
-		} else {
+		default:
 			m.Footer += fmt.Sprintf(" · reply /approve %d %s or /reject %d", a.ID, hashPrefix(a.PayloadHash), a.ID)
 		}
 	default:
