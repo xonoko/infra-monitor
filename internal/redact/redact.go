@@ -16,7 +16,7 @@ var (
 	jwt      = regexp.MustCompile(`eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}`)
 	urlCreds = regexp.MustCompile(`([a-zA-Z][a-zA-Z0-9+.-]*://[^:/@\s]+:)[^@\s]+@`)
 	// key=value, key: value, "key": "value" for credential-looking keys.
-	kv = regexp.MustCompile(`(?i)("?[A-Za-z0-9_.-]*(password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|private[_-]?key|client[_-]?secret|credentials?)"?\s*[:=]\s*)("[^"\n]*"|'[^'\n]*'|[^\s,}\]\n]+)`)
+	kv = regexp.MustCompile(`(?i)("?[A-Za-z0-9_.-]*(password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|private[_-]?key|client[_-]?secret|credentials?)"?\s*[:=]\s*)("[^"\n]*"|'[^'\n]*'|[^\s,}\]]+)`)
 	// Known token shapes.
 	tokens = regexp.MustCompile(`\b(gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[abprs]-[A-Za-z0-9-]{10,}|sk-[A-Za-z0-9_-]{20,}|imt_[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16})\b`)
 )
