@@ -204,6 +204,15 @@ func TestTwoReplicasEndToEnd(t *testing.T) {
 		return inc["firing_count"].(float64) == 1 && inc["cluster"] == "manager"
 	}, 10*time.Second, 100*time.Millisecond)
 
+	// list filters are applied
+	st, none := do(t, cb, "GET", b.url+"/api/v1/incidents?namespace=does-not-exist", "", nil)
+	require.Equal(t, 200, st)
+	require.EqualValues(t, 0, none["total"])
+	_, byQ := do(t, cb, "GET", b.url+"/api/v1/incidents?q=crash", "", nil)
+	require.EqualValues(t, 1, byQ["total"])
+	_, byQ = do(t, cb, "GET", b.url+"/api/v1/incidents?q=nomatch-xyz", "", nil)
+	require.EqualValues(t, 0, byQ["total"])
+
 	// CSRF is required for cookie sessions
 	id := itoa(int(incID))
 	st, _ = do(t, c, "POST", a.url+"/api/v1/incidents/"+id+"/ack", "", nil)

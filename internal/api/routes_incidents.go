@@ -14,7 +14,7 @@ import (
 	"github.com/xonoko/infra-monitor/internal/incident"
 )
 
-type listParams struct {
+type ListParams struct {
 	Status    string    `query:"status" doc:"Comma-separated statuses (open,acknowledged,resolved,closed)"`
 	Severity  string    `query:"severity" doc:"Comma-separated severities"`
 	Verdict   string    `query:"verdict" doc:"Comma-separated verdicts"`
@@ -36,7 +36,7 @@ func csv(s string) []string {
 	return out
 }
 
-func (p listParams) filter() incident.ListFilter {
+func (p ListParams) filter() incident.ListFilter {
 	f := incident.ListFilter{Status: csv(p.Status), Severity: csv(p.Severity), Verdict: csv(p.Verdict),
 		Cluster: p.Cluster, Namespace: p.Namespace, Query: p.Q}
 	if !p.Since.IsZero() {
@@ -59,7 +59,7 @@ func (p listParams) filter() incident.ListFilter {
 }
 
 type ListIncidentsInput struct {
-	listParams
+	ListParams
 	Limit  int `query:"limit" minimum:"0" maximum:"200" default:"50"`
 	Cursor int `query:"cursor" doc:"next_cursor from the previous page"`
 }
@@ -73,7 +73,7 @@ type ListIncidentsOutput struct {
 }
 
 type HistogramInput struct {
-	listParams
+	ListParams
 	Buckets int `query:"buckets" minimum:"0" maximum:"500" default:"60"`
 }
 
