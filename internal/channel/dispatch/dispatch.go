@@ -53,6 +53,7 @@ type Dispatcher struct {
 type Status struct {
 	Name, Type, Mode string
 	Receiving        bool
+	Capabilities     map[string]bool
 	LastError        string
 	LastErrorAt      *time.Time
 	LastSentAt       *time.Time
@@ -64,7 +65,10 @@ func New(d *db.DB, svc *incsvc.Service, authSvc *auth.Service, leases *lease.Man
 	for _, c := range chans {
 		ds.channels[c.Name()] = c
 		ds.order = append(ds.order, c.Name())
-		ds.status[c.Name()] = &Status{Name: c.Name(), Type: c.Type()}
+		cp := c.Capabilities()
+		ds.status[c.Name()] = &Status{Name: c.Name(), Type: c.Type(), Capabilities: map[string]bool{
+			"buttons": cp.Buttons, "edit_messages": cp.EditMessages, "threads": cp.Threads, "typing": cp.Typing, "singleton_receiver": cp.SingletonReceiver,
+		}}
 	}
 	svc.Typing = ds.typing
 	return ds

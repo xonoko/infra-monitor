@@ -471,13 +471,16 @@ type SourceStatus struct {
 }
 
 type ChannelStatus struct {
-	Name        string     `json:"name"`
-	Type        string     `json:"type"`
-	Mode        string     `json:"mode"`
-	Receiving   bool       `json:"receiving" doc:"This replica runs the receiver (lease holder for polling)"`
-	LastError   string     `json:"last_error"`
-	LastErrorAt *time.Time `json:"last_error_at,omitempty"`
-	LastSentAt  *time.Time `json:"last_sent_at,omitempty"`
+	Name         string          `json:"name"`
+	Type         string          `json:"type"`
+	Mode         string          `json:"mode"`
+	Receiving    bool            `json:"receiving" doc:"This replica runs the receiver (lease holder for polling)"`
+	Leader       bool            `json:"leader" doc:"Same as receiving (kept for the UI)"`
+	Connected    bool            `json:"connected" doc:"Last delivery succeeded"`
+	Capabilities map[string]bool `json:"capabilities"`
+	LastError    string          `json:"last_error"`
+	LastErrorAt  *time.Time      `json:"last_error_at,omitempty"`
+	LastSentAt   *time.Time      `json:"last_sent_at,omitempty"`
 }
 
 type HeartbeatStatus struct {
@@ -493,10 +496,12 @@ type HeartbeatStatus struct {
 }
 
 type AgentStatus struct {
-	Enabled bool   `json:"enabled"`
-	Type    string `json:"type"`
-	Model   string `json:"model"`
-	URLHost string `json:"url_host"`
+	Enabled       bool   `json:"enabled"`
+	MaxConcurrent int    `json:"max_concurrent"`
+	MaxPerHour    int    `json:"max_per_hour"`
+	Type          string `json:"type"`
+	Model         string `json:"model"`
+	URLHost       string `json:"url_host"`
 }
 
 type StatusOutput struct {
@@ -550,8 +555,10 @@ func (s *Server) registerStatus() {
 					modes[c.Name] = c.Mode
 				}
 				for _, st := range s.deps.Dispatcher.Statuses() {
-					b.Channels = append(b.Channels, ChannelStatus{Name: st.Name, Type: st.Type, Mode: modes[st.Name], Receiving: st.Receiving,
-						LastError: st.LastError, LastErrorAt: st.LastErrorAt, LastSentAt: st.LastSentAt})
+					b.Channels = append(b.Channels, ChannelStatus{Name: st.Name, Type: st.Type, Mode: modes[st.Name], Receiving: st.Receiving, Leader: st.Receiving,
+						Connected:    st.LastErrorAt == nil || (st.LastSentAt != nil && st.LastSentAt.After(*st.LastErrorAt)),
+						Capabilities: st.Capabilities,
+						LastError:    st.LastError, LastErrorAt: st.LastErrorAt, LastSentAt: st.LastSentAt})
 				}
 			}
 			hbs, err := client.Heartbeat.Query().Order(ent.Asc(heartbeat.FieldKey)).All(ctx)
@@ -565,7 +572,7 @@ func (s *Server) registerStatus() {
 					LastPingAt: h.LastPingAt, LastPingError: h.LastPingError, PingConfigured: s.cfg.Heartbeat.PingURL != "", IncidentID: h.IncidentID})
 			}
 			ag := s.cfg.Agent
-			b.Agent = AgentStatus{Enabled: ag.Enabled, Type: ag.Type, Model: ag.Model}
+			b.Agent = AgentStatus{Enabled: ag.Enabled, Type: ag.Type, Model: ag.Model, MaxConcurrent: ag.MaxConcurrent, MaxPerHour: ag.MaxPerHour}
 			if u, err := url.Parse(ag.URL); err == nil {
 				b.Agent.URLHost = u.Host
 			}
