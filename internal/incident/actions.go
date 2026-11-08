@@ -16,7 +16,9 @@ import (
 	"github.com/xonoko/infra-monitor/internal/actions"
 	"github.com/xonoko/infra-monitor/internal/db/ent"
 	"github.com/xonoko/infra-monitor/internal/db/ent/action"
+	"github.com/xonoko/infra-monitor/internal/db/ent/incident"
 	"github.com/xonoko/infra-monitor/internal/domain"
+	"github.com/xonoko/infra-monitor/internal/redact"
 	"github.com/xonoko/infra-monitor/internal/queue"
 	"github.com/xonoko/infra-monitor/internal/telemetry"
 )
@@ -107,6 +109,26 @@ func (s *Service) createAction(ctx context.Context, tx *ent.Tx, inc *ent.Inciden
 	s.m.actions.Add(ctx, 1, metric.WithAttributes(attribute.String("type", a.Type), attribute.String("status", "proposed")))
 	if _, err := s.addEvent(ctx, tx, inc, domain.EventActionProposed, actor, actionEventPayload(a, preparedAudit(prep, payloadHash))); err != nil {
 		return nil, err
+	}
+	// A proposal needs a human decision: make sure it reaches the chat channels (unless muted).
+	if a.Status == action.StatusProposed && len(inc.NotifyChannels) == 0 && !inc.Muted && len(s.cfg.Channels) > 0 &&
+		(inc.Status == incident.StatusOpen || inc.Status == incident.StatusAcknowledged) {
+		all := make([]string, 0, len(s.cfg.Channels))
+		for _, c := range s.cfg.Channels {
+			all = append(all, c.Name)
+		}
+		upd := tx.Incident.UpdateOne(inc).SetNotifyChannels(all)
+		if inc.NotifiedAt == nil {
+			upd.SetNotifiedAt(s.now())
+		}
+		if inc, err = upd.Save(ctx); err != nil {
+			return nil, err
+		}
+		if _, err := s.addEvent(ctx, tx, inc, domain.EventNotificationRouted, domain.System, map[string]any{
+			"channels": all, "reason": "action proposed: needs a decision",
+		}); err != nil {
+			return nil, err
+		}
 	}
 	// Generic and gitops actions are never auto-approved, whatever auto_approve says.
 	if pol := s.autoPolicy(ctx, inc); !supervised && pol.allows(a.Type) {
@@ -384,12 +406,13 @@ func (s *Service) finishAction(ctx context.Context, id int, out string, rerr err
 		if err != nil {
 			return err
 		}
+		out = redact.Text(out)
 		u := tx.Action.UpdateOne(a).SetFinishedAt(s.now()).SetOutput(truncate(out, 16000))
 		typ := domain.EventActionSucceeded
 		status := action.StatusSucceeded
 		if rerr != nil {
 			typ, status = domain.EventActionFailed, action.StatusFailed
-			u.SetError(truncate(rerr.Error(), 4000))
+			u.SetError(truncate(redact.Text(rerr.Error()), 4000))
 		}
 		if a, err = u.SetStatus(status).Save(ctx); err != nil {
 			return err
@@ -397,7 +420,7 @@ func (s *Service) finishAction(ctx context.Context, id int, out string, rerr err
 		s.m.actions.Add(ctx, 1, metric.WithAttributes(attribute.String("type", a.Type), attribute.String("status", string(status))))
 		extra := map[string]any{"output": truncate(out, 1500)}
 		if rerr != nil {
-			extra["error"] = truncate(rerr.Error(), 1000)
+			extra["error"] = truncate(redact.Text(rerr.Error()), 1000)
 		}
 		_, err = s.addEvent(ctx, tx, inc, typ, domain.System, actionEventPayload(a, extra))
 		return err

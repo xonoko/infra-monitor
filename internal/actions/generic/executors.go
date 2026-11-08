@@ -199,6 +199,9 @@ func patchType(s string) (string, error) {
 }
 
 func (e *Patch) Validate(_ context.Context, p map[string]any, _ actions.Target) error {
+	if err := guard(str(p, "kind"), p["patch"]); err != nil {
+		return err
+	}
 	if err := validAPIVersionKind(str(p, "apiVersion"), str(p, "kind")); err != nil {
 		return err
 	}
@@ -397,6 +400,9 @@ func manifest(p map[string]any) (*unstructured.Unstructured, error) {
 func (e *Apply) Validate(_ context.Context, p map[string]any, _ actions.Target) error {
 	o, err := manifest(p)
 	if err != nil {
+		return err
+	}
+	if err := guard(o.GetKind(), o.Object); err != nil {
 		return err
 	}
 	if err := validAPIVersionKind(o.GetAPIVersion(), o.GetKind()); err != nil {

@@ -18,6 +18,7 @@ import (
 	"github.com/xonoko/infra-monitor/internal/db/ent/investigation"
 	"github.com/xonoko/infra-monitor/internal/db/ent/signal"
 	"github.com/xonoko/infra-monitor/internal/domain"
+	"github.com/xonoko/infra-monitor/internal/redact"
 	"github.com/xonoko/infra-monitor/internal/pubsub"
 	"github.com/xonoko/infra-monitor/internal/queue"
 	"github.com/xonoko/infra-monitor/internal/telemetry"
@@ -270,7 +271,7 @@ func (s *Service) finishInvestigation(ctx context.Context, incID, invID int, res
 			return err
 		}
 		u := tx.Investigation.UpdateOneID(invID).SetStatus(investigation.StatusSucceeded).SetFinishedAt(s.now()).
-			SetAnalysis(res.Analysis).SetSummary(res.Summary).SetRootCause(res.RootCause).
+			SetAnalysis(redact.Text(res.Analysis)).SetSummary(redact.Text(res.Summary)).SetRootCause(redact.Text(res.RootCause)).
 			SetVerdict(investigation.Verdict(verdict)).SetConfidence(res.Confidence).
 			SetPromptTokens(res.Usage.PromptTokens).SetCompletionTokens(res.Usage.CompletionTokens).
 			SetCostUsd(s.costUSD(firstNonEmpty(res.Model, s.agent.Model()), res.Usage))
@@ -284,7 +285,7 @@ func (s *Service) finishInvestigation(ctx context.Context, incID, invID int, res
 			return err
 		}
 		iu := tx.Incident.UpdateOne(inc).SetInvestigationState(incident.InvestigationStateDone).SetInvestigationNote("").
-			SetVerdict(incident.Verdict(verdict)).SetSummary(firstNonEmpty(res.Summary, truncate(res.Analysis, 600))).
+			SetVerdict(incident.Verdict(verdict)).SetSummary(redact.Text(firstNonEmpty(res.Summary, truncate(res.Analysis, 600)))).
 			SetLastInvestigatedAt(s.now())
 		if len(res.Conversation) > 0 && json.Valid(res.Conversation) {
 			iu.SetAgentConversation(res.Conversation)

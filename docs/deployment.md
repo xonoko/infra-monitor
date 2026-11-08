@@ -263,8 +263,13 @@ Then in the UI profile page, generate a link code and send `/link CODE` to the b
 
 ## Approved generic actions and GitOps commits
 
-With `approvedActions.enabled: true` the chart creates a second ServiceAccount (`<fullname>-approved`) bound to the
-built-in `edit` ClusterRole plus read-only access to cluster-scoped objects. infra-monitor impersonates it **only**
+With `approvedActions.enabled: true` the chart creates a second ServiceAccount (`<fullname>-approved`) bound to a
+restricted edit role (`approvedActions.rules`: workload writes; no Secrets, no ServiceAccount writes or tokens, no RBAC)
+plus read-only access to cluster-scoped objects. Do NOT set `clusterRole: edit`: the built-in role grants Secrets,
+ServiceAccount writes, tokens and pods under any ServiceAccount (about cluster-admin). infra-monitor also refuses
+payloads that set `serviceAccountName`/`automountServiceAccountToken` or touch Secrets, ServiceAccounts or RBAC.
+Action outputs, payloads, dry-runs and agent replies are redacted (Secret data, credentials, tokens) before storage
+or display. infra-monitor impersonates it **only**
 after a human approved a precise proposal (`k8s.patch`, `k8s.apply`, `k8s.delete`, `kubectl.exec`). Automatic actions
 keep the main account. These types are never auto-approved, whatever `actions.auto_approve` says.
 
@@ -280,9 +285,8 @@ is re-checked; if it changed, the action is refused and re-proposed.
 ```yaml
 approvedActions:
   enabled: true
-  clusterRole: edit
   clusterRead: true
-  exec: true            # kubectl.exec proposals (pods/exec is in `edit`)
+  exec: true            # kubectl.exec proposals
 config:
   agent:
     model: claude-haiku-5-5        # first automatic diagnostic

@@ -9,6 +9,7 @@ import (
 
 	"github.com/xonoko/infra-monitor/internal/actions"
 	"github.com/xonoko/infra-monitor/internal/db/ent"
+	"github.com/xonoko/infra-monitor/internal/redact"
 	"github.com/xonoko/infra-monitor/internal/domain"
 )
 
@@ -39,6 +40,10 @@ func preparedMap(p *actions.Prepared) map[string]any {
 	if p == nil {
 		return nil
 	}
+	// What is stored and shown never contains secrets (the params used for execution are kept as is).
+	r := *p
+	r.Payload, r.DryRun, r.Effect, r.Rollback = redact.Text(p.Payload), redact.Text(p.DryRun), redact.Text(p.Effect), redact.Text(p.Rollback)
+	p = &r
 	b, _ := json.Marshal(p)
 	var m map[string]any
 	_ = json.Unmarshal(b, &m)

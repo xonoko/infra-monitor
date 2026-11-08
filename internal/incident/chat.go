@@ -13,6 +13,7 @@ import (
 	"github.com/xonoko/infra-monitor/internal/db/ent"
 	"github.com/xonoko/infra-monitor/internal/db/ent/message"
 	"github.com/xonoko/infra-monitor/internal/domain"
+	"github.com/xonoko/infra-monitor/internal/redact"
 	"github.com/xonoko/infra-monitor/internal/queue"
 	"github.com/xonoko/infra-monitor/internal/telemetry"
 )
@@ -112,7 +113,7 @@ func (s *Service) runChatReply(ctx context.Context, p chatPayload) error {
 			s.log.WarnContext(ctx, "agent chat failed", "incident_id", inc.ID, "error", aerr)
 			m, err := tx.Message.Create().SetIncidentID(inc.ID).SetRole(message.RoleSystem).SetAuthorName("infra-monitor").
 				SetChannel(domain.OriginSystem).SetStatus(message.StatusFailed).SetReplyToID(userMsg.ID).
-				SetContent(chatFailureText(aerr)).Save(ctx)
+				SetContent(redact.Text(chatFailureText(aerr))).Save(ctx)
 			if err != nil {
 				return err
 			}
@@ -122,7 +123,7 @@ func (s *Service) runChatReply(ctx context.Context, p chatPayload) error {
 			return err
 		}
 		m, err := tx.Message.Create().SetIncidentID(inc.ID).SetRole(message.RoleAgent).SetAuthorName(actor.Name).
-			SetChannel(domain.OriginSystem).SetContent(firstNonEmpty(res.Reply, "(empty reply)")).SetReplyToID(userMsg.ID).
+			SetChannel(domain.OriginSystem).SetContent(redact.Text(firstNonEmpty(res.Reply, "(empty reply)"))).SetReplyToID(userMsg.ID).
 			SetModel(res.Model).SetPromptTokens(res.Usage.PromptTokens).SetCompletionTokens(res.Usage.CompletionTokens).
 			SetCostUsd(s.costUSD(res.Model, res.Usage)).Save(ctx)
 		if err != nil {

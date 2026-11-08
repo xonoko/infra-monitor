@@ -89,8 +89,40 @@ tls:
 approvedActions:
   enabled: false
   serviceAccountName: ""
-  # -- Built-in ClusterRole bound cluster-wide (edit = namespaced writes, no RBAC, no secret reads).
-  clusterRole: edit
+  # -- Bind an existing ClusterRole instead of the chart's restricted one. WARNING: the built-in `edit` role grants
+  # Secrets read/write, ServiceAccount writes, token creation and pods under any ServiceAccount (≈ cluster-admin).
+  clusterRole: ""
+  # -- Rules of the chart-rendered restricted role (used when clusterRole is empty): `edit` minus Secrets,
+  # ServiceAccount writes, serviceaccounts/token and RBAC. Pair it with an admission policy denying
+  # serviceAccountName changes by this account (the app refuses them too).
+  rules:
+    - apiGroups: [""]
+      resources: [pods, configmaps, services, persistentvolumeclaims, replicationcontrollers, replicationcontrollers/scale]
+      verbs: [get, list, watch, create, update, patch, delete]
+    - apiGroups: [""]
+      resources: [pods/exec, pods/eviction]
+      verbs: [create]
+    - apiGroups: [""]
+      resources: [pods/log, events, endpoints, serviceaccounts, limitranges, resourcequotas]
+      verbs: [get, list, watch]
+    - apiGroups: [apps]
+      resources: [deployments, statefulsets, daemonsets, replicasets, deployments/scale, statefulsets/scale, replicasets/scale]
+      verbs: [get, list, watch, create, update, patch, delete]
+    - apiGroups: [batch]
+      resources: [jobs, cronjobs]
+      verbs: [get, list, watch, create, update, patch, delete]
+    - apiGroups: [autoscaling]
+      resources: [horizontalpodautoscalers]
+      verbs: [get, list, watch, create, update, patch, delete]
+    - apiGroups: [policy]
+      resources: [poddisruptionbudgets]
+      verbs: [get, list, watch, create, update, patch, delete]
+    - apiGroups: [networking.k8s.io]
+      resources: [ingresses, networkpolicies]
+      verbs: [get, list, watch, create, update, patch, delete]
+    - apiGroups: [discovery.k8s.io]
+      resources: [endpointslices]
+      verbs: [get, list, watch]
   # -- Read-only on cluster-scoped objects (nodes, namespaces, PVs, storage/ingress/priority classes, CRDs).
   clusterRead: true
   # -- Allow kubectl.exec proposals (pods/exec is part of the edit role).
