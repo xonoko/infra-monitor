@@ -179,7 +179,7 @@ func TestCostBreakdown(t *testing.T) {
 		c.Actions.AutoApprove = []string{"agent.reinvestigate"}
 	})
 	ctx := context.Background()
-	e.agent.result.Usage = agent.Usage{PromptTokens: 1_000_000, CompletionTokens: 100_000}       // $1.5
+	e.agent.result.Usage = agent.Usage{PromptTokens: 1_000_000, CompletionTokens: 100_000}        // $1.5
 	e.agent.chat.Usage = agent.Usage{PromptTokens: 200_000, CompletionTokens: 0}                  // $0.2
 	e.agent.result.ProposedActions = []agent.ProposedAction{agentProposal("agent.reinvestigate")} // auto -> remediation investigation
 	e.ingest(alert("Cost", "shop", "firing", "c"))
