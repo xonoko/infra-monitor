@@ -260,3 +260,38 @@ curl -s localhost:8080/readyz
 
 Then in the UI profile page, generate a link code and send `/link CODE` to the bot to connect your Telegram account
 (unlinked Telegram users can read but cannot approve actions or chat).
+
+## Approved generic actions and GitOps commits
+
+With `approvedActions.enabled: true` the chart creates a second ServiceAccount (`<fullname>-approved`) bound to the
+built-in `edit` ClusterRole plus read-only access to cluster-scoped objects. infra-monitor impersonates it **only**
+after a human approved a precise proposal (`k8s.patch`, `k8s.apply`, `k8s.delete`, `kubectl.exec`). Automatic actions
+keep the main account. These types are never auto-approved, whatever `actions.auto_approve` says.
+
+Approval is bound to the payload hash. Before approval and at execution the target's resourceVersion (or file SHA)
+is re-checked; if it changed, the action is refused and re-proposed.
+
+`gitops.change` commits to a GitHub repository (Contents read/write fine-grained PAT):
+
+| Secret key | Config key |
+| --- | --- |
+| `github-token` | `actions.gitops.token_file: /etc/infra-monitor/secrets/github-token` |
+
+```yaml
+approvedActions:
+  enabled: true
+  clusterRole: edit
+  clusterRead: true
+  exec: true            # kubectl.exec proposals (pods/exec is in `edit`)
+config:
+  agent:
+    model: claude-haiku-5-5        # first automatic diagnostic
+    deep_model: claude-sonnet-5-5  # "dig deeper"
+    chat_model: claude-sonnet-5-5  # chat replies (default: deep_model)
+  actions:
+    gitops:
+      enabled: true
+      repo: lucasgalton/infra-argocd
+      branch: main
+      token_file: /etc/infra-monitor/secrets/github-token
+```
