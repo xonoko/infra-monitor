@@ -1,0 +1,29 @@
+{{- if .Values.cnpg.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "infra-monitor.cnpgName" . }}
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+spec:
+  instances: {{ .Values.cnpg.instances }}
+  {{- with .Values.cnpg.imageName }}
+  imageName: {{ . }}
+  {{- end }}
+  bootstrap:
+    initdb:
+      database: {{ .Values.database.name }}
+      owner: {{ .Values.database.user }}
+  storage:
+    size: {{ .Values.cnpg.storage.size }}
+    {{- with .Values.cnpg.storage.storageClass }}
+    storageClass: {{ . }}
+    {{- end }}
+  resources:
+    {{- toYaml .Values.cnpg.resources | nindent 4 }}
+  {{- with .Values.cnpg.parameters }}
+  postgresql:
+    parameters:
+      {{- toYaml . | nindent 6 }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "infra-monitor.fullname" . }}
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    {{- include "infra-monitor.config" . | nindent 4 }}

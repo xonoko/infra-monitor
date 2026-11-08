@@ -1,0 +1,225 @@
+# -- Number of replicas. Every replica is identical (API + UI + workers); Postgres is the only shared state.
+replicaCount: 1
+
+image:
+  repository: ghcr.io/xonoko/infra-monitor
+  # -- Defaults to the chart appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  # -- Needed by the in-cluster Kubernetes action executors.
+  automountToken: true
+
+# -- RBAC for the action executors (rollout restart, delete pod, scale).
+rbac:
+  create: true
+  # -- true: one ClusterRole/ClusterRoleBinding. false: a Role/RoleBinding per namespace in `namespaces`.
+  clusterWide: true
+  namespaces: []
+  # -- Override the generated rules.
+  rules: []
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  capabilities:
+    drop: ["ALL"]
+  seccompProfile:
+    type: RuntimeDefault
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 96Mi
+  limits:
+    cpu: "1"
+    memory: 384Mi
+
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: infra-monitor.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: infra-monitor-tls
+  #    hosts: [infra-monitor.example.com]
+
+probes:
+  liveness:
+    httpGet: { path: /healthz, port: http }
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 6
+  readiness:
+    httpGet: { path: /readyz, port: http }
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  # -- Migrations run at startup (advisory lock), so give the first start time.
+  startup:
+    httpGet: { path: /healthz, port: http }
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 60
+
+# -- Only used when replicaCount > 1.
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# -- Default soft anti-affinity across nodes when replicaCount > 1. Set `affinity` to override.
+podAntiAffinity: soft # soft | hard | none
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+topologySpreadConstraints: []
+priorityClassName: ""
+terminationGracePeriodSeconds: 30
+
+extraEnv: []
+extraEnvFrom: []
+# -- e.g. kubeconfigs for other clusters (reference them in config.actions.kubeconfigs).
+extraVolumes: []
+extraVolumeMounts: []
+extraArgs: []
+
+# Secrets are mounted read-only as files at /etc/infra-monitor/secrets/<key>.
+# Reference them from `config` with the *_file keys. Missing keys don't block the pod,
+# but a *_file pointing to a missing key makes startup fail with a clear error.
+#
+# Keys used by the defaults below / the docs:
+#   database-password | database-dsn, oidc-client-secret, telegram-bot-token, telegram-webhook-secret,
+#   holmes-api-key, source-alertmanager-token, heartbeat-ping-url
+secrets:
+  # -- Name of an existing Secret (e.g. created by External Secrets).
+  existingSecret: ""
+  # -- Create a Secret from `values` instead (testing / simple setups).
+  create: false
+  values: {}
+  mountPath: /etc/infra-monitor/secrets
+
+# Database connection. Rendered into config.database.
+database:
+  host: ""
+  port: 5432
+  name: infra_monitor
+  user: infra_monitor
+  sslmode: require
+  maxConns: 20
+  # -- Key in the secret holding the password (ignored when dsnKey is set or cnpg is enabled).
+  passwordKey: database-password
+  # -- Key holding a full DSN instead of host/user/password.
+  dsnKey: ""
+  migrateOnStart: true
+
+# Optional CloudNativePG cluster (requires the CNPG operator). When enabled the app connects to
+# <fullname>-db-rw with the operator-generated <fullname>-db-app secret.
+cnpg:
+  enabled: false
+  instances: 1
+  imageName: ""
+  storage:
+    size: 5Gi
+    storageClass: ""
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  parameters: {}
+
+metrics:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    labels: {}
+  vmServiceScrape:
+    enabled: false
+    interval: 30s
+    labels: {}
+
+# -- infra-monitor configuration (rendered to /etc/infra-monitor/config.yaml). See config/config.example.yaml.
+# `database` is generated from the `database` / `cnpg` values above; anything set here under
+# config.database is merged on top. Environment overrides: INFRA_MONITOR_<SECTION>_<KEY>.
+config:
+  env: production
+  log_level: info
+  log_format: json
+  server:
+    listen: ":8080"
+    public_url: "http://localhost:8080"
+    trust_proxy: true
+  telemetry:
+    service_name: infra-monitor
+    tracing:
+      enabled: false
+      exporter: otlp-grpc
+      endpoint: ""
+      insecure: true
+      sample_ratio: 1
+      ui_url_template: ""
+    metrics:
+      enabled: true
+  auth:
+    local:
+      enabled: true
+    oidc:
+      enabled: false
+    session_ttl: 168h
+  sources:
+    - name: alertmanager
+      type: alertmanager
+      auth:
+        bearer_token_file: /etc/infra-monitor/secrets/source-alertmanager-token
+      alertmanager_url: ""
+      cluster_label: cluster
+  heartbeat:
+    enabled: true
+    matchers: ["alertname=Watchdog"]
+    expected_interval: 1m
+    silent_after: 10m
+  correlation:
+    group_by: [alertname, cluster, namespace]
+    reopen_window: 30m
+    debounce: 45s
+    resolve_grace: 2m
+  agent:
+    enabled: false
+  actions:
+    in_cluster: true
+    namespace_deny: [kube-system]
+    proposal_ttl: 1h
+  channels: []
+  routing: []
+  retention:
+    resolved_incidents: 90d

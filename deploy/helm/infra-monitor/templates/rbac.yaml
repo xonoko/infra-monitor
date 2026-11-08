@@ -1,0 +1,64 @@
+{{- if .Values.rbac.create }}
+{{- $rules := .Values.rbac.rules }}
+{{- if not $rules }}
+{{- $rules = list
+  (dict "apiGroups" (list "apps") "resources" (list "deployments" "statefulsets" "daemonsets" "replicasets") "verbs" (list "get" "list" "watch" "patch"))
+  (dict "apiGroups" (list "apps") "resources" (list "deployments/scale" "statefulsets/scale") "verbs" (list "get" "update" "patch"))
+  (dict "apiGroups" (list "") "resources" (list "pods") "verbs" (list "get" "list" "watch" "delete"))
+}}
+{{- end }}
+{{- if .Values.rbac.clusterWide }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "infra-monitor.fullname" . }}
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+rules:
+  {{- toYaml $rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "infra-monitor.fullname" . }}
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "infra-monitor.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "infra-monitor.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- else }}
+{{- range $ns := .Values.rbac.namespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "infra-monitor.fullname" $ }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "infra-monitor.labels" $ | nindent 4 }}
+rules:
+  {{- toYaml $rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "infra-monitor.fullname" $ }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "infra-monitor.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "infra-monitor.fullname" $ }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "infra-monitor.serviceAccountName" $ }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,30 @@
+cnpg:
+  enabled: true
+secrets:
+  existingSecret: infra-monitor
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: infra-monitor.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: infra-monitor-tls
+      hosts: [infra-monitor.example.com]
+metrics:
+  serviceMonitor:
+    enabled: true
+config:
+  server:
+    public_url: https://infra-monitor.example.com
+  auth:
+    oidc:
+      enabled: true
+      issuer: https://auth.example.com/application/o/infra-monitor/
+      client_id: infra-monitor
+      client_secret_file: /etc/infra-monitor/secrets/oidc-client-secret
+      admin_groups: [infra-admin]

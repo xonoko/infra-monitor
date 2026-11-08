@@ -1,0 +1,7 @@
+database:
+  host: postgres.example.svc
+secrets:
+  create: true
+  values:
+    database-password: test
+    source-alertmanager-token: token

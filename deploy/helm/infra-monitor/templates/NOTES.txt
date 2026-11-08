@@ -1,0 +1,16 @@
+infra-monitor {{ .Chart.AppVersion }} is deployed as {{ include "infra-monitor.fullname" . }} in {{ .Release.Namespace }}.
+
+UI / API: {{ .Values.config.server.public_url }}  (API docs at /api/v1/docs)
+In-cluster: http://{{ include "infra-monitor.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
+
+Alertmanager webhook (per source):
+  http://{{ include "infra-monitor.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}/api/v1/sources/<source-name>/webhook
+
+Create the first admin user:
+  kubectl -n {{ .Release.Namespace }} exec -i deploy/{{ include "infra-monitor.fullname" . }} -- \
+    /infra-monitor user create --config /etc/infra-monitor/config.yaml --email you@example.com --role admin --password-stdin <<< 'secret'
+{{- if not (include "infra-monitor.secretName" .) }}
+
+WARNING: no secret configured (secrets.existingSecret / secrets.create). Any *_file path in the
+config pointing to /etc/infra-monitor/secrets will make startup fail.
+{{- end }}

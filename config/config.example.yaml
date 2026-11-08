@@ -1,0 +1,170 @@
+# infra-monitor configuration (local development example).
+#
+# Every key can be overridden with an environment variable: INFRA_MONITOR_<SECTION>_<KEY>,
+# e.g. INFRA_MONITOR_DATABASE_PASSWORD or INFRA_MONITOR_SERVER_PUBLIC_URL.
+# Secret values can be read from files with the matching *_file key (the file content is trimmed).
+# Durations use Go syntax (30s, 5m, 2h) plus days (90d).
+
+env: development          # production | development
+log_level: debug          # debug | info | warn | error
+log_format: text          # json (production) | text
+
+server:
+  listen: ":8080"
+  public_url: "http://localhost:8080"   # used for links in chat messages and the OIDC redirect
+  shutdown_timeout: 20s
+  trust_proxy: false                    # true behind an ingress (honors X-Forwarded-For / X-Real-IP)
+
+database:
+  # Either a full DSN (or dsn_file) ...
+  dsn: ""
+  # dsn_file: /etc/infra-monitor/secrets/database-dsn
+  # ... or the individual fields below.
+  host: localhost
+  port: 55432               # docker-compose Postgres (`make db-up`)
+  name: infra_monitor
+  user: postgres
+  password: postgres
+  # password_file: /etc/infra-monitor/secrets/database-password
+  sslmode: disable          # disable | require | verify-full
+  max_conns: 20
+  migrate_on_start: true    # apply migrations at startup (advisory lock; safe with many replicas)
+
+telemetry:
+  service_name: infra-monitor
+  tracing:
+    enabled: false
+    exporter: otlp-grpc     # otlp-grpc | otlp-http | stdout
+    endpoint: ""            # e.g. otel-collector:4317; empty = OTEL_EXPORTER_OTLP_* env vars
+    insecure: true
+    headers: {}
+    sample_ratio: 1.0
+    ui_url_template: ""     # "View trace" links, e.g. https://hyperdx.example.com/trace/{trace_id}
+  metrics:
+    enabled: true           # Prometheus format on /metrics
+    otlp_enabled: false     # also push metrics over OTLP gRPC
+    otlp_endpoint: ""
+    otlp_interval: 30s
+
+auth:
+  local:
+    enabled: true           # email + password users (`infra-monitor user create`)
+  oidc:
+    enabled: false
+    name: SSO               # login button label
+    issuer: ""              # e.g. https://auth.example.com/application/o/infra-monitor/
+    client_id: ""
+    client_secret: ""
+    # client_secret_file: /etc/infra-monitor/secrets/oidc-client-secret
+    redirect_url: ""        # default: <public_url>/api/v1/auth/oidc/callback
+    scopes: [openid, profile, email, groups]
+    groups_claim: groups
+    admin_groups: []        # e.g. [infra-admin]
+    operator_groups: []
+    default_role: viewer    # role for users in no listed group: viewer | none (login refused)
+  session_ttl: 168h
+  # cookie_secure: true     # default: true when public_url is https
+
+# Alert sources. Webhook: POST /api/v1/sources/<name>/webhook
+sources:
+  - name: alertmanager
+    type: alertmanager
+    auth:
+      bearer_token: dev-token          # Alertmanager http_config.authorization.credentials
+      # bearer_token_file: /etc/infra-monitor/secrets/source-alertmanager-token
+      # basic_username: ""
+      # basic_password: ""
+      # basic_password_file: ""
+    alertmanager_url: ""               # e.g. http://localhost:9093 — enables reconcile (GET /api/v2/alerts) and silences
+    reconcile_interval: 5m
+    cluster_label: cluster
+    namespace_label: namespace
+    default_cluster: local             # used when an alert has no cluster label
+
+# Dead man's switch: matching signals never create incidents; they refresh the heartbeat.
+heartbeat:
+  enabled: true
+  matchers: ["alertname=Watchdog"]
+  expected_interval: 1m
+  silent_after: 10m        # no heartbeat for this long -> internal "source silent" incident
+  ping_url: ""             # healthchecks.io-style URL pinged while heartbeats arrive
+  # ping_url_file: /etc/infra-monitor/secrets/heartbeat-ping-url
+  ping_method: GET
+  ping_interval: 1m
+
+correlation:
+  group_by: [alertname, cluster, namespace]   # signals with the same values share an incident
+  reopen_window: 30m       # a resolved incident that re-fires within this window is reopened
+  debounce: 45s            # wait for related signals before investigating
+  resolve_grace: 2m        # all signals resolved for this long -> incident resolved
+
+# AI investigator (HolmesGPT over HTTP).
+agent:
+  enabled: false
+  type: holmes
+  url: ""                  # e.g. http://localhost:5050 or http://holmes-holmes.holmes.svc.cluster.local
+  api_key: ""
+  # api_key_file: /etc/infra-monitor/secrets/holmes-api-key
+  model: ""                # key of Holmes' modelList (not the provider model id), e.g. investigate
+  timeout: 5m
+  notify_timeout: 4m       # fail open: notify without AI after this delay
+  max_concurrent: 2
+  max_per_hour: 20
+  cooldown: 15m            # no automatic re-investigation of the same incident within this window
+  extra_prompt: ""
+  structured_output: true  # use response_format json_schema (falls back to a fenced JSON block)
+
+actions:
+  enabled: [k8s.rollout_restart, k8s.delete_pod, k8s.scale, alertmanager.silence, agent.reinvestigate]
+  auto_approve: []         # action types that run without human approval (default: none)
+  namespace_deny: [kube-system]
+  namespace_allow: []      # non-empty = only these namespaces
+  in_cluster: true         # use the pod's ServiceAccount
+  in_cluster_name: ""      # cluster label served by the in-cluster account ("" = any cluster without a kubeconfig)
+  kubeconfigs: {}          # per-cluster kubeconfig paths, keyed by the alert's cluster label
+  #   prod: /etc/infra-monitor/kubeconfigs/prod
+  proposal_ttl: 1h         # proposals expire after this
+  max_replicas: 10         # upper bound for k8s.scale
+  max_silence: 24h         # upper bound for alertmanager.silence
+  timeout: 2m
+
+# Chat channels (one Channel interface for every system; Telegram is implemented).
+channels: []
+#  - name: infra
+#    type: telegram
+#    bot_token: ""
+#    bot_token_file: /etc/infra-monitor/secrets/telegram-bot-token
+#    chat_id: -1001234567890
+#    mode: polling           # polling (one replica holds the poller lease) | webhook
+#    webhook_secret: ""
+#    webhook_secret_file: /etc/infra-monitor/secrets/telegram-webhook-secret
+#    api_url: ""             # override the Bot API base URL (tests / local bot API server)
+#    messages_per_minute: 18
+
+# Notification routing, evaluated in order; the first matching route wins unless continue: true.
+# A route matches when all label matchers match AND the verdict is in `verdicts` (empty = any)
+# AND the severity is in `severities` (empty = any). An empty `channels` list means every channel.
+# With no routes at all, the default is: notify every channel when the verdict is actionable,
+# when it is unknown (AI unavailable or disabled: fail open) for critical/warning alerts, or when
+# severity is critical. Noise stays in the UI only.
+routing: []
+#  - name: actionable
+#    verdicts: [actionable]
+#    channels: [infra]
+#    continue: true
+#  - name: critical
+#    severities: [critical]
+#    channels: [infra]
+#  - name: prod-only
+#    match: ["cluster=prod"]
+#    verdicts: [actionable, unknown]
+#    channels: [infra]
+
+retention:
+  resolved_incidents: 90d
+  jobs: 7d
+
+jobs:
+  workers: 8
+  poll_interval: 2s
+  lock_timeout: 10m

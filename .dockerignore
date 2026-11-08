@@ -1,0 +1,15 @@
+.git
+.github
+.idea
+**/node_modules
+web/dist/*
+!web/dist/.gitkeep
+deploy
+docs
+*.out
+coverage.*
+/infra-monitor
+/bin
+/config.yaml
+.env
+.DS_Store

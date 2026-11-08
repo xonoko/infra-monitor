@@ -1,0 +1,20 @@
+replicaCount: 3
+podAntiAffinity: hard
+database:
+  host: postgres.example.svc
+secrets:
+  existingSecret: infra-monitor
+rbac:
+  clusterWide: false
+  namespaces: [default, apps]
+metrics:
+  vmServiceScrape:
+    enabled: true
+config:
+  channels:
+    - name: infra
+      type: telegram
+      bot_token_file: /etc/infra-monitor/secrets/telegram-bot-token
+      chat_id: -100123
+      mode: webhook
+      webhook_secret_file: /etc/infra-monitor/secrets/telegram-webhook-secret

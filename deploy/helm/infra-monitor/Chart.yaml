@@ -1,0 +1,10 @@
+apiVersion: v2
+name: infra-monitor
+description: Self-hosted alert and incident hub with AI investigation, actions and chat channels (UI + Telegram)
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://github.com/xonoko/infra-monitor
+sources:
+  - https://github.com/xonoko/infra-monitor
+keywords: [alerting, incidents, alertmanager, telegram, holmesgpt]
