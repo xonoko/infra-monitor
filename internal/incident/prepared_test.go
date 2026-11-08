@@ -145,7 +145,7 @@ func TestPreExecutionCheck(t *testing.T) {
 			require.Equal(t, 1, e.exec.runs)
 		} else {
 			require.Equal(t, "expired", string(a.Status))
-			require.Contains(t, a.Error, "cancelled before running")
+			require.Contains(t, a.Error, "canceled before running")
 			require.Zero(t, e.exec.runs)
 		}
 		c, err := e.svc.Cost(ctx, inc.ID, time.Time{})

@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseCheck(t *testing.T) {
-	c, err := parseCheck(`{"still_needed": false, "reason": "pod already Running with 256Mi"}`)
+	c, err := parseCheck(`{"proceed": false, "reason": "pod already Running with 256Mi"}`)
 	require.NoError(t, err)
 	require.False(t, c.StillNeeded)
 	require.Contains(t, c.Reason, "256Mi")

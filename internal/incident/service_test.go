@@ -139,6 +139,7 @@ func newEnv(t *testing.T, withAgent bool, mutate ...func(*config.Config)) *env {
 		},
 		Conversation: json.RawMessage(`[{"role":"system","content":"x"}]`),
 	}, chat: &agent.ChatResult{Reply: "It is the memory limit.", Conversation: json.RawMessage(`[{"role":"system","content":"y"}]`)}}
+	fa.stillNeeded = true
 	deps := incident.Deps{Config: cfg, DB: d, Log: pgtest.Logger(), Registry: reg, Now: c.Now, NamespaceAnnotations: testAnnotations}
 	if withAgent {
 		deps.Agent = fa

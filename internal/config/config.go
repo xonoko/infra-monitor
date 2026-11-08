@@ -183,7 +183,9 @@ type AgentConfig struct {
 	DeepModel string `mapstructure:"deep_model"`
 	// ChatModel answers chat follow-ups (default: deep_model).
 	ChatModel string `mapstructure:"chat_model"`
-	MaxPerDay int    `mapstructure:"max_per_day"`
+	// CheckModel validates every action right before it runs (default: deep_model).
+	CheckModel string `mapstructure:"check_model"`
+	MaxPerDay  int    `mapstructure:"max_per_day"`
 	// InvestigateSeverities gates automatic investigations (manual ones are always allowed).
 	InvestigateSeverities []string    `mapstructure:"investigate_severities"`
 	Storm                 StormConfig `mapstructure:"storm"`
@@ -371,6 +373,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("agent.model", "claude-haiku-5-5")
 	v.SetDefault("agent.deep_model", "claude-sonnet-5-5")
 	v.SetDefault("agent.chat_model", "")
+	v.SetDefault("agent.check_model", "")
 	v.SetDefault("agent.max_per_day", 50)
 	v.SetDefault("agent.investigate_severities", []string{"critical", "warning"})
 	v.SetDefault("agent.storm.enabled", true)

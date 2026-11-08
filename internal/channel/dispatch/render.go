@@ -155,7 +155,7 @@ func actionStatusLine(a *ent.Action) string {
 	case "rejected":
 		return "✖ Rejected" + who
 	case "expired":
-		if strings.HasPrefix(a.Error, "cancelled before running") {
+		if strings.HasPrefix(a.Error, "canceled before running") {
 			return "⌛ " + truncateText(a.Error, 200)
 		}
 		return "⌛ Expired"

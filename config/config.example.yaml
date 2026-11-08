@@ -107,6 +107,8 @@ agent:
   # api_key_file: /etc/infra-monitor/secrets/holmes-api-key
   model: claude-haiku-5-5  # key of Holmes' modelList (not the provider model id)
   deep_model: claude-sonnet-5-5   # only on an explicit "dig deeper" request (UI menu, /reinvestigate deep)
+  chat_model: ""            # chat replies (default: deep_model)
+  check_model: ""           # final go/no-go before EVERY action runs, auto-approved included (default: deep_model)
   timeout: 5m
   notify_timeout: 4m       # fail open: notify without AI after this delay
   # Cost controls (an alert storm must never cause a big bill). Caps count every agent call:

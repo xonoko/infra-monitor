@@ -348,7 +348,7 @@ func (s *Service) ExpireProposals(ctx context.Context) error {
 
 // executeAction runs an approved action exactly once (job with a single attempt).
 func (s *Service) executeAction(ctx context.Context, id int) error {
-	if cancelled, err := s.preExecutionCheck(ctx, id); err != nil || cancelled {
+	if canceled, err := s.preExecutionCheck(ctx, id); err != nil || canceled {
 		return err
 	}
 	var a *ent.Action

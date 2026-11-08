@@ -192,7 +192,7 @@ func TestCostBreakdown(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, c.Investigation.Calls)
 	require.InDelta(t, 1.5, c.Investigation.USD, 1e-9)
-	require.Equal(t, 1, c.Remediation.Calls, "the auto-approved reinvestigation counts as remediation")
+	require.Equal(t, 2, c.Remediation.Calls, "the final check and the auto-approved reinvestigation count as remediation")
 	require.InDelta(t, 1.5, c.Remediation.USD, 1e-9)
 	require.Equal(t, 1, c.Chat.Calls)
 	require.InDelta(t, 0.2, c.Chat.USD, 1e-9)

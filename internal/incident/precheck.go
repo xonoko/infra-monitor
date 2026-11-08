@@ -19,11 +19,9 @@ import (
 	"github.com/xonoko/infra-monitor/internal/telemetry"
 )
 
-// precheckAfter: actions executed sooner than this after being proposed (auto-approved ones) skip the check.
-const precheckAfter = 2 * time.Minute
-
-// preExecutionCheck asks the agent, right before an approved action runs, whether the live state still
-// requires it. If not, the action is cancelled (expired) with the agent's reason and nothing runs.
+// preExecutionCheck asks the agent (agent.check_model, default the deep model), right before ANY approved
+// action runs (human or auto-approved), whether it is still needed AND correct and safe as proposed. If not,
+// the action is canceled (expired) with the agent's reason and nothing runs.
 // If the check can't run (no agent, caps, budget, error), the approved action proceeds and the timeline says so.
 func (s *Service) preExecutionCheck(ctx context.Context, actionID int) (bool, error) {
 	checker, ok := s.agent.(agent.ActionChecker)
@@ -31,7 +29,7 @@ func (s *Service) preExecutionCheck(ctx context.Context, actionID int) (bool, er
 		return false, nil
 	}
 	a, err := s.ent.Action.Get(ctx, actionID)
-	if err != nil || a.Status != action.StatusApproved || s.now().Sub(a.CreatedAt) < precheckAfter {
+	if err != nil || a.Status != action.StatusApproved {
 		return false, nil
 	}
 	inc, err := s.ent.Incident.Get(ctx, a.IncidentID)
@@ -58,6 +56,9 @@ func (s *Service) preExecutionCheck(ctx context.Context, actionID int) (bool, er
 	if err != nil {
 		return false, err
 	}
+	if m := firstNonEmpty(s.cfg.Agent.CheckModel, s.cfg.Agent.DeepModel); m != "" && m != s.agent.Model() {
+		ic.Model = m // the final check uses the stronger model
+	}
 	cctx, cancel := context.WithTimeout(ctx, min(s.cfg.Agent.Timeout, 3*time.Minute))
 	defer cancel()
 	cctx, span := telemetry.Tracer().Start(cctx, "agent.check_action")
@@ -71,13 +72,13 @@ func (s *Service) preExecutionCheck(ctx context.Context, actionID int) (bool, er
 		return false, note("pre-execution check unavailable (" + truncate(redact.Text(cerr.Error()), 200) + "); running the approved action")
 	}
 	s.recordUsage(ctx, "action_check", res.Model, res.Usage)
-	verdict := "still needed"
+	verdict := "go"
 	if !res.StillNeeded {
-		verdict = "no longer needed"
+		verdict = "no-go"
 	}
 	summary := fmt.Sprintf("Pre-execution check for action #%d: %s. %s", a.ID, verdict, redact.Text(res.Reason))
 	now := s.now()
-	var cancelled bool
+	var canceled bool
 	err = s.tx(ctx, func(tx *ent.Tx) error {
 		// The check is agent work on a remediation: recorded (and costed) as an action-triggered investigation.
 		if err := tx.Investigation.Create().SetIncidentID(inc.ID).SetStatus(investigation.StatusSucceeded).
@@ -95,13 +96,13 @@ func (s *Service) preExecutionCheck(ctx context.Context, actionID int) (bool, er
 		if err != nil || a.Status != action.StatusApproved {
 			return err
 		}
-		cancelled = true
-		return s.expireAction(ctx, tx, inc, a, "cancelled before running: "+truncate(redact.Text(res.Reason), 500))
+		canceled = true
+		return s.expireAction(ctx, tx, inc, a, "canceled before running: "+truncate(redact.Text(res.Reason), 500))
 	})
-	if err == nil && !cancelled {
+	if err == nil && !canceled {
 		err = note("pre-execution check: " + truncate(redact.Text(res.Reason), 300))
 	}
-	return cancelled, err
+	return canceled, err
 }
 
 // describeAction is the precise description the agent re-checks.

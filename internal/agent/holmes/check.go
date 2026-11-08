@@ -15,12 +15,15 @@ import (
 
 var _ agent.ActionChecker = (*Client)(nil)
 
-const checkSystemPrompt = `You are infra-monitor's pre-execution safety check. A human approved a remediation earlier; it is about to run NOW.
-Use your read-only tools to look at the CURRENT state of the target and the incident (pods, events, logs, the object itself).
-Decide whether the action is still needed and still safe right now. Say not needed when the problem is already gone, the
-object already has the intended state, the target no longer exists, or the situation changed so the action would be wrong.
-When in doubt about safety, say not needed and explain. Be brief and cheap: a few targeted tool calls.
-Answer ONLY with JSON: {"still_needed": true|false, "reason": "<one or two sentences citing what you observed>"}`
+const checkSystemPrompt = `You are infra-monitor's final check before a remediation runs. It was approved (by a human, or automatically by policy) and will run NOW, exactly as described.
+Use your read-only tools to look at the CURRENT state of the target and the incident (the object itself, pods, events, logs).
+Answer proceed=true ONLY if all of these hold:
+1. It is still needed: the problem is still there and the object does not already have the intended state.
+2. It is correct: right cluster, namespace, object and container; the change itself fixes the observed root cause; values are sensible.
+3. It is safe now: no collateral damage you can see (e.g. last ready replica, data loss, core infrastructure in a bad moment).
+4. There is no clearly better option: e.g. the object is managed by Argo CD (argocd.argoproj.io/tracking-id) and a live patch would be reverted, so a GitOps change is needed instead.
+Otherwise answer proceed=false and say exactly what is wrong. Be concise: a few targeted tool calls.
+Answer ONLY with JSON: {"proceed": true|false, "reason": "<one or two sentences citing what you observed>"}`
 
 // CheckAction asks Holmes whether an approved action is still needed, from a fresh context.
 func (c *Client) CheckAction(ctx context.Context, ic agent.IncidentContext, action string) (*agent.ActionCheck, error) {
@@ -34,10 +37,10 @@ func (c *Client) CheckAction(ctx context.Context, ic agent.IncidentContext, acti
 	}
 	if c.cfg.StructuredOutput {
 		req.ResponseFormat = responseFormat("infra_monitor_action_check", map[string]any{
-			"type": "object", "additionalProperties": false, "required": []string{"still_needed", "reason"},
+			"type": "object", "additionalProperties": false, "required": []string{"proceed", "reason"},
 			"properties": map[string]any{
-				"still_needed": map[string]any{"type": "boolean"},
-				"reason":       map[string]any{"type": "string"},
+				"proceed": map[string]any{"type": "boolean"},
+				"reason":  map[string]any{"type": "string"},
 			},
 		})
 	}
@@ -68,12 +71,18 @@ func parseCheck(text string) (*agent.ActionCheck, error) {
 	for _, c := range cands {
 		if i := strings.IndexByte(c, '{'); i >= 0 {
 			var v struct {
+				Proceed     *bool  `json:"proceed"`
 				StillNeeded *bool  `json:"still_needed"`
 				Reason      string `json:"reason"`
 			}
 			dec := json.NewDecoder(strings.NewReader(c[i:]))
-			if dec.Decode(&v) == nil && v.StillNeeded != nil {
-				return &agent.ActionCheck{StillNeeded: *v.StillNeeded, Reason: strings.TrimSpace(v.Reason)}, nil
+			if dec.Decode(&v) == nil {
+				if v.Proceed == nil {
+					v.Proceed = v.StillNeeded
+				}
+				if v.Proceed != nil {
+					return &agent.ActionCheck{StillNeeded: *v.Proceed, Reason: strings.TrimSpace(v.Reason)}, nil
+				}
 			}
 		}
 	}
