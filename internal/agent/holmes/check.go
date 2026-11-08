@@ -15,15 +15,17 @@ import (
 
 var _ agent.ActionChecker = (*Client)(nil)
 
-const checkSystemPrompt = `You are infra-monitor's final check before a remediation runs. It was approved (by a human, or automatically by policy) and will run NOW, exactly as described.
-Use your read-only tools to look at the CURRENT state of the target and the incident (the object itself, pods, events, logs).
+const checkSystemPrompt = `You are infra-monitor's final reviewer. A remediation was proposed from a first analysis (by a smaller model) and approved
+(by a human, or automatically by policy). It will run NOW, exactly as described.
+Do NOT investigate again and do NOT call any tools: review only what you are given (the first analysis, the exact action
+with its payload and dry-run, and a fresh snapshot of the current state gathered by infra-monitor).
 Answer proceed=true ONLY if all of these hold:
-1. It is still needed: the problem is still there and the object does not already have the intended state.
-2. It is correct: right cluster, namespace, object and container; the change itself fixes the observed root cause; values are sensible.
-3. It is safe now: no collateral damage you can see (e.g. last ready replica, data loss, core infrastructure in a bad moment).
-4. There is no clearly better option: e.g. the object is managed by Argo CD (argocd.argoproj.io/tracking-id) and a live patch would be reverted, so a GitOps change is needed instead.
-Otherwise answer proceed=false and say exactly what is wrong. Be concise: a few targeted tool calls.
-Answer ONLY with JSON: {"proceed": true|false, "reason": "<one or two sentences citing what you observed>"}`
+1. The first analysis is sound: the evidence supports the root cause.
+2. The action fixes that root cause: right cluster, namespace, object and container; sensible values; no obvious side effects.
+3. It is still needed per the fresh snapshot (problem still present, the dry-run still shows a change).
+4. There is no clearly better option (e.g. the object is managed by Argo CD and a live change would be reverted: a GitOps change is needed).
+Otherwise answer proceed=false and say exactly what is wrong.
+Answer ONLY with JSON: {"proceed": true|false, "reason": "<one or two sentences>"}`
 
 // CheckAction asks Holmes whether an approved action is still needed, from a fresh context.
 func (c *Client) CheckAction(ctx context.Context, ic agent.IncidentContext, action string) (*agent.ActionCheck, error) {
@@ -31,7 +33,7 @@ func (c *Client) CheckAction(ctx context.Context, ic agent.IncidentContext, acti
 		attribute.Int("incident.id", ic.IncidentID), attribute.String("agent.model", c.model(ic.Model))))
 	defer span.End()
 	req := chatRequest{
-		Ask:                    "Approved action about to run:\n" + action + "\n\nIncident context:\n" + incidentContext(ic),
+		Ask:                    "Review this approved action before it runs (no tool calls).\n\n" + action + "\n\nIncident:\n" + incidentContext(ic),
 		Model:                  c.model(ic.Model),
 		AdditionalSystemPrompt: checkSystemPrompt,
 	}

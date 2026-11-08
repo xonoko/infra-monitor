@@ -88,9 +88,11 @@ An alert storm must never produce a large LLM bill (LiteLLM also enforces budget
   retried. The incident fails open ("AI budget reached") and all agent calls pause for `agent.budget_pause`.
 - The default model is cheap (`agent.model`, first analysis only). `agent.deep_model` (Sonnet) is used for "dig deeper",
   chat replies (`chat_model`) and the final check before any action runs (`check_model`).
-- **Final check**: right before an approved action runs (human or auto-approved), the agent re-reads the live state and
-  answers proceed only if the action is still needed, correct and safe, with no clearly better option (e.g. a GitOps
-  change for an Argo-managed object). Otherwise the action is canceled with the reason. If the check can't run (caps,
+- **Final review**: right before an approved action runs (human or auto-approved), the stronger model reviews (without
+  investigating again or calling tools) the first analysis, the exact action, and a fresh snapshot gathered by
+  infra-monitor (incident status, firing signals, a new server dry-run). It answers proceed only if the analysis is
+  sound, the action fixes it, it is still needed and there is no clearly better option (e.g. GitOps for Argo-managed
+  objects). Otherwise the action is canceled with the reason. If the check can't run (caps,
   budget, agent down), the approved action proceeds and the timeline says so. No model ever executes anything: the
   executor applies exactly the hash-approved payload.
 - Metrics: `infra_monitor_investigations{outcome}`, `infra_monitor_investigations_skipped{reason}`

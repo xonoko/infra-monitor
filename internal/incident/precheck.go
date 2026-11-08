@@ -64,7 +64,7 @@ func (s *Service) preExecutionCheck(ctx context.Context, actionID int) (bool, er
 	cctx, span := telemetry.Tracer().Start(cctx, "agent.check_action")
 	span.SetAttributes(attribute.Int("action.id", a.ID), attribute.String("action.type", a.Type))
 	started := s.now()
-	res, cerr := checker.CheckAction(cctx, ic, describeAction(a))
+	res, cerr := checker.CheckAction(cctx, ic, s.reviewBrief(ctx, inc, a))
 	telemetry.RecordError(span, cerr)
 	span.End()
 	if cerr != nil {
@@ -119,4 +119,36 @@ func describeAction(a *ent.Action) string {
 		fmt.Fprintf(&b, "Params: %s\n", params)
 	}
 	return b.String()
+}
+
+// reviewBrief is everything the final reviewer needs, so it doesn't have to investigate again:
+// the first analysis, the exact action, and a fresh snapshot gathered by infra-monitor.
+func (s *Service) reviewBrief(ctx context.Context, inc *ent.Incident, a *ent.Action) string {
+	var b strings.Builder
+	b.WriteString("== First analysis ==\n")
+	if inv, err := s.ent.Investigation.Query().Where(investigation.IncidentID(inc.ID), investigation.StatusEQ(investigation.StatusSucceeded),
+		investigation.TriggerNEQ(investigation.TriggerAction)).Order(ent.Desc(investigation.FieldID)).First(ctx); err == nil {
+		fmt.Fprintf(&b, "Model: %s, verdict %s (confidence %.0f%%), at %s\nSummary: %s\nRoot cause: %s\nAnalysis:\n%s\n",
+			inv.Model, inv.Verdict, inv.Confidence*100, inv.CreatedAt.UTC().Format(time.RFC3339), inv.Summary, inv.RootCause, truncate(inv.Analysis, 4000))
+	} else {
+		b.WriteString("(no AI analysis: the action was proposed by a user or by policy)\n")
+	}
+	b.WriteString("\n== Action ==\n")
+	b.WriteString(describeAction(a))
+	b.WriteString("\n== Current state (gathered now by infra-monitor) ==\n")
+	fmt.Fprintf(&b, "Incident status: %s, last signal %s ago\n", inc.Status, s.now().Sub(inc.LastSignalAt).Round(time.Second))
+	if c, err := s.Counts(ctx, []int{inc.ID}); err == nil {
+		fmt.Fprintf(&b, "Signals firing: %d of %d\n", c[inc.ID].Firing, c[inc.ID].Signals)
+	}
+	if exec, ok := s.registry.Get(a.Type); ok {
+		if fresh, err := s.prepare(ctx, exec, a.Params, Target(inc)); err == nil && fresh != nil {
+			fmt.Fprintf(&b, "Fresh server dry-run: ok=%v\nFresh effect: %s\nFresh dry-run diff:\n%s\n", fresh.DryRunOK, fresh.Effect, truncate(fresh.DryRun, 3000))
+			if p := PreparedOf(a); p != nil && p.Precondition != fresh.Precondition {
+				b.WriteString("Note: the target object changed since the proposal (execution will refuse and ask again).\n")
+			}
+		} else if err != nil {
+			fmt.Fprintf(&b, "Fresh dry-run failed: %v\n", err)
+		}
+	}
+	return redact.Text(b.String())
 }
