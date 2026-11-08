@@ -1,0 +1,354 @@
+package incident
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+
+	"github.com/xonoko/infra-monitor/internal/actions"
+	"github.com/xonoko/infra-monitor/internal/db/ent"
+	"github.com/xonoko/infra-monitor/internal/db/ent/action"
+	"github.com/xonoko/infra-monitor/internal/domain"
+	"github.com/xonoko/infra-monitor/internal/queue"
+	"github.com/xonoko/infra-monitor/internal/telemetry"
+)
+
+type actionInput struct {
+	Type            string
+	Params          map[string]any
+	Rationale       string
+	Risk            string
+	ProposedBy      string // agent | user | system
+	InvestigationID *int
+}
+
+// Target derives the action scope from an incident.
+func Target(inc *ent.Incident) actions.Target {
+	return actions.Target{IncidentID: inc.ID, Cluster: inc.Cluster, Namespace: inc.Namespace, Labels: incidentMatchLabels(inc), Source: inc.Source}
+}
+
+func paramsHash(typ string, p map[string]any) string {
+	b, _ := json.Marshal(p) // map keys are sorted by encoding/json
+	h := sha256.Sum256(append([]byte(typ+"\x00"), b...))
+	return hex.EncodeToString(h[:8])
+}
+
+// createAction validates and stores a proposal; a pending identical proposal is returned instead of duplicated.
+func (s *Service) createAction(ctx context.Context, tx *ent.Tx, inc *ent.Incident, in actionInput, actor domain.Actor) (*ent.Action, error) {
+	if in.Params == nil {
+		in.Params = map[string]any{}
+	}
+	exec, ok := s.registry.Get(in.Type)
+	if !ok {
+		return nil, fmt.Errorf("%w: %w: %q", ErrInvalid, actions.ErrUnknownType, in.Type)
+	}
+	t := Target(inc)
+	if err := s.registry.Validate(ctx, in.Type, in.Params, t); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalid, err)
+	}
+	hash := paramsHash(in.Type, in.Params)
+	pending, err := tx.Action.Query().Where(action.IncidentID(inc.ID), action.TypeEQ(in.Type),
+		action.StatusIn(action.StatusProposed, action.StatusApproved, action.StatusRunning)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range pending {
+		if paramsHash(a.Type, a.Params) == hash {
+			return a, nil
+		}
+	}
+	risk := in.Risk
+	switch risk {
+	case "low", "medium", "high":
+	default:
+		risk = exec.Risk()
+	}
+	// The registry's default risk is a floor: the agent can't downgrade it.
+	if riskRank(exec.Risk()) > riskRank(risk) {
+		risk = exec.Risk()
+	}
+	proposedBy := action.ProposedBy(in.ProposedBy)
+	a, err := tx.Action.Create().
+		SetIncidentID(inc.ID).SetType(in.Type).SetParams(in.Params).SetRationale(truncate(in.Rationale, 4000)).
+		SetRisk(action.Risk(risk)).SetProposedBy(proposedBy).SetNillableProposerID(actor.UserIDPtr()).
+		SetNillableInvestigationID(in.InvestigationID).
+		SetExpiresAt(s.now().Add(s.cfg.Actions.ProposalTTL)).
+		SetIdempotencyKey(uuid.NewString()).
+		SetSummary(truncate(exec.Summary(in.Params, t), 300)).
+		Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s.m.actions.Add(ctx, 1, metric.WithAttributes(attribute.String("type", a.Type), attribute.String("status", "proposed")))
+	if _, err := s.addEvent(ctx, tx, inc, domain.EventActionProposed, actor, actionEventPayload(a, nil)); err != nil {
+		return nil, err
+	}
+	if s.registry.AutoApprove(a.Type) {
+		if a, err = s.approveLocked(ctx, tx, inc, a, domain.System, "auto-approved by configuration"); err != nil {
+			return nil, err
+		}
+	}
+	return a, nil
+}
+
+func riskRank(r string) int {
+	switch r {
+	case "low":
+		return 1
+	case "medium":
+		return 2
+	case "high":
+		return 3
+	}
+	return 0
+}
+
+func actionEventPayload(a *ent.Action, extra map[string]any) map[string]any {
+	p := map[string]any{"action_id": a.ID, "type": a.Type, "summary": a.Summary, "risk": string(a.Risk), "status": string(a.Status)}
+	for k, v := range extra {
+		p[k] = v
+	}
+	return p
+}
+
+// ProposeAction lets a user propose an action (it still needs approval).
+func (s *Service) ProposeAction(ctx context.Context, actor domain.Actor, incidentID int, typ string, params map[string]any, rationale string) (*ent.Action, error) {
+	if err := require(actor, domain.RoleOperator); err != nil {
+		return nil, err
+	}
+	var out *ent.Action
+	err := s.tx(ctx, func(tx *ent.Tx) error {
+		inc, err := s.lockIncident(ctx, tx, incidentID)
+		if err != nil {
+			return err
+		}
+		out, err = s.createAction(ctx, tx, inc, actionInput{Type: typ, Params: params, Rationale: rationale, ProposedBy: "user"}, actor)
+		return err
+	})
+	return out, err
+}
+
+func (s *Service) lockAction(ctx context.Context, tx *ent.Tx, id int) (*ent.Action, *ent.Incident, error) {
+	a, err := tx.Action.Query().Where(action.ID(id)).ForUpdate().Only(ctx)
+	if err != nil {
+		return nil, nil, notFound(err, fmt.Sprintf("action %d", id))
+	}
+	inc, err := s.lockIncident(ctx, tx, a.IncidentID)
+	return a, inc, err
+}
+
+// Approve approves a proposal and queues its execution.
+func (s *Service) Approve(ctx context.Context, actor domain.Actor, actionID int) (*ent.Action, error) {
+	if err := require(actor, domain.RoleOperator); err != nil {
+		return nil, err
+	}
+	var out *ent.Action
+	err := s.tx(ctx, func(tx *ent.Tx) error {
+		a, inc, err := s.lockAction(ctx, tx, actionID)
+		if err != nil {
+			return err
+		}
+		out, err = s.approveLocked(ctx, tx, inc, a, actor, "")
+		return err
+	})
+	return out, err
+}
+
+func (s *Service) approveLocked(ctx context.Context, tx *ent.Tx, inc *ent.Incident, a *ent.Action, actor domain.Actor, note string) (*ent.Action, error) {
+	if a.Status != action.StatusProposed {
+		return nil, fmt.Errorf("%w: action #%d is %s", ErrConflict, a.ID, a.Status)
+	}
+	if !a.ExpiresAt.After(s.now()) {
+		if err := s.expireAction(ctx, tx, inc, a, "expired before approval"); err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%w: action #%d expired", ErrConflict, a.ID)
+	}
+	// Re-validate: policy or registry may have changed since the proposal.
+	if err := s.registry.Validate(ctx, a.Type, a.Params, Target(inc)); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalid, err)
+	}
+	a, err := tx.Action.UpdateOne(a).SetStatus(action.StatusApproved).SetNillableDecidedByID(actor.UserIDPtr()).
+		SetDecidedByName(actor.Name).SetDecidedVia(actor.Channel).SetDecidedAt(s.now()).Save(ctx)
+	if err != nil {
+		return nil, err
+	}
+	s.m.actions.Add(ctx, 1, metric.WithAttributes(attribute.String("type", a.Type), attribute.String("status", "approved")))
+	extra := map[string]any{"decided_by": actor.Name, "decided_via": actor.Channel}
+	if note != "" {
+		extra["note"] = note
+	}
+	if _, err := s.addEvent(ctx, tx, inc, domain.EventActionApproved, actor, actionEventPayload(a, extra)); err != nil {
+		return nil, err
+	}
+	return a, enqueue(ctx, tx, JobExecuteAction, actionPayload{ActionID: a.ID}, queue.Opts{UniqueKey: fmt.Sprintf("exec:%d", a.ID), MaxAttempts: 1})
+}
+
+// Reject rejects a proposal.
+func (s *Service) Reject(ctx context.Context, actor domain.Actor, actionID int, reason string) (*ent.Action, error) {
+	if err := require(actor, domain.RoleOperator); err != nil {
+		return nil, err
+	}
+	var out *ent.Action
+	err := s.tx(ctx, func(tx *ent.Tx) error {
+		a, inc, err := s.lockAction(ctx, tx, actionID)
+		if err != nil {
+			return err
+		}
+		if a.Status != action.StatusProposed {
+			return fmt.Errorf("%w: action #%d is %s", ErrConflict, a.ID, a.Status)
+		}
+		if out, err = tx.Action.UpdateOne(a).SetStatus(action.StatusRejected).SetNillableDecidedByID(actor.UserIDPtr()).
+			SetDecidedByName(actor.Name).SetDecidedVia(actor.Channel).SetDecidedAt(s.now()).SetError(reason).Save(ctx); err != nil {
+			return err
+		}
+		s.m.actions.Add(ctx, 1, metric.WithAttributes(attribute.String("type", a.Type), attribute.String("status", "rejected")))
+		_, err = s.addEvent(ctx, tx, inc, domain.EventActionRejected, actor, actionEventPayload(out, map[string]any{
+			"decided_by": actor.Name, "decided_via": actor.Channel, "reason": reason,
+		}))
+		return err
+	})
+	return out, err
+}
+
+func (s *Service) expireAction(ctx context.Context, tx *ent.Tx, inc *ent.Incident, a *ent.Action, reason string) error {
+	a, err := tx.Action.UpdateOne(a).SetStatus(action.StatusExpired).SetError(reason).Save(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = s.addEvent(ctx, tx, inc, domain.EventActionExpired, domain.System, actionEventPayload(a, map[string]any{"reason": reason}))
+	return err
+}
+
+// ExpireProposals expires proposals past their TTL and fails actions whose run was lost (scheduler).
+func (s *Service) ExpireProposals(ctx context.Context) error {
+	now := s.now()
+	ids, err := s.ent.Action.Query().Where(action.StatusEQ(action.StatusProposed), action.ExpiresAtLT(now)).IDs(ctx)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if err := s.tx(ctx, func(tx *ent.Tx) error {
+			a, inc, err := s.lockAction(ctx, tx, id)
+			if err != nil || a.Status != action.StatusProposed {
+				return err
+			}
+			return s.expireAction(ctx, tx, inc, a, "proposal expired")
+		}); err != nil {
+			return err
+		}
+	}
+	lost, err := s.ent.Action.Query().Where(action.StatusEQ(action.StatusRunning),
+		action.StartedAtLT(now.Add(-s.cfg.Actions.Timeout-5*time.Minute))).IDs(ctx)
+	if err != nil {
+		return err
+	}
+	for _, id := range lost {
+		if err := s.finishAction(ctx, id, "", errors.New("execution lost (worker stopped)")); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// executeAction runs an approved action exactly once (job with a single attempt).
+func (s *Service) executeAction(ctx context.Context, id int) error {
+	var a *ent.Action
+	var inc *ent.Incident
+	err := s.tx(ctx, func(tx *ent.Tx) error {
+		var err error
+		a, inc, err = s.lockAction(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if a.Status != action.StatusApproved {
+			a = nil
+			return nil
+		}
+		if a, err = tx.Action.UpdateOne(a).SetStatus(action.StatusRunning).SetStartedAt(s.now()).Save(ctx); err != nil {
+			return err
+		}
+		_, err = s.addEvent(ctx, tx, inc, domain.EventActionStarted, domain.System, actionEventPayload(a, nil))
+		return err
+	})
+	if err != nil || a == nil {
+		return err
+	}
+	exec, ok := s.registry.Get(a.Type)
+	var out string
+	var rerr error
+	if !ok {
+		rerr = fmt.Errorf("action type %q is no longer enabled", a.Type)
+	} else {
+		ectx, cancel := context.WithTimeout(ctx, s.cfg.Actions.Timeout)
+		ectx, span := telemetry.Tracer().Start(ectx, "action.execute")
+		span.SetAttributes(attribute.String("action.type", a.Type), attribute.Int("action.id", a.ID), attribute.Int("incident.id", a.IncidentID))
+		out, rerr = exec.Execute(ectx, a.Params, Target(inc))
+		telemetry.RecordError(span, rerr)
+		span.End()
+		cancel()
+	}
+	return s.finishAction(context.WithoutCancel(ctx), a.ID, out, rerr)
+}
+
+func (s *Service) finishAction(ctx context.Context, id int, out string, rerr error) error {
+	return s.tx(ctx, func(tx *ent.Tx) error {
+		a, inc, err := s.lockAction(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		u := tx.Action.UpdateOne(a).SetFinishedAt(s.now()).SetOutput(truncate(out, 16000))
+		typ := domain.EventActionSucceeded
+		status := action.StatusSucceeded
+		if rerr != nil {
+			typ, status = domain.EventActionFailed, action.StatusFailed
+			u.SetError(truncate(rerr.Error(), 4000))
+		}
+		if a, err = u.SetStatus(status).Save(ctx); err != nil {
+			return err
+		}
+		s.m.actions.Add(ctx, 1, metric.WithAttributes(attribute.String("type", a.Type), attribute.String("status", string(status))))
+		extra := map[string]any{"output": truncate(out, 1500)}
+		if rerr != nil {
+			extra["error"] = truncate(rerr.Error(), 1000)
+		}
+		_, err = s.addEvent(ctx, tx, inc, typ, domain.System, actionEventPayload(a, extra))
+		return err
+	})
+}
+
+// ReinvestigateExecutor is the "agent.reinvestigate" action.
+type ReinvestigateExecutor struct{ Svc *Service }
+
+func (ReinvestigateExecutor) Type() string { return "agent.reinvestigate" }
+func (ReinvestigateExecutor) Description() string {
+	return "Run a new AI investigation on this incident (e.g. after a remediation, to check the result)."
+}
+func (ReinvestigateExecutor) Risk() string { return "low" }
+func (ReinvestigateExecutor) Schema() json.RawMessage {
+	return json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"reason":{"type":"string","description":"Why a new investigation is useful"}}}`)
+}
+func (ReinvestigateExecutor) Validate(context.Context, map[string]any, actions.Target) error {
+	return nil
+}
+func (ReinvestigateExecutor) Summary(map[string]any, actions.Target) string {
+	return "re-run the AI investigation"
+}
+func (e ReinvestigateExecutor) Execute(ctx context.Context, _ map[string]any, t actions.Target) (string, error) {
+	err := e.Svc.tx(ctx, func(tx *ent.Tx) error {
+		return enqueue(ctx, tx, JobInvestigate, incidentPayload{IncidentID: t.IncidentID, Trigger: "action"},
+			queue.Opts{UniqueKey: fmt.Sprintf("investigate:%d", t.IncidentID), MaxAttempts: 3})
+	})
+	if err != nil {
+		return "", err
+	}
+	return "investigation queued", nil
+}

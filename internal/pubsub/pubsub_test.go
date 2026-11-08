@@ -19,25 +19,28 @@ func TestFanOutAcrossConnections(t *testing.T) {
 	b := pubsub.NewListener(d.Pool, pgtest.Logger())
 	go a.Run(ctx)
 	go b.Run(ctx)
-	ca, ua := a.Subscribe(pubsub.ChannelStream, 4)
+	ca, ua := a.Subscribe(pubsub.ChannelStream, 64)
 	defer ua()
-	cb, ub := b.Subscribe(pubsub.ChannelStream, 4)
+	cb, ub := b.Subscribe(pubsub.ChannelStream, 64)
 	defer ub()
 
-	require.Eventually(t, func() bool {
-		_ = pubsub.Notify(ctx, d.Pool, pubsub.ChannelStream, "hello")
+	// Keep notifying until both listeners (separate connections, like two replicas) got one.
+	gotA, gotB := false, false
+	deadline := time.After(10 * time.Second)
+	tick := time.NewTicker(50 * time.Millisecond)
+	defer tick.Stop()
+	for !gotA || !gotB {
 		select {
 		case m := <-ca:
 			require.Equal(t, "hello", m)
-			return true
-		case <-time.After(50 * time.Millisecond):
-			return false
+			gotA = true
+		case m := <-cb:
+			require.Equal(t, "hello", m)
+			gotB = true
+		case <-tick.C:
+			require.NoError(t, pubsub.Notify(ctx, d.Pool, pubsub.ChannelStream, "hello"))
+		case <-deadline:
+			t.Fatalf("fan-out incomplete: a=%v b=%v", gotA, gotB)
 		}
-	}, 5*time.Second, 10*time.Millisecond)
-	select {
-	case m := <-cb:
-		require.Equal(t, "hello", m)
-	case <-time.After(2 * time.Second):
-		t.Fatal("second replica did not receive the notification")
 	}
 }

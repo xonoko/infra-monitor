@@ -87,7 +87,9 @@ var Agent = Actor{Type: ActorAgent, Name: "agent", Role: RoleViewer, Channel: Or
 
 type actorKey struct{}
 
-func WithActor(ctx context.Context, a Actor) context.Context { return context.WithValue(ctx, actorKey{}, a) }
+func WithActor(ctx context.Context, a Actor) context.Context {
+	return context.WithValue(ctx, actorKey{}, a)
+}
 
 func ActorFrom(ctx context.Context) (Actor, bool) {
 	a, ok := ctx.Value(actorKey{}).(Actor)

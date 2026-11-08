@@ -1,0 +1,31 @@
+{
+  "receiver": "infra-monitor",
+  "status": "firing",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {"alertname": "Watchdog", "severity": "none", "cluster": "manager", "prometheus": "monitoring/vm-stack"},
+      "annotations": {"description": "This is an alert meant to ensure that the entire alerting pipeline is functional.", "summary": "An alert that should always be firing to certify that Alertmanager is working properly."},
+      "startsAt": "2026-11-08T08:00:00.000Z",
+      "endsAt": "2026-11-08T12:04:30.000Z",
+      "generatorURL": "http://vmalert-vm-stack.monitoring.svc:8080/vmalert/alert?group_id=1&alert_id=2",
+      "fingerprint": "c4c1fa1a3c5e2d20"
+    },
+    {
+      "status": "resolved",
+      "labels": {"alertname": "KubePodCrashLooping", "severity": "warning", "cluster": "manager", "namespace": "shop", "pod": "api-7d9f-abcde", "container": "api"},
+      "annotations": {"summary": "Pod is crash looping.", "runbook_url": "https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodcrashlooping"},
+      "startsAt": "2026-11-08T10:00:00Z",
+      "endsAt": "2026-11-08T10:30:00Z",
+      "generatorURL": "http://vmalert/alert?group_id=3",
+      "fingerprint": ""
+    }
+  ],
+  "groupLabels": {"alertname": "Watchdog"},
+  "commonLabels": {"cluster": "manager"},
+  "commonAnnotations": {},
+  "externalURL": "http://vmalertmanager-vm-stack.monitoring.svc:9093",
+  "version": "4",
+  "groupKey": "{}/{}:{alertname=\"Watchdog\"}",
+  "truncatedAlerts": 0
+}

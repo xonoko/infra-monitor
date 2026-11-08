@@ -372,3 +372,42 @@ func (q *Queue) Cleanup(ctx context.Context, retention time.Duration) (int64, er
 	tag, err := q.pool.Exec(ctx, "DELETE FROM jobs WHERE status IN ('succeeded','failed','dead') AND finished_at < now() - make_interval(secs => $1)", retention.Seconds())
 	return tag.RowsAffected(), err
 }
+
+// Drain runs pending jobs synchronously, one at a time in run_at order, until none are
+// left (tests and tools). With includeFuture, delayed jobs run too (still in order).
+func (q *Queue) Drain(ctx context.Context, includeFuture bool) (int, error) {
+	q.mu.Lock()
+	kinds := make([]string, 0, len(q.handlers))
+	for k := range q.handlers {
+		kinds = append(kinds, k)
+	}
+	q.mu.Unlock()
+	for n := 0; n < 10000; n++ {
+		rows, err := q.pool.Query(ctx, `UPDATE jobs SET status = 'running', attempts = attempts + 1, locked_by = $1,
+				locked_until = now() + interval '1 hour', updated_at = now()
+			WHERE id = (SELECT id FROM jobs WHERE status = 'pending' AND kind = ANY($2) AND ($3 OR run_at <= now())
+				ORDER BY run_at, id LIMIT 1 FOR UPDATE SKIP LOCKED)
+			RETURNING id, kind, payload, attempts, max_attempts, traceparent`, q.workerID, kinds, includeFuture)
+		if err != nil {
+			return n, err
+		}
+		var jobs []*Job
+		for rows.Next() {
+			j := &Job{}
+			if err := rows.Scan(&j.ID, &j.Kind, &j.Payload, &j.Attempt, &j.MaxAttempts, &j.traceparent); err != nil {
+				rows.Close()
+				return n, err
+			}
+			jobs = append(jobs, j)
+		}
+		rows.Close()
+		if len(jobs) == 0 {
+			return n, nil
+		}
+		q.mu.Lock()
+		reg := q.handlers[jobs[0].Kind]
+		q.mu.Unlock()
+		q.execute(ctx, reg, jobs[0])
+	}
+	return 0, fmt.Errorf("drain: too many jobs")
+}

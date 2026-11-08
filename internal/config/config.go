@@ -124,8 +124,8 @@ type SourceAuthConfig struct {
 }
 
 type SourceConfig struct {
-	Name string `mapstructure:"name"`
-	Type string `mapstructure:"type"` // alertmanager
+	Name string           `mapstructure:"name"`
+	Type string           `mapstructure:"type"` // alertmanager
 	Auth SourceAuthConfig `mapstructure:"auth"`
 	// AlertmanagerURL is used for reconcile (GET /api/v2/alerts) and silences.
 	AlertmanagerURL   string        `mapstructure:"alertmanager_url"`
@@ -164,20 +164,20 @@ type AgentConfig struct {
 	Model      string        `mapstructure:"model"`
 	Timeout    time.Duration `mapstructure:"timeout"`
 	// NotifyTimeout: notify without AI after this delay (fail open).
-	NotifyTimeout   time.Duration `mapstructure:"notify_timeout"`
-	MaxConcurrent   int           `mapstructure:"max_concurrent"`
-	MaxPerHour      int           `mapstructure:"max_per_hour"`
-	Cooldown        time.Duration `mapstructure:"cooldown"`
-	ExtraPrompt     string        `mapstructure:"extra_prompt"`
-	StructuredOutput bool         `mapstructure:"structured_output"`
+	NotifyTimeout    time.Duration `mapstructure:"notify_timeout"`
+	MaxConcurrent    int           `mapstructure:"max_concurrent"`
+	MaxPerHour       int           `mapstructure:"max_per_hour"`
+	Cooldown         time.Duration `mapstructure:"cooldown"`
+	ExtraPrompt      string        `mapstructure:"extra_prompt"`
+	StructuredOutput bool          `mapstructure:"structured_output"`
 }
 
 type ActionsConfig struct {
-	Enabled       []string          `mapstructure:"enabled"`
-	AutoApprove   []string          `mapstructure:"auto_approve"`
-	NamespaceDeny []string          `mapstructure:"namespace_deny"`
-	NamespaceAllow []string         `mapstructure:"namespace_allow"`
-	Kubeconfigs   map[string]string `mapstructure:"kubeconfigs"`
+	Enabled        []string          `mapstructure:"enabled"`
+	AutoApprove    []string          `mapstructure:"auto_approve"`
+	NamespaceDeny  []string          `mapstructure:"namespace_deny"`
+	NamespaceAllow []string          `mapstructure:"namespace_allow"`
+	Kubeconfigs    map[string]string `mapstructure:"kubeconfigs"`
 	// InClusterName is the cluster label value served by the in-cluster ServiceAccount ("" = any cluster without a kubeconfig).
 	InClusterName string        `mapstructure:"in_cluster_name"`
 	InCluster     bool          `mapstructure:"in_cluster"`

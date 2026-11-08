@@ -160,3 +160,16 @@ func sleep(ctx context.Context, d time.Duration) {
 	case <-t.C:
 	}
 }
+
+// HeldNames lists the leases this replica holds.
+func (m *Manager) HeldNames() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := []string{}
+	for n, h := range m.held {
+		if h {
+			out = append(out, n)
+		}
+	}
+	return out
+}

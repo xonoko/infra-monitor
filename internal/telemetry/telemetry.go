@@ -46,7 +46,7 @@ func Setup(ctx context.Context, cfg config.TelemetryConfig, log *slog.Logger) (*
 	t.Registry.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 	host, _ := os.Hostname()
-	res, err := resource.Merge(resource.Default(), resource.NewWithAttributes(semconv.SchemaURL,
+	res, err := resource.Merge(resource.Default(), resource.NewSchemaless(
 		semconv.ServiceName(cfg.ServiceName),
 		semconv.ServiceVersion(buildinfo.Version),
 		semconv.ServiceInstanceID(host),
