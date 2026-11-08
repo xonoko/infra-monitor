@@ -3,6 +3,7 @@ package incident_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -119,6 +120,9 @@ func (f *fakeAgent) CheckAction(_ context.Context, _ agent.IncidentContext, desc
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.checks = append(f.checks, desc)
+	if f.checkErr != nil {
+		return nil, f.checkErr
+	}
 	return &agent.ActionCheck{StillNeeded: f.stillNeeded, Reason: "observed the pod", Model: "fake-model"}, nil
 }
 
@@ -152,4 +156,33 @@ func TestPreExecutionCheck(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, c.Remediation.Calls, "the check counts as remediation")
 	}
+}
+
+func TestFinalReviewUnavailableFailsClosed(t *testing.T) {
+	e := newEnv(t, true)
+	e.agent.result.ProposedActions = nil
+	ctx := context.Background()
+	e.ingest(alert("OOM", "demo", "firing", "o"))
+	e.drain()
+	inc := e.onlyIncident()
+	a, err := e.svc.ProposeAction(ctx, operator(), inc.ID, "test.echo", map[string]any{"msg": "fix"}, "")
+	require.NoError(t, err)
+
+	e.agent.checkErr = errors.New("litellm: connection error")
+	_, err = e.svc.Approve(ctx, operator(), a.ID)
+	require.NoError(t, err)
+	e.drain()
+	a, _ = e.svc.GetAction(ctx, a.ID)
+	require.Equal(t, "proposed", string(a.Status), "held, back to proposed")
+	require.Contains(t, a.Error, "final review unavailable")
+	require.Zero(t, e.exec.runs, "nothing ran")
+
+	// the user retries once the review works again
+	e.agent.checkErr = nil
+	_, err = e.svc.Approve(ctx, operator(), a.ID)
+	require.NoError(t, err)
+	e.drain()
+	a, _ = e.svc.GetAction(ctx, a.ID)
+	require.Equal(t, "succeeded", string(a.Status))
+	require.Equal(t, 1, e.exec.runs)
 }

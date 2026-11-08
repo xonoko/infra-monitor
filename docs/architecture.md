@@ -92,8 +92,9 @@ An alert storm must never produce a large LLM bill (LiteLLM also enforces budget
   investigating again or calling tools) the first analysis, the exact action, and a fresh snapshot gathered by
   infra-monitor (incident status, firing signals, a new server dry-run). It answers proceed only if the analysis is
   sound, the action fixes it, it is still needed and there is no clearly better option (e.g. GitOps for Argo-managed
-  objects). Otherwise the action is canceled with the reason. If the check can't run (caps,
-  budget, agent down), the approved action proceeds and the timeline says so. No model ever executes anything: the
+  objects). Otherwise the action is canceled with the reason. Fail closed: if the review can't
+  run (caps, budget, agent or LLM down), nothing runs; the action goes back to "proposed" with the reason and the
+  user retries by approving again. No model ever executes anything: the
   executor applies exactly the hash-approved payload.
 - Metrics: `infra_monitor_investigations{outcome}`, `infra_monitor_investigations_skipped{reason}`
   (storm, cap, budget, severity, state), `infra_monitor_agent_tokens{type,model}`, `infra_monitor_agent_cost_usd`.

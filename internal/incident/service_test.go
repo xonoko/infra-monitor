@@ -50,6 +50,7 @@ type fakeAgent struct {
 	lastReq     agent.ChatRequest
 	checks      []string
 	stillNeeded bool
+	checkErr    error
 }
 
 func (f *fakeAgent) Name() string  { return "fake" }

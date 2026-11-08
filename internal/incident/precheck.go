@@ -22,7 +22,8 @@ import (
 // preExecutionCheck asks the agent (agent.check_model, default the deep model), right before ANY approved
 // action runs (human or auto-approved), whether it is still needed AND correct and safe as proposed. If not,
 // the action is canceled (expired) with the agent's reason and nothing runs.
-// If the check can't run (no agent, caps, budget, error), the approved action proceeds and the timeline says so.
+// Fail closed: if the review can't run (caps, budget, agent error), the action is NOT run; it goes back to
+// "proposed" so a human can retry by approving again.
 func (s *Service) preExecutionCheck(ctx context.Context, actionID int) (bool, error) {
 	checker, ok := s.agent.(agent.ActionChecker)
 	if s.agent == nil || !ok {
@@ -50,7 +51,7 @@ func (s *Service) preExecutionCheck(ctx context.Context, actionID int) (bool, er
 		return false, err
 	} else if key != "" {
 		s.m.skipped.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", key)))
-		return false, note("pre-execution check skipped (" + reason + "); running the approved action")
+		return true, s.holdForRetry(ctx, a.ID, "final review unavailable ("+reason+")")
 	}
 	ic, err := s.BuildContext(ctx, inc)
 	if err != nil {
@@ -68,8 +69,8 @@ func (s *Service) preExecutionCheck(ctx context.Context, actionID int) (bool, er
 	telemetry.RecordError(span, cerr)
 	span.End()
 	if cerr != nil {
-		s.log.WarnContext(ctx, "pre-execution check failed, running the approved action", "action_id", a.ID, "error", cerr)
-		return false, note("pre-execution check unavailable (" + truncate(redact.Text(cerr.Error()), 200) + "); running the approved action")
+		s.log.WarnContext(ctx, "final review failed, holding the action", "action_id", a.ID, "error", cerr)
+		return true, s.holdForRetry(ctx, a.ID, "final review unavailable ("+truncate(redact.Text(cerr.Error()), 200)+")")
 	}
 	s.recordUsage(ctx, "action_check", res.Model, res.Usage)
 	verdict := "go"
@@ -151,4 +152,24 @@ func (s *Service) reviewBrief(ctx context.Context, inc *ent.Incident, a *ent.Act
 		}
 	}
 	return redact.Text(b.String())
+}
+
+// holdForRetry puts an approved action back to "proposed" (decision cleared) because the final review
+// could not run. Approving again retries the review; the proposal keeps its expiry.
+func (s *Service) holdForRetry(ctx context.Context, actionID int, reason string) error {
+	return s.tx(ctx, func(tx *ent.Tx) error {
+		a, inc, err := s.lockAction(ctx, tx, actionID)
+		if err != nil || a.Status != action.StatusApproved {
+			return err
+		}
+		if a, err = tx.Action.UpdateOne(a).SetStatus(action.StatusProposed).ClearDecidedByID().SetDecidedByName("").
+			SetDecidedVia("").ClearDecidedAt().SetError(reason + "; approve again to retry").Save(ctx); err != nil {
+			return err
+		}
+		s.log.WarnContext(ctx, "action held: final review unavailable", "action_id", a.ID, "reason", reason)
+		_, err = s.addEvent(ctx, tx, inc, domain.EventActionChecked, domain.System, actionEventPayload(a, map[string]any{
+			"precheck": reason + "; not run, approve again to retry", "held": true,
+		}))
+		return err
+	})
 }

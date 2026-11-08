@@ -417,6 +417,14 @@ func (d *Dispatcher) deliver(ctx context.Context, ch channel.Channel, inc *ent.I
 			return nil
 		}
 		return d.postProposal(ctx, ch, t, a, &evID)
+	case domain.EventActionChecked:
+		if held, _ := p["held"].(bool); held {
+			if err := d.updateProposal(ctx, ch, t, intVal(p, "action_id"), nil); err != nil {
+				return err
+			}
+			return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry, Body: fmt.Sprintf("⏸ Action #%d not run: %s", intVal(p, "action_id"), str(p, "precheck"))}, &evID)
+		}
+		return nil
 	case domain.EventActionApproved, domain.EventActionRejected, domain.EventActionStarted, domain.EventActionExpired:
 		if id := intVal(p, "action_id"); id > 0 {
 			return d.updateProposal(ctx, ch, t, id, nil)
