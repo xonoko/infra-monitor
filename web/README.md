@@ -17,7 +17,7 @@ Layout:
 - `src/api/` — `types.ts` (mirrors docs/api.md), `client.ts` (fetch + CSRF + 401 redirect + RFC 7807 errors),
   `sse.ts` (EventSource with reconnect; `timeline` events invalidate queries, `progress` feeds the agent panel), `keys.ts`.
 - `src/views/` — pages (incidents list + drawer, incident page, mutes, status, profile, admin, login).
-- `src/components/incident/` — incident detail tabs (overview, timeline, signals, actions, chat).
+- `src/components/incident/` — incident view: `IncidentStream` (one live stream of messages, investigation and action cards and system events, with the composer), `IncidentGlance` (at-a-glance panel: right sidebar when wide, folds above the stream when narrow), plus Signals and Details secondary views.
 - `src/components/ui/` — small styled wrappers around reka-ui primitives.
 - `src/mock/` — dev-only fixtures, loaded behind `import.meta.env.DEV && VITE_MOCK`.
 

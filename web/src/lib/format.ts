@@ -75,3 +75,7 @@ export function sevKey(sev: string): 'critical' | 'warning' | 'info' | 'other' {
 export function pct(n: number): string {
   return `${Math.round(n * 100)}%`
 }
+
+export function hhmm(ts: string): string {
+  return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+}
