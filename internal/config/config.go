@@ -202,6 +202,31 @@ type ModelPrice struct {
 	Output float64 `mapstructure:"output"`
 }
 
+// GenericActionsConfig enables arbitrary k8s changes with precise human approval.
+type GenericActionsConfig struct {
+	Enabled bool `mapstructure:"enabled"`
+	// ApprovedServiceAccount is impersonated for approved generic actions, e.g.
+	// "system:serviceaccount:infra-monitor:infra-monitor-approved". Empty = use the pod's own account.
+	ApprovedServiceAccount string `mapstructure:"approved_service_account"`
+	ExecEnabled            bool   `mapstructure:"exec_enabled"`
+	// ExecTimeout bounds kubectl.exec commands.
+	ExecTimeout time.Duration `mapstructure:"exec_timeout"`
+}
+
+// GitOpsConfig enables gitops.change proposals: commits to a GitHub repository.
+type GitOpsConfig struct {
+	Enabled bool   `mapstructure:"enabled"`
+	Repo    string `mapstructure:"repo"`   // owner/name
+	Branch  string `mapstructure:"branch"` // default main
+	// PathPrefixes limits the files that can be changed (empty = whole repo).
+	PathPrefixes []string `mapstructure:"path_prefixes"`
+	Token        string   `mapstructure:"token"`
+	TokenFile    string   `mapstructure:"token_file"`
+	APIURL       string   `mapstructure:"api_url"` // default https://api.github.com
+	AuthorName   string   `mapstructure:"author_name"`
+	AuthorEmail  string   `mapstructure:"author_email"`
+}
+
 // StormConfig: when more than Threshold incidents open within Window, they are grouped into one
 // "alert storm" incident investigated once, instead of one investigation each.
 type StormConfig struct {
@@ -227,6 +252,10 @@ type ActionsConfig struct {
 	MaxAutoPerHour int `mapstructure:"max_auto_per_hour"`
 	// AllowReinvestigateChain lets an investigation triggered by an action propose another re-investigation.
 	AllowReinvestigateChain bool `mapstructure:"allow_reinvestigate_chain"`
+	// Generic approved actions (k8s.patch / k8s.apply / k8s.delete / kubectl.exec): never auto-approved, executed
+	// by impersonating ApprovedServiceAccount ("system:serviceaccount:<ns>:<name>"), dry-run first.
+	Generic GenericActionsConfig `mapstructure:"generic"`
+	GitOps  GitOpsConfig         `mapstructure:"gitops"`
 	// AnnotationPrefix of the namespace annotations that override the auto-approve policy:
 	// <prefix>/auto-approve ("type,type" or "none") and <prefix>/max-auto-per-hour.
 	AnnotationPrefix string `mapstructure:"annotation_prefix"`
@@ -360,6 +389,18 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("actions.max_auto_per_hour", 2)
 	v.SetDefault("actions.allow_reinvestigate_chain", false)
 	v.SetDefault("actions.annotation_prefix", "infra-monitor.xonoko.com")
+	v.SetDefault("actions.generic.enabled", false)
+	v.SetDefault("actions.generic.approved_service_account", "")
+	v.SetDefault("actions.generic.exec_enabled", false)
+	v.SetDefault("actions.generic.exec_timeout", time.Minute)
+	v.SetDefault("actions.gitops.enabled", false)
+	v.SetDefault("actions.gitops.repo", "")
+	v.SetDefault("actions.gitops.branch", "main")
+	v.SetDefault("actions.gitops.token", "")
+	v.SetDefault("actions.gitops.token_file", "")
+	v.SetDefault("actions.gitops.api_url", "https://api.github.com")
+	v.SetDefault("actions.gitops.author_name", "infra-monitor")
+	v.SetDefault("actions.gitops.author_email", "infra-monitor.noreply.github.com")
 	v.SetDefault("actions.namespace_deny", []string{"kube-system"})
 	v.SetDefault("actions.namespace_allow", []string{})
 	v.SetDefault("actions.in_cluster", true)
@@ -455,6 +496,7 @@ func (c *Config) resolveSecrets() error {
 		readSecret(&c.Auth.OIDC.ClientSecret, c.Auth.OIDC.ClientSecretFile),
 		readSecret(&c.Heartbeat.PingURL, c.Heartbeat.PingURLFile),
 		readSecret(&c.Agent.APIKey, c.Agent.APIKeyFile),
+		readSecret(&c.Actions.GitOps.Token, c.Actions.GitOps.TokenFile),
 	}
 	for i := range c.Sources {
 		s := &c.Sources[i]
