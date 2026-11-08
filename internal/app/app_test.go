@@ -20,6 +20,7 @@ import (
 	"github.com/xonoko/infra-monitor/internal/auth"
 	"github.com/xonoko/infra-monitor/internal/config"
 	"github.com/xonoko/infra-monitor/internal/domain"
+	"github.com/xonoko/infra-monitor/internal/telemetry"
 	"github.com/xonoko/infra-monitor/internal/testutil/pgtest"
 )
 
@@ -30,7 +31,7 @@ type replica struct {
 	done   chan error
 }
 
-func startReplica(t *testing.T, dsn string) *replica {
+func startReplica(t *testing.T, dsn string, extra ...string) *replica {
 	t.Helper()
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")
@@ -51,7 +52,7 @@ correlation:
   resolve_grace: 0s
 jobs:
   poll_interval: 200ms
-`), 0o600))
+`+strings.Join(extra, "\n")), 0o600))
 	cfg, err := config.Load(cfgPath)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -60,7 +61,11 @@ jobs:
 	a.Leases.RetryInterval = 200 * time.Millisecond
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	r := &replica{url: "http://" + ln.Addr().String(), app: a, cancel: cancel, done: make(chan error, 1)}
+	scheme := "http://"
+	if cfg.Server.TLS.CertFile != "" {
+		scheme = "https://"
+	}
+	r := &replica{url: scheme + ln.Addr().String(), app: a, cancel: cancel, done: make(chan error, 1)}
 	go func() { r.done <- a.Serve(ctx, ln) }()
 	t.Cleanup(func() {
 		cancel()
@@ -71,8 +76,9 @@ jobs:
 		}
 		a.Close(context.Background())
 	})
+	readyClient := telemetry.HTTPClient(2 * time.Second)
 	require.Eventually(t, func() bool {
-		resp, err := http.Get(r.url + "/readyz")
+		resp, err := readyClient.Get(r.url + "/readyz")
 		if err != nil {
 			return false
 		}

@@ -20,9 +20,11 @@ import (
 const EnvPrefix = "INFRA_MONITOR"
 
 type Config struct {
-	Env         string            `mapstructure:"env"` // production | development
-	LogLevel    string            `mapstructure:"log_level"`
-	LogFormat   string            `mapstructure:"log_format"` // json | text
+	Env       string `mapstructure:"env"` // production | development
+	LogLevel  string `mapstructure:"log_level"`
+	LogFormat string `mapstructure:"log_format"` // json | text
+	// CAFile is an extra PEM CA bundle trusted by every outbound HTTPS client (Holmes, Alertmanager, OIDC, pings...).
+	CAFile      string            `mapstructure:"ca_file"`
 	Server      ServerConfig      `mapstructure:"server"`
 	Database    DatabaseConfig    `mapstructure:"database"`
 	Telemetry   TelemetryConfig   `mapstructure:"telemetry"`
@@ -44,6 +46,13 @@ type ServerConfig struct {
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
 	// TrustedProxies enables X-Forwarded-* handling (set when running behind an ingress).
 	TrustProxy bool `mapstructure:"trust_proxy"`
+	// TLS serves HTTPS when cert_file and key_file are set (reloaded automatically when the files change).
+	TLS ServerTLSConfig `mapstructure:"tls"`
+}
+
+type ServerTLSConfig struct {
+	CertFile string `mapstructure:"cert_file"`
+	KeyFile  string `mapstructure:"key_file"`
 }
 
 type DatabaseConfig struct {
@@ -56,7 +65,9 @@ type DatabaseConfig struct {
 	Password     string `mapstructure:"password"`
 	PasswordFile string `mapstructure:"password_file"`
 	SSLMode      string `mapstructure:"sslmode"`
-	MaxConns     int32  `mapstructure:"max_conns"`
+	// SSLRootCert is the CA bundle used with sslmode verify-ca / verify-full.
+	SSLRootCert string `mapstructure:"sslrootcert"`
+	MaxConns    int32  `mapstructure:"max_conns"`
 	// MigrateOnStart applies pending migrations when `serve` starts (guarded by an advisory lock).
 	MigrateOnStart bool `mapstructure:"migrate_on_start"`
 }
@@ -240,7 +251,11 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("database.user", "infra_monitor")
 	v.SetDefault("database.password", "")
 	v.SetDefault("database.password_file", "")
-	v.SetDefault("database.sslmode", "disable")
+	v.SetDefault("database.sslmode", "require")
+	v.SetDefault("database.sslrootcert", "")
+	v.SetDefault("ca_file", "")
+	v.SetDefault("server.tls.cert_file", "")
+	v.SetDefault("server.tls.key_file", "")
 	v.SetDefault("database.max_conns", 20)
 	v.SetDefault("database.migrate_on_start", true)
 
@@ -518,6 +533,9 @@ func (c *DatabaseConfig) DatabaseURL() string {
 	q := url.Values{}
 	if c.SSLMode != "" {
 		q.Set("sslmode", c.SSLMode)
+	}
+	if c.SSLRootCert != "" {
+		q.Set("sslrootcert", c.SSLRootCert)
 	}
 	u.RawQuery = q.Encode()
 	return u.String()

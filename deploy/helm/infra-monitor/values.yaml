@@ -60,7 +60,39 @@ resources:
 service:
   type: ClusterIP
   port: 8080
+  # -- e.g. for Traefik to the HTTPS backend:
+  #   traefik.ingress.kubernetes.io/service.serversscheme: https
+  #   traefik.ingress.kubernetes.io/service.serverstransport: <ns>-<name>@kubernetescrd
   annotations: {}
+
+# In-cluster TLS: the app serves HTTPS itself (probes and /metrics included).
+tls:
+  enabled: false
+  # -- Secret with tls.crt, tls.key (and ca.crt). Default: <fullname>-tls.
+  secretName: ""
+  mountPath: /etc/infra-monitor/tls
+  # -- Trust the secret's ca.crt for outbound calls (Holmes, LiteLLM, Alertmanager...) via config.ca_file.
+  trustCA: true
+  # -- Render a cert-manager Certificate for the Service DNS names.
+  certificate:
+    create: true
+    issuerRef:
+      name: ca-issuer
+      kind: ClusterIssuer
+      group: cert-manager.io
+    duration: 2160h
+    renewBefore: 360h
+    extraDnsNames: []
+
+# Ingress-only NetworkPolicy (egress is not restricted).
+networkPolicy:
+  enabled: false
+  # -- Namespaces allowed to reach the app (matched on kubernetes.io/metadata.name).
+  allowedNamespaces: []
+  # -- Extra ingress peers (raw NetworkPolicyPeer list).
+  extraFrom: []
+  # -- Always allow pods from the release namespace.
+  allowSameNamespace: true
 
 ingress:
   enabled: false
@@ -76,6 +108,7 @@ ingress:
   #    hosts: [infra-monitor.example.com]
 
 probes:
+  # -- The probe scheme follows tls.enabled (set by the chart).
   liveness:
     httpGet: { path: /healthz, port: http }
     periodSeconds: 10

@@ -1,0 +1,14 @@
+tls:
+  enabled: true
+networkPolicy:
+  enabled: true
+  allowedNamespaces: [traefik-system, monitoring]
+metrics:
+  vmServiceScrape:
+    enabled: true
+service:
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: https
+    traefik.ingress.kubernetes.io/service.serverstransport: infra-monitor-infra-monitor@kubernetescrd
+secrets:
+  existingSecret: infra-monitor

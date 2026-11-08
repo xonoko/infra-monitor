@@ -1,0 +1,27 @@
+{{- if and .Values.tls.enabled .Values.tls.certificate.create }}
+{{- $fullname := include "infra-monitor.fullname" . }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- include "infra-monitor.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "infra-monitor.tlsSecretName" . }}
+  duration: {{ .Values.tls.certificate.duration }}
+  renewBefore: {{ .Values.tls.certificate.renewBefore }}
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  usages: [server auth, digital signature, key encipherment]
+  dnsNames:
+    - {{ $fullname }}
+    - {{ $fullname }}.{{ .Release.Namespace }}.svc
+    - {{ $fullname }}.{{ .Release.Namespace }}.svc.cluster.local
+    {{- range .Values.tls.certificate.extraDnsNames }}
+    - {{ . }}
+    {{- end }}
+  issuerRef:
+    {{- toYaml .Values.tls.certificate.issuerRef | nindent 4 }}
+{{- end }}

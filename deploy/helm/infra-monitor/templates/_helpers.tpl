@@ -79,5 +79,30 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- define "infra-monitor.config" -}}
 {{- $cfg := deepCopy .Values.config -}}
 {{- $_ := set $cfg "database" (include "infra-monitor.databaseConfig" . | fromYaml) -}}
+{{- if .Values.tls.enabled -}}
+{{- $server := default dict (get $cfg "server") -}}
+{{- $_ := set $server "tls" (dict "cert_file" (printf "%s/tls.crt" .Values.tls.mountPath) "key_file" (printf "%s/tls.key" .Values.tls.mountPath)) -}}
+{{- $_ := set $cfg "server" $server -}}
+{{- if and .Values.tls.trustCA (not (get $cfg "ca_file")) -}}
+{{- $_ := set $cfg "ca_file" (printf "%s/ca.crt" .Values.tls.mountPath) -}}
+{{- end -}}
+{{- end -}}
 {{- toYaml $cfg -}}
+{{- end -}}
+
+{{- define "infra-monitor.tlsSecretName" -}}
+{{- default (printf "%s-tls" (include "infra-monitor.fullname" .)) .Values.tls.secretName -}}
+{{- end -}}
+
+{{- define "infra-monitor.scheme" -}}
+{{- if .Values.tls.enabled }}HTTPS{{ else }}HTTP{{ end -}}
+{{- end -}}
+
+{{/* Render a probe, forcing httpGet.scheme from tls.enabled. Args: (list probe scheme) */}}
+{{- define "infra-monitor.probe" -}}
+{{- $p := deepCopy (index . 0) -}}
+{{- if hasKey $p "httpGet" -}}
+{{- $_ := set $p.httpGet "scheme" (index . 1) -}}
+{{- end -}}
+{{- toYaml $p -}}
 {{- end -}}

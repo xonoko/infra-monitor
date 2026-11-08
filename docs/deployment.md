@@ -104,7 +104,26 @@ ingress:
 
 metrics:
   vmServiceScrape:
-    enabled: true
+    enabled: true      # scrapes /metrics over HTTPS with the internal CA
+
+# TLS everywhere: the app serves HTTPS itself with a cert from the ca-issuer ClusterIssuer.
+# Different secret name than the ingress (Let's Encrypt) certificate.
+tls:
+  enabled: true
+  secretName: infra-monitor-internal-tls
+  certificate:
+    create: true
+    issuerRef: { name: ca-issuer, kind: ClusterIssuer, group: cert-manager.io }
+  trustCA: true        # outbound calls to Holmes/LiteLLM trust the ca.crt of this secret
+
+service:
+  annotations:
+    traefik.ingress.kubernetes.io/service.serversscheme: https
+    traefik.ingress.kubernetes.io/service.serverstransport: infra-monitor-infra-monitor@kubernetescrd
+
+networkPolicy:
+  enabled: true
+  allowedNamespaces: [traefik-system, monitoring]   # Traefik, VMAlertmanager, vmagent
 
 config:
   env: production
@@ -154,7 +173,7 @@ config:
   agent:
     enabled: true
     type: holmes
-    url: http://holmes-holmes.holmes.svc.cluster.local   # confirm the service port (chart default 80)
+    url: https://holmes-holmes.holmes.svc.cluster.local   # https with a ca-issuer cert; confirm the port
     api_key_file: /etc/infra-monitor/secrets/holmes-api-key
     model: investigate       # key of Holmes' modelList
     timeout: 5m
@@ -190,10 +209,14 @@ notifications. Route `Watchdog` with a short `repeat_interval` so it works as a 
 receivers:
   - name: infra-monitor
     webhook_configs:
-      - url: http://infra-monitor.infra-monitor.svc:8080/api/v1/sources/alertmanager/webhook
+      - url: https://infra-monitor.infra-monitor.svc:8080/api/v1/sources/alertmanager/webhook
         send_resolved: true
         max_alerts: 0
         http_config:
+          tls_config:
+            # CA of the ca-issuer ClusterIssuer (ca.crt of any certificate it issued)
+            ca_file: /etc/vm/secrets/internal-ca/ca.crt
+            server_name: infra-monitor.infra-monitor.svc
           authorization:
             type: Bearer
             # either inline (from a secret-templated config) ...

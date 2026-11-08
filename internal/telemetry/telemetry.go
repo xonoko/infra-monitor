@@ -163,7 +163,7 @@ func Tracer() trace.Tracer { return otel.Tracer(ScopeName) }
 
 // HTTPClient returns an http.Client whose requests create client spans and propagate context.
 func HTTPClient(timeout time.Duration) *http.Client {
-	return &http.Client{Timeout: timeout, Transport: otelhttp.NewTransport(http.DefaultTransport)}
+	return &http.Client{Timeout: timeout, Transport: otelhttp.NewTransport(OutboundTransport())}
 }
 
 // TraceID returns the current trace id or "".

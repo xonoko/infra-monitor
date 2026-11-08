@@ -5,6 +5,7 @@ package app
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -34,7 +35,8 @@ type App struct {
 	Leases    *lease.Manager
 	Server    *api.Server
 
-	svc *services
+	svc   *services
+	certs *certReloader
 
 	// runners are long-running loops started by Run.
 	runners []runner
@@ -67,6 +69,14 @@ func Build(ctx context.Context, cfg *config.Config, log *slog.Logger, opts Optio
 	a.Telemetry, err = telemetry.Setup(ctx, cfg.Telemetry, log)
 	if err != nil {
 		return nil, fmt.Errorf("telemetry: %w", err)
+	}
+	if err := telemetry.ConfigureOutboundTLS(cfg.CAFile); err != nil {
+		return nil, err
+	}
+	if cfg.Server.TLS.CertFile != "" {
+		if a.certs, err = newCertReloader(cfg.Server.TLS.CertFile, cfg.Server.TLS.KeyFile, log); err != nil {
+			return nil, err
+		}
 	}
 	a.closers = append(a.closers, a.Telemetry.Shutdown)
 
@@ -115,8 +125,12 @@ func (a *App) Run(ctx context.Context) error {
 func (a *App) Serve(ctx context.Context, ln net.Listener) error {
 	g, gctx := errgroup.WithContext(ctx)
 	srv := &http.Server{Handler: a.Server.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	if a.certs != nil {
+		srv.TLSConfig = a.certs.tlsConfig()
+		ln = tls.NewListener(ln, srv.TLSConfig)
+	}
 	g.Go(func() error {
-		a.Log.Info("http server listening", "addr", ln.Addr().String(), "public_url", a.Cfg.Server.PublicURL)
+		a.Log.Info("http server listening", "addr", ln.Addr().String(), "tls", a.certs != nil, "public_url", a.Cfg.Server.PublicURL)
 		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("http server: %w", err)
 		}

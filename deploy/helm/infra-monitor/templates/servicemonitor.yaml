@@ -16,6 +16,15 @@ spec:
     - port: http
       path: /metrics
       interval: {{ .Values.metrics.serviceMonitor.interval }}
+      {{- if .Values.tls.enabled }}
+      scheme: https
+      tlsConfig:
+        serverName: {{ include "infra-monitor.fullname" . }}.{{ .Release.Namespace }}.svc
+        ca:
+          secret:
+            name: {{ include "infra-monitor.tlsSecretName" . }}
+            key: ca.crt
+      {{- end }}
 {{- end }}
 {{- if .Values.metrics.vmServiceScrape.enabled }}
 ---
@@ -36,4 +45,13 @@ spec:
     - port: http
       path: /metrics
       interval: {{ .Values.metrics.vmServiceScrape.interval }}
+      {{- if .Values.tls.enabled }}
+      scheme: https
+      tlsConfig:
+        serverName: {{ include "infra-monitor.fullname" . }}.{{ .Release.Namespace }}.svc
+        ca:
+          secret:
+            name: {{ include "infra-monitor.tlsSecretName" . }}
+            key: ca.crt
+      {{- end }}
 {{- end }}
