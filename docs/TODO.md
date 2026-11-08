@@ -113,6 +113,12 @@ Legend: `[ ]` todo, `[x]` done.
 - [x] Postgres `sslmode` default `require`, `sslrootcert` for verify-full
 - [x] Chart: cert-manager Certificate (ca-issuer), Service annotations for Traefik ServersTransport, HTTPS scrapes, NetworkPolicy
 
+## Cost controls (added 2026-11-08)
+- [x] Severity gate, storm mode (one investigation per storm), hard caps (concurrent/hour/day) incl. chat, cooldown
+- [x] Budget/rate-limit errors final + pause, fail open "AI budget reached"
+- [x] Haiku by default, Sonnet only on explicit "dig deeper" (UI menu, `/reinvestigate deep`)
+- [x] Metrics: skipped by reason, tokens, cost estimate; usage on /status
+
 ## Follow-ups (not blocking the MVP)
 - [ ] Switch the UI's hand-written API types to the generated OpenAPI schema (`make web-client`)
 - [ ] Slack adapter (design in docs/channels/slack.md)

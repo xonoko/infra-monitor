@@ -175,12 +175,31 @@ type AgentConfig struct {
 	Model      string        `mapstructure:"model"`
 	Timeout    time.Duration `mapstructure:"timeout"`
 	// NotifyTimeout: notify without AI after this delay (fail open).
-	NotifyTimeout    time.Duration `mapstructure:"notify_timeout"`
-	MaxConcurrent    int           `mapstructure:"max_concurrent"`
-	MaxPerHour       int           `mapstructure:"max_per_hour"`
-	Cooldown         time.Duration `mapstructure:"cooldown"`
-	ExtraPrompt      string        `mapstructure:"extra_prompt"`
-	StructuredOutput bool          `mapstructure:"structured_output"`
+	NotifyTimeout time.Duration `mapstructure:"notify_timeout"`
+	MaxConcurrent int           `mapstructure:"max_concurrent"`
+	MaxPerHour    int           `mapstructure:"max_per_hour"`
+	Cooldown      time.Duration `mapstructure:"cooldown"`
+	// DeepModel is used only when a user explicitly asks for a deeper investigation.
+	DeepModel string `mapstructure:"deep_model"`
+	MaxPerDay int    `mapstructure:"max_per_day"`
+	// InvestigateSeverities gates automatic investigations (manual ones are always allowed).
+	InvestigateSeverities []string    `mapstructure:"investigate_severities"`
+	Storm                 StormConfig `mapstructure:"storm"`
+	// BudgetPause stops all agent calls after a budget/rate-limit error.
+	BudgetPause time.Duration `mapstructure:"budget_pause"`
+	// Prices (USD per million tokens) for the cost estimate metric.
+	PriceInputPerMTok  float64 `mapstructure:"price_input_per_mtok"`
+	PriceOutputPerMTok float64 `mapstructure:"price_output_per_mtok"`
+	ExtraPrompt        string  `mapstructure:"extra_prompt"`
+	StructuredOutput   bool    `mapstructure:"structured_output"`
+}
+
+// StormConfig: when more than Threshold incidents open within Window, they are grouped into one
+// "alert storm" incident investigated once, instead of one investigation each.
+type StormConfig struct {
+	Enabled   bool          `mapstructure:"enabled"`
+	Threshold int           `mapstructure:"threshold"`
+	Window    time.Duration `mapstructure:"window"`
 }
 
 type ActionsConfig struct {
@@ -303,12 +322,21 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("agent.url", "")
 	v.SetDefault("agent.api_key", "")
 	v.SetDefault("agent.api_key_file", "")
-	v.SetDefault("agent.model", "")
+	v.SetDefault("agent.model", "claude-haiku-5-5")
+	v.SetDefault("agent.deep_model", "claude-sonnet-5-5")
+	v.SetDefault("agent.max_per_day", 50)
+	v.SetDefault("agent.investigate_severities", []string{"critical", "warning"})
+	v.SetDefault("agent.storm.enabled", true)
+	v.SetDefault("agent.storm.threshold", 5)
+	v.SetDefault("agent.storm.window", 10*time.Minute)
+	v.SetDefault("agent.budget_pause", time.Hour)
+	v.SetDefault("agent.price_input_per_mtok", 1.0)
+	v.SetDefault("agent.price_output_per_mtok", 5.0)
 	v.SetDefault("agent.timeout", 5*time.Minute)
 	v.SetDefault("agent.notify_timeout", 4*time.Minute)
-	v.SetDefault("agent.max_concurrent", 2)
-	v.SetDefault("agent.max_per_hour", 20)
-	v.SetDefault("agent.cooldown", 15*time.Minute)
+	v.SetDefault("agent.max_concurrent", 1)
+	v.SetDefault("agent.max_per_hour", 10)
+	v.SetDefault("agent.cooldown", 30*time.Minute)
 	v.SetDefault("agent.extra_prompt", "")
 	v.SetDefault("agent.structured_output", true)
 

@@ -69,6 +69,13 @@ func New(cfg config.AgentConfig, log *slog.Logger, opts ...Option) (*Client, err
 func (c *Client) Name() string  { return "holmes" }
 func (c *Client) Model() string { return c.cfg.Model }
 
+func (c *Client) model(override string) string {
+	if override != "" {
+		return override
+	}
+	return c.cfg.Model
+}
+
 // HTTPError is a non-2xx answer from Holmes.
 type HTTPError struct {
 	Status int
@@ -87,6 +94,12 @@ func (e *HTTPError) Retryable() bool {
 	return e.Status >= 500 || e.Status == http.StatusTooManyRequests
 }
 
+// BudgetExceeded: 429, or a budget error relayed from LiteLLM.
+func (e *HTTPError) BudgetExceeded() bool {
+	d := strings.ToLower(e.Detail)
+	return e.Status == http.StatusTooManyRequests || strings.Contains(d, "budget") || strings.Contains(d, "rate limit") || strings.Contains(d, "ratelimit")
+}
+
 // StreamError is an `error` event from the Holmes stream.
 type StreamError struct {
 	Code int
@@ -99,6 +112,12 @@ func (e *StreamError) Error() string {
 
 // Retryable: 5204 is Holmes' rate-limit code.
 func (e *StreamError) Retryable() bool { return e.Code == 5204 }
+
+// BudgetExceeded: rate limit (5204) or a budget error in the message.
+func (e *StreamError) BudgetExceeded() bool {
+	m := strings.ToLower(e.Msg)
+	return e.Code == 5204 || strings.Contains(m, "budget") || strings.Contains(m, "rate limit")
+}
 
 type chatRequest struct {
 	Ask                    string          `json:"ask"`
@@ -128,11 +147,11 @@ type metadata struct {
 // Investigate runs a root-cause investigation.
 func (c *Client) Investigate(ctx context.Context, ic agent.IncidentContext, progress func(agent.Progress)) (*agent.InvestigationResult, error) {
 	ctx, span := telemetry.Tracer().Start(ctx, "holmes.investigate", trace.WithSpanKind(trace.SpanKindClient), trace.WithAttributes(
-		attribute.Int("incident.id", ic.IncidentID), attribute.String("agent.model", c.cfg.Model)))
+		attribute.Int("incident.id", ic.IncidentID), attribute.String("agent.model", c.model(ic.Model))))
 	defer span.End()
 	req := chatRequest{
 		Ask:                    investigationAsk(ic),
-		Model:                  c.cfg.Model,
+		Model:                  c.model(ic.Model),
 		AdditionalSystemPrompt: investigationSystemPrompt(ic.ActionTypes, c.cfg.StructuredOutput, c.cfg.ExtraPrompt),
 	}
 	if c.cfg.StructuredOutput {
@@ -146,7 +165,7 @@ func (c *Client) Investigate(ctx context.Context, ic agent.IncidentContext, prog
 	res := parseInvestigation(resp.Analysis)
 	res.Conversation = resp.ConversationHistory
 	res.ToolCalls = toolCalls
-	res.Model = c.cfg.Model
+	res.Model = c.model(ic.Model)
 	if resp.Metadata != nil {
 		res.Usage = agent.Usage{PromptTokens: resp.Metadata.Usage.PromptTokens, CompletionTokens: resp.Metadata.Usage.CompletionTokens}
 	}
@@ -165,7 +184,7 @@ func (c *Client) Chat(ctx context.Context, req agent.ChatRequest, progress func(
 	hasHistory := len(req.Conversation) > 0 && string(req.Conversation) != "null"
 	cr := chatRequest{
 		Ask:                    chatAsk(req, hasHistory),
-		Model:                  c.cfg.Model,
+		Model:                  c.model(req.Incident.Model),
 		AdditionalSystemPrompt: chatSystemPrompt(req.Incident.ActionTypes, c.cfg.StructuredOutput, c.cfg.ExtraPrompt),
 	}
 	if hasHistory {
@@ -182,7 +201,7 @@ func (c *Client) Chat(ctx context.Context, req agent.ChatRequest, progress func(
 	res := parseChat(resp.Analysis)
 	res.Conversation = resp.ConversationHistory
 	res.ToolCalls = toolCalls
-	res.Model = c.cfg.Model
+	res.Model = c.model(req.Incident.Model)
 	if resp.Metadata != nil {
 		res.Usage = agent.Usage{PromptTokens: resp.Metadata.Usage.PromptTokens, CompletionTokens: resp.Metadata.Usage.CompletionTokens}
 	}

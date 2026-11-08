@@ -117,9 +117,19 @@ defineExpose({ openChat })
             icon="sparkle"
             :disabled="!isOperator || inc.investigation_state === 'running' || inc.investigation_state === 'pending'"
             :loading="m.reinvestigate.isPending.value"
-            @click="m.reinvestigate.mutate(undefined)"
+            @click="m.reinvestigate.mutate(false)"
             >{{ inc.investigation_state === 'running' ? 'Investigating…' : 'Reinvestigate' }}</Btn
           >
+          <DropdownMenuRoot>
+            <DropdownMenuTrigger as-child>
+              <Btn size="sm" icon="chevronDown" :disabled="!isOperator || inc.investigation_state === 'running' || inc.investigation_state === 'pending'" title="More investigation options" aria-label="More investigation options" />
+            </DropdownMenuTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuContent class="menu" align="start" :side-offset="4">
+                <DropdownMenuItem class="menu__item" @select="m.reinvestigate.mutate(true)">Dig deeper (bigger model, costs more)</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenuPortal>
+          </DropdownMenuRoot>
           <DropdownMenuRoot>
             <DropdownMenuTrigger as-child>
               <Btn size="sm" icon="mute" :disabled="!isOperator" :loading="m.mute.isPending.value">Mute <Icon name="chevronDown" :size="12" /></Btn>

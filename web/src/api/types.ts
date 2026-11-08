@@ -33,6 +33,9 @@ export interface Incident {
   pending_actions: number
   reopen_count: number
   investigation_state: InvestigationState
+  investigation_note?: string
+  storm_id?: ID | null
+  is_storm?: boolean
   notify_channels: string[]
   assignee?: { id: ID; name: string } | null
   trace_id: string
@@ -282,6 +285,13 @@ export interface AgentStatus {
   url_host?: string
   max_concurrent?: number
   max_per_hour?: number
+  max_per_day?: number
+  deep_model?: string
+  calls_last_hour?: number
+  calls_today?: number
+  budget_paused_until?: Timestamp | null
+  storm_threshold?: number
+  storm_window_seconds?: number
 }
 export interface LeaseStatus {
   name: string

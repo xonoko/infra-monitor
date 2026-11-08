@@ -105,12 +105,24 @@ agent:
   url: ""                  # e.g. http://localhost:5050 or http://holmes-holmes.holmes.svc.cluster.local
   api_key: ""
   # api_key_file: /etc/infra-monitor/secrets/holmes-api-key
-  model: ""                # key of Holmes' modelList (not the provider model id), e.g. investigate
+  model: claude-haiku-5-5  # key of Holmes' modelList (not the provider model id)
+  deep_model: claude-sonnet-5-5   # only on an explicit "dig deeper" request (UI menu, /reinvestigate deep)
   timeout: 5m
   notify_timeout: 4m       # fail open: notify without AI after this delay
-  max_concurrent: 2
-  max_per_hour: 20
-  cooldown: 15m            # no automatic re-investigation of the same incident within this window
+  # Cost controls (an alert storm must never cause a big bill). Caps count every agent call:
+  # investigations (auto, manual, deep) and chat replies.
+  max_concurrent: 1
+  max_per_hour: 10
+  max_per_day: 50
+  cooldown: 30m            # no automatic re-investigation of a reopened incident within this window
+  investigate_severities: [critical, warning]   # automatic investigations only for these
+  storm:                   # > threshold incidents within window: group them, investigate once
+    enabled: true
+    threshold: 5
+    window: 10m
+  budget_pause: 1h         # after a budget / rate-limit error (LiteLLM 400 budget_exceeded, 429): no agent calls
+  price_input_per_mtok: 1.0    # USD per million tokens, for the infra_monitor_agent_cost_usd estimate
+  price_output_per_mtok: 5.0
   extra_prompt: ""
   structured_output: true  # use response_format json_schema (falls back to a fenced JSON block)
 

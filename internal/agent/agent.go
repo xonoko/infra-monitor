@@ -7,6 +7,8 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 	"time"
 )
 
@@ -41,6 +43,10 @@ type IncidentContext struct {
 	OpenedAt         time.Time         `json:"opened_at"`
 	PreviousAnalysis string            `json:"previous_analysis,omitempty"`
 	ActionTypes      []ActionType      `json:"-"`
+	// Description adds free-form context (e.g. the list of incidents grouped by an alert storm).
+	Description string `json:"description,omitempty"`
+	// Model overrides the configured model for this call (e.g. a deeper model on explicit request).
+	Model string `json:"-"`
 }
 
 type ProposedAction struct {
@@ -96,4 +102,24 @@ type Agent interface {
 	Model() string
 	Investigate(ctx context.Context, ic IncidentContext, progress func(Progress)) (*InvestigationResult, error)
 	Chat(ctx context.Context, req ChatRequest, progress func(Progress)) (*ChatResult, error)
+}
+
+// IsBudgetExceeded reports whether err means the LLM budget or rate limit is exhausted
+// (LiteLLM budget_exceeded / 429, Holmes rate-limit code 5204, ...). Such errors are final:
+// the core fails open and pauses automatic investigations instead of retrying.
+func IsBudgetExceeded(err error) bool {
+	if err == nil {
+		return false
+	}
+	var be interface{ BudgetExceeded() bool }
+	if errors.As(err, &be) && be.BudgetExceeded() {
+		return true
+	}
+	s := strings.ToLower(err.Error())
+	for _, k := range []string{"budget", "rate limit", "ratelimit", "rate_limit", "too many requests", "quota", "http 429"} {
+		if strings.Contains(s, k) {
+			return true
+		}
+	}
+	return false
 }

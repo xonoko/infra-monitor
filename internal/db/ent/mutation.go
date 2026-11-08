@@ -6179,6 +6179,8 @@ type IncidentMutation struct {
 	mute_id                  *int
 	addmute_id               *int
 	internal                 *bool
+	storm_id                 *int
+	addstorm_id              *int
 	opened_at                *time.Time
 	acknowledged_at          *time.Time
 	resolved_at              *time.Time
@@ -6191,6 +6193,7 @@ type IncidentMutation struct {
 	notified_at              *time.Time
 	investigation_state      *incident.InvestigationState
 	last_investigated_at     *time.Time
+	investigation_note       *string
 	agent_conversation       *json.RawMessage
 	appendagent_conversation json.RawMessage
 	trace_id                 *string
@@ -6892,6 +6895,76 @@ func (m *IncidentMutation) ResetInternal() {
 	m.internal = nil
 }
 
+// SetStormID sets the "storm_id" field.
+func (m *IncidentMutation) SetStormID(i int) {
+	m.storm_id = &i
+	m.addstorm_id = nil
+}
+
+// StormID returns the value of the "storm_id" field in the mutation.
+func (m *IncidentMutation) StormID() (r int, exists bool) {
+	v := m.storm_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStormID returns the old "storm_id" field's value of the Incident entity.
+// If the Incident object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IncidentMutation) OldStormID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStormID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStormID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStormID: %w", err)
+	}
+	return oldValue.StormID, nil
+}
+
+// AddStormID adds i to the "storm_id" field.
+func (m *IncidentMutation) AddStormID(i int) {
+	if m.addstorm_id != nil {
+		*m.addstorm_id += i
+	} else {
+		m.addstorm_id = &i
+	}
+}
+
+// AddedStormID returns the value that was added to the "storm_id" field in this mutation.
+func (m *IncidentMutation) AddedStormID() (r int, exists bool) {
+	v := m.addstorm_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearStormID clears the value of the "storm_id" field.
+func (m *IncidentMutation) ClearStormID() {
+	m.storm_id = nil
+	m.addstorm_id = nil
+	m.clearedFields[incident.FieldStormID] = struct{}{}
+}
+
+// StormIDCleared returns if the "storm_id" field was cleared in this mutation.
+func (m *IncidentMutation) StormIDCleared() bool {
+	_, ok := m.clearedFields[incident.FieldStormID]
+	return ok
+}
+
+// ResetStormID resets all changes to the "storm_id" field.
+func (m *IncidentMutation) ResetStormID() {
+	m.storm_id = nil
+	m.addstorm_id = nil
+	delete(m.clearedFields, incident.FieldStormID)
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (m *IncidentMutation) SetAssigneeID(i int) {
 	m.assignee = &i
@@ -7401,6 +7474,42 @@ func (m *IncidentMutation) ResetLastInvestigatedAt() {
 	delete(m.clearedFields, incident.FieldLastInvestigatedAt)
 }
 
+// SetInvestigationNote sets the "investigation_note" field.
+func (m *IncidentMutation) SetInvestigationNote(s string) {
+	m.investigation_note = &s
+}
+
+// InvestigationNote returns the value of the "investigation_note" field in the mutation.
+func (m *IncidentMutation) InvestigationNote() (r string, exists bool) {
+	v := m.investigation_note
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInvestigationNote returns the old "investigation_note" field's value of the Incident entity.
+// If the Incident object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IncidentMutation) OldInvestigationNote(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInvestigationNote is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInvestigationNote requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInvestigationNote: %w", err)
+	}
+	return oldValue.InvestigationNote, nil
+}
+
+// ResetInvestigationNote resets all changes to the "investigation_note" field.
+func (m *IncidentMutation) ResetInvestigationNote() {
+	m.investigation_note = nil
+}
+
 // SetAgentConversation sets the "agent_conversation" field.
 func (m *IncidentMutation) SetAgentConversation(jm json.RawMessage) {
 	m.agent_conversation = &jm
@@ -7887,7 +7996,7 @@ func (m *IncidentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *IncidentMutation) Fields() []string {
-	fields := make([]string, 0, 28)
+	fields := make([]string, 0, 30)
 	if m.created_at != nil {
 		fields = append(fields, incident.FieldCreatedAt)
 	}
@@ -7933,6 +8042,9 @@ func (m *IncidentMutation) Fields() []string {
 	if m.internal != nil {
 		fields = append(fields, incident.FieldInternal)
 	}
+	if m.storm_id != nil {
+		fields = append(fields, incident.FieldStormID)
+	}
 	if m.assignee != nil {
 		fields = append(fields, incident.FieldAssigneeID)
 	}
@@ -7965,6 +8077,9 @@ func (m *IncidentMutation) Fields() []string {
 	}
 	if m.last_investigated_at != nil {
 		fields = append(fields, incident.FieldLastInvestigatedAt)
+	}
+	if m.investigation_note != nil {
+		fields = append(fields, incident.FieldInvestigationNote)
 	}
 	if m.agent_conversation != nil {
 		fields = append(fields, incident.FieldAgentConversation)
@@ -8010,6 +8125,8 @@ func (m *IncidentMutation) Field(name string) (ent.Value, bool) {
 		return m.MuteID()
 	case incident.FieldInternal:
 		return m.Internal()
+	case incident.FieldStormID:
+		return m.StormID()
 	case incident.FieldAssigneeID:
 		return m.AssigneeID()
 	case incident.FieldOpenedAt:
@@ -8032,6 +8149,8 @@ func (m *IncidentMutation) Field(name string) (ent.Value, bool) {
 		return m.InvestigationState()
 	case incident.FieldLastInvestigatedAt:
 		return m.LastInvestigatedAt()
+	case incident.FieldInvestigationNote:
+		return m.InvestigationNote()
 	case incident.FieldAgentConversation:
 		return m.AgentConversation()
 	case incident.FieldTraceID:
@@ -8075,6 +8194,8 @@ func (m *IncidentMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldMuteID(ctx)
 	case incident.FieldInternal:
 		return m.OldInternal(ctx)
+	case incident.FieldStormID:
+		return m.OldStormID(ctx)
 	case incident.FieldAssigneeID:
 		return m.OldAssigneeID(ctx)
 	case incident.FieldOpenedAt:
@@ -8097,6 +8218,8 @@ func (m *IncidentMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldInvestigationState(ctx)
 	case incident.FieldLastInvestigatedAt:
 		return m.OldLastInvestigatedAt(ctx)
+	case incident.FieldInvestigationNote:
+		return m.OldInvestigationNote(ctx)
 	case incident.FieldAgentConversation:
 		return m.OldAgentConversation(ctx)
 	case incident.FieldTraceID:
@@ -8215,6 +8338,13 @@ func (m *IncidentMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetInternal(v)
 		return nil
+	case incident.FieldStormID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStormID(v)
+		return nil
 	case incident.FieldAssigneeID:
 		v, ok := value.(int)
 		if !ok {
@@ -8292,6 +8422,13 @@ func (m *IncidentMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetLastInvestigatedAt(v)
 		return nil
+	case incident.FieldInvestigationNote:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInvestigationNote(v)
+		return nil
 	case incident.FieldAgentConversation:
 		v, ok := value.(json.RawMessage)
 		if !ok {
@@ -8317,6 +8454,9 @@ func (m *IncidentMutation) AddedFields() []string {
 	if m.addmute_id != nil {
 		fields = append(fields, incident.FieldMuteID)
 	}
+	if m.addstorm_id != nil {
+		fields = append(fields, incident.FieldStormID)
+	}
 	if m.addreopen_count != nil {
 		fields = append(fields, incident.FieldReopenCount)
 	}
@@ -8330,6 +8470,8 @@ func (m *IncidentMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case incident.FieldMuteID:
 		return m.AddedMuteID()
+	case incident.FieldStormID:
+		return m.AddedStormID()
 	case incident.FieldReopenCount:
 		return m.AddedReopenCount()
 	}
@@ -8348,6 +8490,13 @@ func (m *IncidentMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddMuteID(v)
 		return nil
+	case incident.FieldStormID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddStormID(v)
+		return nil
 	case incident.FieldReopenCount:
 		v, ok := value.(int)
 		if !ok {
@@ -8365,6 +8514,9 @@ func (m *IncidentMutation) ClearedFields() []string {
 	var fields []string
 	if m.FieldCleared(incident.FieldMuteID) {
 		fields = append(fields, incident.FieldMuteID)
+	}
+	if m.FieldCleared(incident.FieldStormID) {
+		fields = append(fields, incident.FieldStormID)
 	}
 	if m.FieldCleared(incident.FieldAssigneeID) {
 		fields = append(fields, incident.FieldAssigneeID)
@@ -8403,6 +8555,9 @@ func (m *IncidentMutation) ClearField(name string) error {
 	switch name {
 	case incident.FieldMuteID:
 		m.ClearMuteID()
+		return nil
+	case incident.FieldStormID:
+		m.ClearStormID()
 		return nil
 	case incident.FieldAssigneeID:
 		m.ClearAssigneeID()
@@ -8478,6 +8633,9 @@ func (m *IncidentMutation) ResetField(name string) error {
 	case incident.FieldInternal:
 		m.ResetInternal()
 		return nil
+	case incident.FieldStormID:
+		m.ResetStormID()
+		return nil
 	case incident.FieldAssigneeID:
 		m.ResetAssigneeID()
 		return nil
@@ -8510,6 +8668,9 @@ func (m *IncidentMutation) ResetField(name string) error {
 		return nil
 	case incident.FieldLastInvestigatedAt:
 		m.ResetLastInvestigatedAt()
+		return nil
+	case incident.FieldInvestigationNote:
+		m.ResetInvestigationNote()
 		return nil
 	case incident.FieldAgentConversation:
 		m.ResetAgentConversation()

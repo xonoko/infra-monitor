@@ -74,6 +74,23 @@ incident was routed to. Jobs run after commit, so the fan-out never sees uncommi
 7. **Resolve**: when every signal is resolved, `resolve_incident` runs after `resolve_grace` and resolves unless
    something re-fired. Pending proposals expire.
 
+### Cost controls
+
+An alert storm must never produce a large LLM bill (LiteLLM also enforces budgets on its side):
+
+- Automatic investigations only for `agent.investigate_severities` (default critical, warning).
+- **Storm mode**: when more than `agent.storm.threshold` incidents open within `agent.storm.window`, new incidents
+  are attached to one "Alert storm" incident (`incidents.storm_id`). Only the storm is investigated (once, with the
+  list of grouped alerts) and notified; it resolves when every grouped incident is resolved.
+- **Hard caps** on every agent call, investigations and chat replies alike: `max_concurrent`, `max_per_hour`,
+  `max_per_day`, plus `cooldown` against automatic re-investigation of reopened incidents.
+- **Budget errors are final**: a budget or rate-limit error (HTTP 429, LiteLLM budget_exceeded, Holmes 5204) is not
+  retried. The incident fails open ("AI budget reached") and all agent calls pause for `agent.budget_pause`.
+- The default model is cheap (`agent.model`); `agent.deep_model` is used only on an explicit "dig deeper" request.
+- Metrics: `infra_monitor_investigations{outcome}`, `infra_monitor_investigations_skipped{reason}`
+  (storm, cap, budget, severity, state), `infra_monitor_agent_tokens{type,model}`, `infra_monitor_agent_cost_usd`.
+  `/api/v1/status` shows calls in the last hour / 24h and the budget pause.
+
 ### Actions
 
 Agents and users can only propose. Proposals are schema-validated and policy-checked (namespace deny/allow lists,

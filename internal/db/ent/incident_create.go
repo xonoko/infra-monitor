@@ -216,6 +216,20 @@ func (_c *IncidentCreate) SetNillableInternal(v *bool) *IncidentCreate {
 	return _c
 }
 
+// SetStormID sets the "storm_id" field.
+func (_c *IncidentCreate) SetStormID(v int) *IncidentCreate {
+	_c.mutation.SetStormID(v)
+	return _c
+}
+
+// SetNillableStormID sets the "storm_id" field if the given value is not nil.
+func (_c *IncidentCreate) SetNillableStormID(v *int) *IncidentCreate {
+	if v != nil {
+		_c.SetStormID(*v)
+	}
+	return _c
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (_c *IncidentCreate) SetAssigneeID(v int) *IncidentCreate {
 	_c.mutation.SetAssigneeID(v)
@@ -358,6 +372,20 @@ func (_c *IncidentCreate) SetLastInvestigatedAt(v time.Time) *IncidentCreate {
 func (_c *IncidentCreate) SetNillableLastInvestigatedAt(v *time.Time) *IncidentCreate {
 	if v != nil {
 		_c.SetLastInvestigatedAt(*v)
+	}
+	return _c
+}
+
+// SetInvestigationNote sets the "investigation_note" field.
+func (_c *IncidentCreate) SetInvestigationNote(v string) *IncidentCreate {
+	_c.mutation.SetInvestigationNote(v)
+	return _c
+}
+
+// SetNillableInvestigationNote sets the "investigation_note" field if the given value is not nil.
+func (_c *IncidentCreate) SetNillableInvestigationNote(v *string) *IncidentCreate {
+	if v != nil {
+		_c.SetInvestigationNote(*v)
 	}
 	return _c
 }
@@ -580,6 +608,10 @@ func (_c *IncidentCreate) defaults() {
 		v := incident.DefaultInvestigationState
 		_c.mutation.SetInvestigationState(v)
 	}
+	if _, ok := _c.mutation.InvestigationNote(); !ok {
+		v := incident.DefaultInvestigationNote
+		_c.mutation.SetInvestigationNote(v)
+	}
 	if _, ok := _c.mutation.TraceID(); !ok {
 		v := incident.DefaultTraceID
 		_c.mutation.SetTraceID(v)
@@ -659,6 +691,9 @@ func (_c *IncidentCreate) check() error {
 		if err := incident.InvestigationStateValidator(v); err != nil {
 			return &ValidationError{Name: "investigation_state", err: fmt.Errorf(`ent: validator failed for field "Incident.investigation_state": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.InvestigationNote(); !ok {
+		return &ValidationError{Name: "investigation_note", err: errors.New(`ent: missing required field "Incident.investigation_note"`)}
 	}
 	if _, ok := _c.mutation.TraceID(); !ok {
 		return &ValidationError{Name: "trace_id", err: errors.New(`ent: missing required field "Incident.trace_id"`)}
@@ -750,6 +785,10 @@ func (_c *IncidentCreate) createSpec() (*Incident, *sqlgraph.CreateSpec) {
 		_spec.SetField(incident.FieldInternal, field.TypeBool, value)
 		_node.Internal = value
 	}
+	if value, ok := _c.mutation.StormID(); ok {
+		_spec.SetField(incident.FieldStormID, field.TypeInt, value)
+		_node.StormID = &value
+	}
 	if value, ok := _c.mutation.OpenedAt(); ok {
 		_spec.SetField(incident.FieldOpenedAt, field.TypeTime, value)
 		_node.OpenedAt = value
@@ -789,6 +828,10 @@ func (_c *IncidentCreate) createSpec() (*Incident, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LastInvestigatedAt(); ok {
 		_spec.SetField(incident.FieldLastInvestigatedAt, field.TypeTime, value)
 		_node.LastInvestigatedAt = &value
+	}
+	if value, ok := _c.mutation.InvestigationNote(); ok {
+		_spec.SetField(incident.FieldInvestigationNote, field.TypeString, value)
+		_node.InvestigationNote = value
 	}
 	if value, ok := _c.mutation.AgentConversation(); ok {
 		_spec.SetField(incident.FieldAgentConversation, field.TypeJSON, value)
@@ -1143,6 +1186,30 @@ func (u *IncidentUpsert) UpdateInternal() *IncidentUpsert {
 	return u
 }
 
+// SetStormID sets the "storm_id" field.
+func (u *IncidentUpsert) SetStormID(v int) *IncidentUpsert {
+	u.Set(incident.FieldStormID, v)
+	return u
+}
+
+// UpdateStormID sets the "storm_id" field to the value that was provided on create.
+func (u *IncidentUpsert) UpdateStormID() *IncidentUpsert {
+	u.SetExcluded(incident.FieldStormID)
+	return u
+}
+
+// AddStormID adds v to the "storm_id" field.
+func (u *IncidentUpsert) AddStormID(v int) *IncidentUpsert {
+	u.Add(incident.FieldStormID, v)
+	return u
+}
+
+// ClearStormID clears the value of the "storm_id" field.
+func (u *IncidentUpsert) ClearStormID() *IncidentUpsert {
+	u.SetNull(incident.FieldStormID)
+	return u
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (u *IncidentUpsert) SetAssigneeID(v int) *IncidentUpsert {
 	u.Set(incident.FieldAssigneeID, v)
@@ -1314,6 +1381,18 @@ func (u *IncidentUpsert) UpdateLastInvestigatedAt() *IncidentUpsert {
 // ClearLastInvestigatedAt clears the value of the "last_investigated_at" field.
 func (u *IncidentUpsert) ClearLastInvestigatedAt() *IncidentUpsert {
 	u.SetNull(incident.FieldLastInvestigatedAt)
+	return u
+}
+
+// SetInvestigationNote sets the "investigation_note" field.
+func (u *IncidentUpsert) SetInvestigationNote(v string) *IncidentUpsert {
+	u.Set(incident.FieldInvestigationNote, v)
+	return u
+}
+
+// UpdateInvestigationNote sets the "investigation_note" field to the value that was provided on create.
+func (u *IncidentUpsert) UpdateInvestigationNote() *IncidentUpsert {
+	u.SetExcluded(incident.FieldInvestigationNote)
 	return u
 }
 
@@ -1602,6 +1681,34 @@ func (u *IncidentUpsertOne) UpdateInternal() *IncidentUpsertOne {
 	})
 }
 
+// SetStormID sets the "storm_id" field.
+func (u *IncidentUpsertOne) SetStormID(v int) *IncidentUpsertOne {
+	return u.Update(func(s *IncidentUpsert) {
+		s.SetStormID(v)
+	})
+}
+
+// AddStormID adds v to the "storm_id" field.
+func (u *IncidentUpsertOne) AddStormID(v int) *IncidentUpsertOne {
+	return u.Update(func(s *IncidentUpsert) {
+		s.AddStormID(v)
+	})
+}
+
+// UpdateStormID sets the "storm_id" field to the value that was provided on create.
+func (u *IncidentUpsertOne) UpdateStormID() *IncidentUpsertOne {
+	return u.Update(func(s *IncidentUpsert) {
+		s.UpdateStormID()
+	})
+}
+
+// ClearStormID clears the value of the "storm_id" field.
+func (u *IncidentUpsertOne) ClearStormID() *IncidentUpsertOne {
+	return u.Update(func(s *IncidentUpsert) {
+		s.ClearStormID()
+	})
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (u *IncidentUpsertOne) SetAssigneeID(v int) *IncidentUpsertOne {
 	return u.Update(func(s *IncidentUpsert) {
@@ -1802,6 +1909,20 @@ func (u *IncidentUpsertOne) UpdateLastInvestigatedAt() *IncidentUpsertOne {
 func (u *IncidentUpsertOne) ClearLastInvestigatedAt() *IncidentUpsertOne {
 	return u.Update(func(s *IncidentUpsert) {
 		s.ClearLastInvestigatedAt()
+	})
+}
+
+// SetInvestigationNote sets the "investigation_note" field.
+func (u *IncidentUpsertOne) SetInvestigationNote(v string) *IncidentUpsertOne {
+	return u.Update(func(s *IncidentUpsert) {
+		s.SetInvestigationNote(v)
+	})
+}
+
+// UpdateInvestigationNote sets the "investigation_note" field to the value that was provided on create.
+func (u *IncidentUpsertOne) UpdateInvestigationNote() *IncidentUpsertOne {
+	return u.Update(func(s *IncidentUpsert) {
+		s.UpdateInvestigationNote()
 	})
 }
 
@@ -2261,6 +2382,34 @@ func (u *IncidentUpsertBulk) UpdateInternal() *IncidentUpsertBulk {
 	})
 }
 
+// SetStormID sets the "storm_id" field.
+func (u *IncidentUpsertBulk) SetStormID(v int) *IncidentUpsertBulk {
+	return u.Update(func(s *IncidentUpsert) {
+		s.SetStormID(v)
+	})
+}
+
+// AddStormID adds v to the "storm_id" field.
+func (u *IncidentUpsertBulk) AddStormID(v int) *IncidentUpsertBulk {
+	return u.Update(func(s *IncidentUpsert) {
+		s.AddStormID(v)
+	})
+}
+
+// UpdateStormID sets the "storm_id" field to the value that was provided on create.
+func (u *IncidentUpsertBulk) UpdateStormID() *IncidentUpsertBulk {
+	return u.Update(func(s *IncidentUpsert) {
+		s.UpdateStormID()
+	})
+}
+
+// ClearStormID clears the value of the "storm_id" field.
+func (u *IncidentUpsertBulk) ClearStormID() *IncidentUpsertBulk {
+	return u.Update(func(s *IncidentUpsert) {
+		s.ClearStormID()
+	})
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (u *IncidentUpsertBulk) SetAssigneeID(v int) *IncidentUpsertBulk {
 	return u.Update(func(s *IncidentUpsert) {
@@ -2461,6 +2610,20 @@ func (u *IncidentUpsertBulk) UpdateLastInvestigatedAt() *IncidentUpsertBulk {
 func (u *IncidentUpsertBulk) ClearLastInvestigatedAt() *IncidentUpsertBulk {
 	return u.Update(func(s *IncidentUpsert) {
 		s.ClearLastInvestigatedAt()
+	})
+}
+
+// SetInvestigationNote sets the "investigation_note" field.
+func (u *IncidentUpsertBulk) SetInvestigationNote(v string) *IncidentUpsertBulk {
+	return u.Update(func(s *IncidentUpsert) {
+		s.SetInvestigationNote(v)
+	})
+}
+
+// UpdateInvestigationNote sets the "investigation_note" field to the value that was provided on create.
+func (u *IncidentUpsertBulk) UpdateInvestigationNote() *IncidentUpsertBulk {
+	return u.Update(func(s *IncidentUpsert) {
+		s.UpdateInvestigationNote()
 	})
 }
 

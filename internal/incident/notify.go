@@ -99,6 +99,9 @@ func (s *Service) Route(inc *ent.Incident) (channels, rules []string) {
 
 // decideNotification routes the incident to channels (once investigation finished, failed or timed out).
 func (s *Service) decideNotification(ctx context.Context, tx *ent.Tx, inc *ent.Incident, reason string) (*ent.Incident, error) {
+	if inc.StormID != nil {
+		return inc, nil // grouped: the storm incident is notified instead
+	}
 	if inc.Muted {
 		return inc, nil
 	}

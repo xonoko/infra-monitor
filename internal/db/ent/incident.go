@@ -49,6 +49,8 @@ type Incident struct {
 	MuteID *int `json:"mute_id,omitempty"`
 	// Internal holds the value of the "internal" field.
 	Internal bool `json:"internal,omitempty"`
+	// StormID holds the value of the "storm_id" field.
+	StormID *int `json:"storm_id,omitempty"`
 	// AssigneeID holds the value of the "assignee_id" field.
 	AssigneeID *int `json:"assignee_id,omitempty"`
 	// OpenedAt holds the value of the "opened_at" field.
@@ -71,6 +73,8 @@ type Incident struct {
 	InvestigationState incident.InvestigationState `json:"investigation_state,omitempty"`
 	// LastInvestigatedAt holds the value of the "last_investigated_at" field.
 	LastInvestigatedAt *time.Time `json:"last_investigated_at,omitempty"`
+	// InvestigationNote holds the value of the "investigation_note" field.
+	InvestigationNote string `json:"investigation_note,omitempty"`
 	// AgentConversation holds the value of the "agent_conversation" field.
 	AgentConversation json.RawMessage `json:"agent_conversation,omitempty"`
 	// TraceID holds the value of the "trace_id" field.
@@ -176,9 +180,9 @@ func (*Incident) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case incident.FieldMuted, incident.FieldInternal:
 			values[i] = new(sql.NullBool)
-		case incident.FieldID, incident.FieldMuteID, incident.FieldAssigneeID, incident.FieldReopenCount:
+		case incident.FieldID, incident.FieldMuteID, incident.FieldStormID, incident.FieldAssigneeID, incident.FieldReopenCount:
 			values[i] = new(sql.NullInt64)
-		case incident.FieldTitle, incident.FieldStatus, incident.FieldSeverity, incident.FieldGroupingKey, incident.FieldSource, incident.FieldCluster, incident.FieldNamespace, incident.FieldVerdict, incident.FieldSummary, incident.FieldInvestigationState, incident.FieldTraceID:
+		case incident.FieldTitle, incident.FieldStatus, incident.FieldSeverity, incident.FieldGroupingKey, incident.FieldSource, incident.FieldCluster, incident.FieldNamespace, incident.FieldVerdict, incident.FieldSummary, incident.FieldInvestigationState, incident.FieldInvestigationNote, incident.FieldTraceID:
 			values[i] = new(sql.NullString)
 		case incident.FieldCreatedAt, incident.FieldUpdatedAt, incident.FieldOpenedAt, incident.FieldAcknowledgedAt, incident.FieldResolvedAt, incident.FieldClosedAt, incident.FieldLastSignalAt, incident.FieldNotifiedAt, incident.FieldLastInvestigatedAt:
 			values[i] = new(sql.NullTime)
@@ -296,6 +300,13 @@ func (_m *Incident) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Internal = value.Bool
 			}
+		case incident.FieldStormID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field storm_id", values[i])
+			} else if value.Valid {
+				_m.StormID = new(int)
+				*_m.StormID = int(value.Int64)
+			}
 		case incident.FieldAssigneeID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field assignee_id", values[i])
@@ -369,6 +380,12 @@ func (_m *Incident) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.LastInvestigatedAt = new(time.Time)
 				*_m.LastInvestigatedAt = value.Time
+			}
+		case incident.FieldInvestigationNote:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field investigation_note", values[i])
+			} else if value.Valid {
+				_m.InvestigationNote = value.String
 			}
 		case incident.FieldAgentConversation:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -502,6 +519,11 @@ func (_m *Incident) String() string {
 	builder.WriteString("internal=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Internal))
 	builder.WriteString(", ")
+	if v := _m.StormID; v != nil {
+		builder.WriteString("storm_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
 	if v := _m.AssigneeID; v != nil {
 		builder.WriteString("assignee_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
@@ -546,6 +568,9 @@ func (_m *Incident) String() string {
 		builder.WriteString("last_investigated_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("investigation_note=")
+	builder.WriteString(_m.InvestigationNote)
 	builder.WriteString(", ")
 	builder.WriteString("agent_conversation=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AgentConversation))

@@ -115,6 +115,11 @@ func Internal(v bool) predicate.Incident {
 	return predicate.Incident(sql.FieldEQ(FieldInternal, v))
 }
 
+// StormID applies equality check predicate on the "storm_id" field. It's identical to StormIDEQ.
+func StormID(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldEQ(FieldStormID, v))
+}
+
 // AssigneeID applies equality check predicate on the "assignee_id" field. It's identical to AssigneeIDEQ.
 func AssigneeID(v int) predicate.Incident {
 	return predicate.Incident(sql.FieldEQ(FieldAssigneeID, v))
@@ -158,6 +163,11 @@ func NotifiedAt(v time.Time) predicate.Incident {
 // LastInvestigatedAt applies equality check predicate on the "last_investigated_at" field. It's identical to LastInvestigatedAtEQ.
 func LastInvestigatedAt(v time.Time) predicate.Incident {
 	return predicate.Incident(sql.FieldEQ(FieldLastInvestigatedAt, v))
+}
+
+// InvestigationNote applies equality check predicate on the "investigation_note" field. It's identical to InvestigationNoteEQ.
+func InvestigationNote(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldEQ(FieldInvestigationNote, v))
 }
 
 // TraceID applies equality check predicate on the "trace_id" field. It's identical to TraceIDEQ.
@@ -810,6 +820,56 @@ func InternalNEQ(v bool) predicate.Incident {
 	return predicate.Incident(sql.FieldNEQ(FieldInternal, v))
 }
 
+// StormIDEQ applies the EQ predicate on the "storm_id" field.
+func StormIDEQ(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldEQ(FieldStormID, v))
+}
+
+// StormIDNEQ applies the NEQ predicate on the "storm_id" field.
+func StormIDNEQ(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldNEQ(FieldStormID, v))
+}
+
+// StormIDIn applies the In predicate on the "storm_id" field.
+func StormIDIn(vs ...int) predicate.Incident {
+	return predicate.Incident(sql.FieldIn(FieldStormID, vs...))
+}
+
+// StormIDNotIn applies the NotIn predicate on the "storm_id" field.
+func StormIDNotIn(vs ...int) predicate.Incident {
+	return predicate.Incident(sql.FieldNotIn(FieldStormID, vs...))
+}
+
+// StormIDGT applies the GT predicate on the "storm_id" field.
+func StormIDGT(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldGT(FieldStormID, v))
+}
+
+// StormIDGTE applies the GTE predicate on the "storm_id" field.
+func StormIDGTE(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldGTE(FieldStormID, v))
+}
+
+// StormIDLT applies the LT predicate on the "storm_id" field.
+func StormIDLT(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldLT(FieldStormID, v))
+}
+
+// StormIDLTE applies the LTE predicate on the "storm_id" field.
+func StormIDLTE(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldLTE(FieldStormID, v))
+}
+
+// StormIDIsNil applies the IsNil predicate on the "storm_id" field.
+func StormIDIsNil() predicate.Incident {
+	return predicate.Incident(sql.FieldIsNull(FieldStormID))
+}
+
+// StormIDNotNil applies the NotNil predicate on the "storm_id" field.
+func StormIDNotNil() predicate.Incident {
+	return predicate.Incident(sql.FieldNotNull(FieldStormID))
+}
+
 // AssigneeIDEQ applies the EQ predicate on the "assignee_id" field.
 func AssigneeIDEQ(v int) predicate.Incident {
 	return predicate.Incident(sql.FieldEQ(FieldAssigneeID, v))
@@ -1228,6 +1288,71 @@ func LastInvestigatedAtIsNil() predicate.Incident {
 // LastInvestigatedAtNotNil applies the NotNil predicate on the "last_investigated_at" field.
 func LastInvestigatedAtNotNil() predicate.Incident {
 	return predicate.Incident(sql.FieldNotNull(FieldLastInvestigatedAt))
+}
+
+// InvestigationNoteEQ applies the EQ predicate on the "investigation_note" field.
+func InvestigationNoteEQ(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldEQ(FieldInvestigationNote, v))
+}
+
+// InvestigationNoteNEQ applies the NEQ predicate on the "investigation_note" field.
+func InvestigationNoteNEQ(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldNEQ(FieldInvestigationNote, v))
+}
+
+// InvestigationNoteIn applies the In predicate on the "investigation_note" field.
+func InvestigationNoteIn(vs ...string) predicate.Incident {
+	return predicate.Incident(sql.FieldIn(FieldInvestigationNote, vs...))
+}
+
+// InvestigationNoteNotIn applies the NotIn predicate on the "investigation_note" field.
+func InvestigationNoteNotIn(vs ...string) predicate.Incident {
+	return predicate.Incident(sql.FieldNotIn(FieldInvestigationNote, vs...))
+}
+
+// InvestigationNoteGT applies the GT predicate on the "investigation_note" field.
+func InvestigationNoteGT(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldGT(FieldInvestigationNote, v))
+}
+
+// InvestigationNoteGTE applies the GTE predicate on the "investigation_note" field.
+func InvestigationNoteGTE(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldGTE(FieldInvestigationNote, v))
+}
+
+// InvestigationNoteLT applies the LT predicate on the "investigation_note" field.
+func InvestigationNoteLT(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldLT(FieldInvestigationNote, v))
+}
+
+// InvestigationNoteLTE applies the LTE predicate on the "investigation_note" field.
+func InvestigationNoteLTE(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldLTE(FieldInvestigationNote, v))
+}
+
+// InvestigationNoteContains applies the Contains predicate on the "investigation_note" field.
+func InvestigationNoteContains(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldContains(FieldInvestigationNote, v))
+}
+
+// InvestigationNoteHasPrefix applies the HasPrefix predicate on the "investigation_note" field.
+func InvestigationNoteHasPrefix(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldHasPrefix(FieldInvestigationNote, v))
+}
+
+// InvestigationNoteHasSuffix applies the HasSuffix predicate on the "investigation_note" field.
+func InvestigationNoteHasSuffix(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldHasSuffix(FieldInvestigationNote, v))
+}
+
+// InvestigationNoteEqualFold applies the EqualFold predicate on the "investigation_note" field.
+func InvestigationNoteEqualFold(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldEqualFold(FieldInvestigationNote, v))
+}
+
+// InvestigationNoteContainsFold applies the ContainsFold predicate on the "investigation_note" field.
+func InvestigationNoteContainsFold(v string) predicate.Incident {
+	return predicate.Incident(sql.FieldContainsFold(FieldInvestigationNote, v))
 }
 
 // AgentConversationIsNil applies the IsNil predicate on the "agent_conversation" field.

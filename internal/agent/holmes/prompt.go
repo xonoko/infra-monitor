@@ -147,6 +147,11 @@ func incidentContext(ic agent.IncidentContext) string {
 }
 
 func investigationAsk(ic agent.IncidentContext) string {
+	if ic.Description != "" {
+		return "This is an ALERT STORM: many alerts fired at once. Find the common root cause (one failing node, network, dependency, deploy...) " +
+			"rather than investigating each alert separately. Keep it short and cheap: a few targeted tool calls.\n\n" +
+			ic.Description + "\n" + incidentContext(ic)
+	}
 	return "Investigate this alert and find the root cause using your tools (pods, events, logs, metrics...).\n" +
 		"Decide whether it needs human attention and which allowed action, if any, would fix it.\n\n" + incidentContext(ic)
 }

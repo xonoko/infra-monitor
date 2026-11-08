@@ -148,6 +148,7 @@ func (a *App) runScheduler(ctx context.Context) error {
 		run("heartbeats", svc.CheckHeartbeats)
 		run("expire_proposals", svc.ExpireProposals)
 		run("end_mutes", svc.EndExpiredMutes)
+		run("resolve_storms", svc.ResolveStorms)
 		for _, src := range a.Cfg.Sources {
 			c, ok := a.svc.amClients[src.Name]
 			if !ok || time.Now().Before(nextReconcile[src.Name]) {

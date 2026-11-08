@@ -45,6 +45,8 @@ const (
 	FieldMuteID = "mute_id"
 	// FieldInternal holds the string denoting the internal field in the database.
 	FieldInternal = "internal"
+	// FieldStormID holds the string denoting the storm_id field in the database.
+	FieldStormID = "storm_id"
 	// FieldAssigneeID holds the string denoting the assignee_id field in the database.
 	FieldAssigneeID = "assignee_id"
 	// FieldOpenedAt holds the string denoting the opened_at field in the database.
@@ -67,6 +69,8 @@ const (
 	FieldInvestigationState = "investigation_state"
 	// FieldLastInvestigatedAt holds the string denoting the last_investigated_at field in the database.
 	FieldLastInvestigatedAt = "last_investigated_at"
+	// FieldInvestigationNote holds the string denoting the investigation_note field in the database.
+	FieldInvestigationNote = "investigation_note"
 	// FieldAgentConversation holds the string denoting the agent_conversation field in the database.
 	FieldAgentConversation = "agent_conversation"
 	// FieldTraceID holds the string denoting the trace_id field in the database.
@@ -156,6 +160,7 @@ var Columns = []string{
 	FieldMuted,
 	FieldMuteID,
 	FieldInternal,
+	FieldStormID,
 	FieldAssigneeID,
 	FieldOpenedAt,
 	FieldAcknowledgedAt,
@@ -167,6 +172,7 @@ var Columns = []string{
 	FieldNotifiedAt,
 	FieldInvestigationState,
 	FieldLastInvestigatedAt,
+	FieldInvestigationNote,
 	FieldAgentConversation,
 	FieldTraceID,
 }
@@ -212,6 +218,8 @@ var (
 	DefaultReopenCount int
 	// DefaultNotifyChannels holds the default value on creation for the "notify_channels" field.
 	DefaultNotifyChannels []string
+	// DefaultInvestigationNote holds the default value on creation for the "investigation_note" field.
+	DefaultInvestigationNote string
 	// DefaultTraceID holds the default value on creation for the "trace_id" field.
 	DefaultTraceID string
 )
@@ -379,6 +387,11 @@ func ByInternal(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldInternal, opts...).ToFunc()
 }
 
+// ByStormID orders the results by the storm_id field.
+func ByStormID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStormID, opts...).ToFunc()
+}
+
 // ByAssigneeID orders the results by the assignee_id field.
 func ByAssigneeID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAssigneeID, opts...).ToFunc()
@@ -427,6 +440,11 @@ func ByInvestigationState(opts ...sql.OrderTermOption) OrderOption {
 // ByLastInvestigatedAt orders the results by the last_investigated_at field.
 func ByLastInvestigatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLastInvestigatedAt, opts...).ToFunc()
+}
+
+// ByInvestigationNote orders the results by the investigation_note field.
+func ByInvestigationNote(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInvestigationNote, opts...).ToFunc()
 }
 
 // ByTraceID orders the results by the trace_id field.

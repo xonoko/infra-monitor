@@ -93,12 +93,12 @@ const confColor = computed(() => {
       <div v-else-if="inv && (inv.status === 'failed' || inv.status === 'timed_out')" class="ai__failed">
         <Icon name="info" :size="14" />
         <div>
-          <b>AI investigation unavailable.</b>
+          <b>{{ incident.investigation_note || 'AI investigation unavailable' }}.</b>
           <span class="muted"> {{ inv.error || (inv.status === 'timed_out' ? 'The agent did not answer in time.' : 'The agent failed.') }} Notifications were sent with the raw alert.</span>
         </div>
       </div>
       <p v-else-if="!inv && !working" class="muted small">
-        {{ incident.investigation_state === 'skipped' ? 'Investigation was skipped (rate limit, mute or cooldown).' : 'No investigation yet.' }}
+        {{ incident.investigation_state === 'skipped' ? `Investigation skipped: ${incident.investigation_note || 'limits'}.` : 'No investigation yet.' }}
       </p>
       <Skeleton v-if="!inv && data.investigations.isPending.value" :lines="3" />
     </section>

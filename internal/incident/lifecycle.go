@@ -117,8 +117,14 @@ func (s *Service) Reopen(ctx context.Context, actor domain.Actor, id int) (*ent.
 	return out, err
 }
 
-// Reinvestigate queues a new investigation now (bypasses cooldown and hourly limit).
+// Reinvestigate queues a new investigation now with the default model.
 func (s *Service) Reinvestigate(ctx context.Context, actor domain.Actor, id int) (*ent.Incident, error) {
+	return s.ReinvestigateWith(ctx, actor, id, false)
+}
+
+// ReinvestigateWith queues a manual investigation; deep uses agent.deep_model (explicit request only).
+// Hard caps and the budget pause still apply when the job runs.
+func (s *Service) ReinvestigateWith(ctx context.Context, actor domain.Actor, id int, deep bool) (*ent.Incident, error) {
 	if err := require(actor, domain.RoleOperator); err != nil {
 		return nil, err
 	}
@@ -137,7 +143,7 @@ func (s *Service) Reinvestigate(ctx context.Context, actor domain.Actor, id int)
 		if out, err = tx.Incident.UpdateOne(inc).SetInvestigationState(incident.InvestigationStatePending).Save(ctx); err != nil {
 			return err
 		}
-		return enqueue(ctx, tx, JobInvestigate, incidentPayload{IncidentID: id, Trigger: "manual", RequestedBy: actor.UserID},
+		return enqueue(ctx, tx, JobInvestigate, incidentPayload{IncidentID: id, Trigger: "manual", RequestedBy: actor.UserID, Deep: deep},
 			queue.Opts{UniqueKey: fmt.Sprintf("investigate:%d", id), MaxAttempts: 3})
 	})
 	return out, err

@@ -246,6 +246,7 @@ var (
 		{Name: "muted", Type: field.TypeBool, Default: false},
 		{Name: "mute_id", Type: field.TypeInt, Nullable: true},
 		{Name: "internal", Type: field.TypeBool, Default: false},
+		{Name: "storm_id", Type: field.TypeInt, Nullable: true},
 		{Name: "opened_at", Type: field.TypeTime},
 		{Name: "acknowledged_at", Type: field.TypeTime, Nullable: true},
 		{Name: "resolved_at", Type: field.TypeTime, Nullable: true},
@@ -256,6 +257,7 @@ var (
 		{Name: "notified_at", Type: field.TypeTime, Nullable: true},
 		{Name: "investigation_state", Type: field.TypeEnum, Enums: []string{"none", "pending", "running", "done", "failed", "skipped"}, Default: "none"},
 		{Name: "last_investigated_at", Type: field.TypeTime, Nullable: true},
+		{Name: "investigation_note", Type: field.TypeString, Default: ""},
 		{Name: "agent_conversation", Type: field.TypeJSON, Nullable: true},
 		{Name: "trace_id", Type: field.TypeString, Default: ""},
 		{Name: "assignee_id", Type: field.TypeInt, Nullable: true},
@@ -268,7 +270,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "incidents_users_assigned_incidents",
-				Columns:    []*schema.Column{IncidentsColumns[28]},
+				Columns:    []*schema.Column{IncidentsColumns[30]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -282,12 +284,12 @@ var (
 			{
 				Name:    "incident_status_last_signal_at",
 				Unique:  false,
-				Columns: []*schema.Column{IncidentsColumns[4], IncidentsColumns[20]},
+				Columns: []*schema.Column{IncidentsColumns[4], IncidentsColumns[21]},
 			},
 			{
 				Name:    "incident_opened_at",
 				Unique:  false,
-				Columns: []*schema.Column{IncidentsColumns[16]},
+				Columns: []*schema.Column{IncidentsColumns[17]},
 			},
 		},
 	}

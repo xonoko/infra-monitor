@@ -159,6 +159,13 @@ type ResolveInput struct {
 	}
 }
 
+type ReinvestigateInput struct {
+	ID   int `path:"id"`
+	Body *struct {
+		Deep bool `json:"deep,omitempty" doc:"Use agent.deep_model (e.g. Sonnet) instead of the default model"`
+	}
+}
+
 type MuteIncidentInput struct {
 	ID   int `path:"id"`
 	Body struct {
@@ -336,7 +343,15 @@ func (s *Server) registerIncidents() {
 	}
 	mutate("ack", "ack-incident", "Acknowledge (assigns to you)", svc.Ack)
 	mutate("reopen", "reopen-incident", "Reopen a resolved incident", svc.Reopen)
-	mutate("reinvestigate", "reinvestigate-incident", "Run a new AI investigation", svc.Reinvestigate)
+	huma.Register(s.api, op(http.MethodPost, "/incidents/{id}/reinvestigate", "reinvestigate-incident", "Run a new AI investigation (deep: use the deeper, more expensive model)", domain.RoleOperator, tag),
+		func(ctx context.Context, in *ReinvestigateInput) (*IncidentOutput, error) {
+			deep := in.Body != nil && in.Body.Deep
+			inc, err := svc.ReinvestigateWith(ctx, actor(ctx), in.ID, deep)
+			if err != nil {
+				return nil, apiErr(err)
+			}
+			return s.incidentOut(ctx, inc)
+		})
 
 	huma.Register(s.api, op(http.MethodPost, "/incidents/{id}/resolve", "resolve-incident", "Resolve", domain.RoleOperator, tag),
 		func(ctx context.Context, in *ResolveInput) (*IncidentOutput, error) {

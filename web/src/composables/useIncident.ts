@@ -48,7 +48,7 @@ export function useIncidentMutations(id: Ref<number>) {
     ack: mk(() => api.ack(id.value), 'Incident acknowledged', 'Could not acknowledge'),
     resolve: mk((reason?: string) => api.resolve(id.value, reason), 'Incident resolved', 'Could not resolve'),
     reopen: mk(() => api.reopen(id.value), 'Incident reopened', 'Could not reopen'),
-    reinvestigate: mk(() => api.reinvestigate(id.value), 'Investigation requested', 'Could not start investigation'),
+    reinvestigate: mk((deep?: boolean) => api.reinvestigate(id.value, !!deep), (deep) => (deep ? 'Deep investigation requested' : 'Investigation requested'), 'Could not start investigation'),
     mute: mk(
       (a: { duration: string; reason?: string }) => api.muteIncident(id.value, a.duration, a.reason),
       (a) => `Muted for ${a.duration}`,

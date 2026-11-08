@@ -16,6 +16,7 @@ const helpText = `**infra-monitor commands**
 - reply to an incident message: chat with the AI agent about it
 - /status — open incidents
 - /ack, /resolve, /reinvestigate — reply to an incident card (or add the id: /ack 42)
+- /reinvestigate deep — dig deeper with the bigger model (costs more)
 - /mute 1h — mute the incident you reply to
 - /approve 12, /reject 12 — decide on a proposed action
 - /link CODE — link your account (code from your profile page)`
@@ -64,6 +65,9 @@ func (d *Dispatcher) command(ctx context.Context, ch channel.Channel, ev channel
 			return channel.Response{Text: "Reply to an incident card, or give its id: /" + ev.Command + " 42"}, nil
 		}
 		b := channel.ButtonAction{Op: ev.Command, IncidentID: incID}
+		if ev.Command == "reinvestigate" && len(rest) > 0 && strings.EqualFold(rest[0], "deep") {
+			b.Arg = "deep"
+		}
 		if ev.Command == "mute" {
 			b.Arg = "1h"
 			if len(rest) > 0 {

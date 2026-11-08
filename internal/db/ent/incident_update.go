@@ -231,6 +231,33 @@ func (_u *IncidentUpdate) SetNillableInternal(v *bool) *IncidentUpdate {
 	return _u
 }
 
+// SetStormID sets the "storm_id" field.
+func (_u *IncidentUpdate) SetStormID(v int) *IncidentUpdate {
+	_u.mutation.ResetStormID()
+	_u.mutation.SetStormID(v)
+	return _u
+}
+
+// SetNillableStormID sets the "storm_id" field if the given value is not nil.
+func (_u *IncidentUpdate) SetNillableStormID(v *int) *IncidentUpdate {
+	if v != nil {
+		_u.SetStormID(*v)
+	}
+	return _u
+}
+
+// AddStormID adds value to the "storm_id" field.
+func (_u *IncidentUpdate) AddStormID(v int) *IncidentUpdate {
+	_u.mutation.AddStormID(v)
+	return _u
+}
+
+// ClearStormID clears the value of the "storm_id" field.
+func (_u *IncidentUpdate) ClearStormID() *IncidentUpdate {
+	_u.mutation.ClearStormID()
+	return _u
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (_u *IncidentUpdate) SetAssigneeID(v int) *IncidentUpdate {
 	_u.mutation.SetAssigneeID(v)
@@ -423,6 +450,20 @@ func (_u *IncidentUpdate) SetNillableLastInvestigatedAt(v *time.Time) *IncidentU
 // ClearLastInvestigatedAt clears the value of the "last_investigated_at" field.
 func (_u *IncidentUpdate) ClearLastInvestigatedAt() *IncidentUpdate {
 	_u.mutation.ClearLastInvestigatedAt()
+	return _u
+}
+
+// SetInvestigationNote sets the "investigation_note" field.
+func (_u *IncidentUpdate) SetInvestigationNote(v string) *IncidentUpdate {
+	_u.mutation.SetInvestigationNote(v)
+	return _u
+}
+
+// SetNillableInvestigationNote sets the "investigation_note" field if the given value is not nil.
+func (_u *IncidentUpdate) SetNillableInvestigationNote(v *string) *IncidentUpdate {
+	if v != nil {
+		_u.SetInvestigationNote(*v)
+	}
 	return _u
 }
 
@@ -812,6 +853,15 @@ func (_u *IncidentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Internal(); ok {
 		_spec.SetField(incident.FieldInternal, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.StormID(); ok {
+		_spec.SetField(incident.FieldStormID, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedStormID(); ok {
+		_spec.AddField(incident.FieldStormID, field.TypeInt, value)
+	}
+	if _u.mutation.StormIDCleared() {
+		_spec.ClearField(incident.FieldStormID, field.TypeInt)
+	}
 	if value, ok := _u.mutation.OpenedAt(); ok {
 		_spec.SetField(incident.FieldOpenedAt, field.TypeTime, value)
 	}
@@ -864,6 +914,9 @@ func (_u *IncidentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.LastInvestigatedAtCleared() {
 		_spec.ClearField(incident.FieldLastInvestigatedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.InvestigationNote(); ok {
+		_spec.SetField(incident.FieldInvestigationNote, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AgentConversation(); ok {
 		_spec.SetField(incident.FieldAgentConversation, field.TypeJSON, value)
@@ -1393,6 +1446,33 @@ func (_u *IncidentUpdateOne) SetNillableInternal(v *bool) *IncidentUpdateOne {
 	return _u
 }
 
+// SetStormID sets the "storm_id" field.
+func (_u *IncidentUpdateOne) SetStormID(v int) *IncidentUpdateOne {
+	_u.mutation.ResetStormID()
+	_u.mutation.SetStormID(v)
+	return _u
+}
+
+// SetNillableStormID sets the "storm_id" field if the given value is not nil.
+func (_u *IncidentUpdateOne) SetNillableStormID(v *int) *IncidentUpdateOne {
+	if v != nil {
+		_u.SetStormID(*v)
+	}
+	return _u
+}
+
+// AddStormID adds value to the "storm_id" field.
+func (_u *IncidentUpdateOne) AddStormID(v int) *IncidentUpdateOne {
+	_u.mutation.AddStormID(v)
+	return _u
+}
+
+// ClearStormID clears the value of the "storm_id" field.
+func (_u *IncidentUpdateOne) ClearStormID() *IncidentUpdateOne {
+	_u.mutation.ClearStormID()
+	return _u
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (_u *IncidentUpdateOne) SetAssigneeID(v int) *IncidentUpdateOne {
 	_u.mutation.SetAssigneeID(v)
@@ -1585,6 +1665,20 @@ func (_u *IncidentUpdateOne) SetNillableLastInvestigatedAt(v *time.Time) *Incide
 // ClearLastInvestigatedAt clears the value of the "last_investigated_at" field.
 func (_u *IncidentUpdateOne) ClearLastInvestigatedAt() *IncidentUpdateOne {
 	_u.mutation.ClearLastInvestigatedAt()
+	return _u
+}
+
+// SetInvestigationNote sets the "investigation_note" field.
+func (_u *IncidentUpdateOne) SetInvestigationNote(v string) *IncidentUpdateOne {
+	_u.mutation.SetInvestigationNote(v)
+	return _u
+}
+
+// SetNillableInvestigationNote sets the "investigation_note" field if the given value is not nil.
+func (_u *IncidentUpdateOne) SetNillableInvestigationNote(v *string) *IncidentUpdateOne {
+	if v != nil {
+		_u.SetInvestigationNote(*v)
+	}
 	return _u
 }
 
@@ -2004,6 +2098,15 @@ func (_u *IncidentUpdateOne) sqlSave(ctx context.Context) (_node *Incident, err 
 	if value, ok := _u.mutation.Internal(); ok {
 		_spec.SetField(incident.FieldInternal, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.StormID(); ok {
+		_spec.SetField(incident.FieldStormID, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedStormID(); ok {
+		_spec.AddField(incident.FieldStormID, field.TypeInt, value)
+	}
+	if _u.mutation.StormIDCleared() {
+		_spec.ClearField(incident.FieldStormID, field.TypeInt)
+	}
 	if value, ok := _u.mutation.OpenedAt(); ok {
 		_spec.SetField(incident.FieldOpenedAt, field.TypeTime, value)
 	}
@@ -2056,6 +2159,9 @@ func (_u *IncidentUpdateOne) sqlSave(ctx context.Context) (_node *Incident, err 
 	}
 	if _u.mutation.LastInvestigatedAtCleared() {
 		_spec.ClearField(incident.FieldLastInvestigatedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.InvestigationNote(); ok {
+		_spec.SetField(incident.FieldInvestigationNote, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.AgentConversation(); ok {
 		_spec.SetField(incident.FieldAgentConversation, field.TypeJSON, value)

@@ -156,7 +156,7 @@ export const api = {
   ack: (id: number) => post<Incident>(`/incidents/${id}/ack`),
   resolve: (id: number, reason?: string) => post<Incident>(`/incidents/${id}/resolve`, { reason }),
   reopen: (id: number) => post<Incident>(`/incidents/${id}/reopen`),
-  reinvestigate: (id: number) => post<Incident>(`/incidents/${id}/reinvestigate`),
+  reinvestigate: (id: number, deep = false) => post<Incident>(`/incidents/${id}/reinvestigate`, deep ? { deep: true } : undefined),
   muteIncident: (id: number, duration: string, reason?: string) => post<Mute>(`/incidents/${id}/mute`, { duration, reason }),
 
   // actions

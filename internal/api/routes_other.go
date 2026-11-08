@@ -496,12 +496,19 @@ type HeartbeatStatus struct {
 }
 
 type AgentStatus struct {
-	Enabled       bool   `json:"enabled"`
-	MaxConcurrent int    `json:"max_concurrent"`
-	MaxPerHour    int    `json:"max_per_hour"`
-	Type          string `json:"type"`
-	Model         string `json:"model"`
-	URLHost       string `json:"url_host"`
+	Model              string     `json:"model"`
+	DeepModel          string     `json:"deep_model"`
+	MaxPerDay          int        `json:"max_per_day"`
+	CallsLastHour      int        `json:"calls_last_hour"`
+	CallsToday         int        `json:"calls_today"`
+	BudgetPausedUntil  *time.Time `json:"budget_paused_until,omitempty"`
+	StormThreshold     int        `json:"storm_threshold"`
+	StormWindowSeconds int64      `json:"storm_window_seconds"`
+	Enabled            bool       `json:"enabled"`
+	MaxConcurrent      int        `json:"max_concurrent"`
+	MaxPerHour         int        `json:"max_per_hour"`
+	Type               string     `json:"type"`
+	URLHost            string     `json:"url_host"`
 }
 
 type StatusOutput struct {
@@ -573,6 +580,13 @@ func (s *Server) registerStatus() {
 			}
 			ag := s.cfg.Agent
 			b.Agent = AgentStatus{Enabled: ag.Enabled, Type: ag.Type, Model: ag.Model, MaxConcurrent: ag.MaxConcurrent, MaxPerHour: ag.MaxPerHour}
+			b.Agent.DeepModel, b.Agent.MaxPerDay = ag.DeepModel, ag.MaxPerDay
+			if ag.Storm.Enabled {
+				b.Agent.StormThreshold, b.Agent.StormWindowSeconds = ag.Storm.Threshold, int64(ag.Storm.Window.Seconds())
+			}
+			if u, err := s.deps.Incidents.Usage(ctx); err == nil {
+				b.Agent.CallsLastHour, b.Agent.CallsToday, b.Agent.BudgetPausedUntil = u.CallsLastHour, u.CallsToday, u.PausedUntil
+			}
 			if u, err := url.Parse(ag.URL); err == nil {
 				b.Agent.URLHost = u.Host
 			}

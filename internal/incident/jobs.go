@@ -29,6 +29,7 @@ type incidentPayload struct {
 	IncidentID  int    `json:"incident_id"`
 	Trigger     string `json:"trigger,omitempty"`
 	RequestedBy int    `json:"requested_by,omitempty"`
+	Deep        bool   `json:"deep,omitempty"`
 }
 
 type chatPayload struct {

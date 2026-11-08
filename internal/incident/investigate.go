@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -72,6 +73,25 @@ func (s *Service) BuildContext(ctx context.Context, inc *ent.Incident) (agent.In
 		Order(ent.Desc(investigation.FieldID)).First(ctx); err == nil {
 		ic.PreviousAnalysis = last.Summary
 	}
+	if IsStorm(inc) {
+		summary, members, err := s.stormSummary(ctx, inc)
+		if err != nil {
+			return ic, err
+		}
+		ic.Description = summary
+		ids := make([]int, 0, len(members))
+		for _, m := range members {
+			ids = append(ids, m.ID)
+		}
+		msigs, err := s.ent.Signal.Query().Where(signal.IncidentIDIn(ids...), signal.StatusEQ(signal.StatusFiring)).Order(ent.Desc(signal.FieldLastSeenAt)).Limit(40).All(ctx)
+		if err != nil {
+			return ic, err
+		}
+		for _, sg := range msigs {
+			ic.Signals = append(ic.Signals, agent.SignalSummary{Name: sg.Name, Status: string(sg.Status), Severity: sg.Severity, Labels: sg.Labels,
+				Annotations: sg.Annotations, StartsAt: sg.StartsAt, GeneratorURL: sg.GeneratorURL})
+		}
+	}
 	for _, t := range s.registry.Types() {
 		ic.ActionTypes = append(ic.ActionTypes, agent.ActionType{Type: t.Type, Description: t.Description, Risk: t.Risk, ParamsSchema: t.Schema})
 	}
@@ -88,10 +108,31 @@ func (s *Service) runInvestigation(ctx context.Context, p incidentPayload) error
 	}
 	auto := p.Trigger == "" || p.Trigger == "auto"
 	if auto && inc.Status != incident.StatusOpen && inc.Status != incident.StatusAcknowledged {
-		return s.skipInvestigation(ctx, inc.ID, "incident already "+string(inc.Status))
+		return s.skipInvestigation(ctx, inc.ID, SkipState, "incident already "+string(inc.Status))
 	}
 	if auto && inc.Muted {
-		return s.skipInvestigation(ctx, inc.ID, "incident muted")
+		return s.skipInvestigation(ctx, inc.ID, SkipState, "incident muted")
+	}
+	if auto && !s.severityAllowed(inc.Severity) {
+		return s.skipInvestigation(ctx, inc.ID, SkipSeverity, fmt.Sprintf("severity %q is not auto-investigated", inc.Severity))
+	}
+	if auto && inc.StormID != nil {
+		return nil // grouped into a storm: the storm incident is investigated instead
+	}
+	if auto && !IsStorm(inc) {
+		storm, recent, err := s.inStorm(ctx)
+		if err != nil {
+			return err
+		}
+		if storm {
+			return s.joinStorm(ctx, inc.ID, recent)
+		}
+	}
+	// Hard caps and budget pause apply to every trigger (manual included).
+	if key, reason, err := s.capReason(ctx); err != nil {
+		return err
+	} else if key != "" {
+		return s.skipInvestigation(ctx, inc.ID, key, reason)
 	}
 	// Global concurrency across replicas.
 	running, err := s.ent.Investigation.Query().Where(investigation.StatusEQ(investigation.StatusRunning),
@@ -102,16 +143,6 @@ func (s *Service) runInvestigation(ctx context.Context, p incidentPayload) error
 	if running >= max(1, s.cfg.Agent.MaxConcurrent) {
 		return queue.Snooze(15 * time.Second)
 	}
-	if auto && s.cfg.Agent.MaxPerHour > 0 {
-		n, err := s.ent.Investigation.Query().Where(investigation.TriggerEQ(investigation.TriggerAuto),
-			investigation.CreatedAtGT(s.now().Add(-time.Hour))).Count(ctx)
-		if err != nil {
-			return err
-		}
-		if n >= s.cfg.Agent.MaxPerHour {
-			return s.skipInvestigation(ctx, inc.ID, fmt.Sprintf("hourly limit of %d investigations reached", s.cfg.Agent.MaxPerHour))
-		}
-	}
 
 	trigger := investigation.TriggerAuto
 	switch p.Trigger {
@@ -119,6 +150,10 @@ func (s *Service) runInvestigation(ctx context.Context, p incidentPayload) error
 		trigger = investigation.TriggerManual
 	case "action":
 		trigger = investigation.TriggerAction
+	}
+	model := s.agent.Model()
+	if p.Deep && s.cfg.Agent.DeepModel != "" {
+		model = s.cfg.Agent.DeepModel
 	}
 	var inv *ent.Investigation
 	actor := domain.Agent
@@ -129,7 +164,7 @@ func (s *Service) runInvestigation(ctx context.Context, p incidentPayload) error
 			return err
 		}
 		c := tx.Investigation.Create().SetIncidentID(inc.ID).SetStatus(investigation.StatusRunning).SetTrigger(trigger).
-			SetAgent(s.agent.Name()).SetModel(s.agent.Model()).SetStartedAt(s.now()).SetTraceID(telemetry.TraceID(ctx))
+			SetAgent(s.agent.Name()).SetModel(model).SetStartedAt(s.now()).SetTraceID(telemetry.TraceID(ctx))
 		if p.RequestedBy != 0 {
 			c.SetRequestedByID(p.RequestedBy)
 		}
@@ -150,10 +185,13 @@ func (s *Service) runInvestigation(ctx context.Context, p incidentPayload) error
 	if err != nil {
 		return err
 	}
+	if model != s.agent.Model() {
+		ic.Model = model
+	}
 	actx, cancel := context.WithTimeout(ctx, s.cfg.Agent.Timeout)
 	defer cancel()
 	actx, span := telemetry.Tracer().Start(actx, "agent.investigate")
-	span.SetAttributes(attribute.Int("incident.id", inc.ID), attribute.String("agent", s.agent.Name()), attribute.String("model", s.agent.Model()))
+	span.SetAttributes(attribute.Int("incident.id", inc.ID), attribute.String("agent", s.agent.Name()), attribute.String("model", model))
 	if s.Typing != nil {
 		s.Typing(ctx, inc.ID)
 	}
@@ -163,27 +201,34 @@ func (s *Service) runInvestigation(ctx context.Context, p incidentPayload) error
 	s.publishProgress(ctx, Progress{IncidentID: inc.ID, Kind: "done"})
 	if aerr != nil {
 		status := investigation.StatusFailed
+		outcome := string(status)
 		if errors.Is(aerr, context.DeadlineExceeded) {
-			status = investigation.StatusTimedOut
+			status, outcome = investigation.StatusTimedOut, string(investigation.StatusTimedOut)
 		}
-		s.m.investigations.Add(ctx, 1, metric.WithAttributes(attribute.String("outcome", string(status))))
+		if agent.IsBudgetExceeded(aerr) {
+			outcome = "budget"
+			aerr = fmt.Errorf("%s%w", budgetPrefix, aerr)
+		}
+		s.m.investigations.Add(ctx, 1, metric.WithAttributes(attribute.String("outcome", outcome)))
 		s.log.WarnContext(ctx, "investigation failed", "incident_id", inc.ID, "error", aerr)
 		return s.finishInvestigationFailed(context.WithoutCancel(ctx), inc.ID, inv.ID, status, aerr, actor)
 	}
 	s.m.investigations.Add(ctx, 1, metric.WithAttributes(attribute.String("outcome", "succeeded")))
+	s.recordUsage(ctx, "investigation", res.Model, res.Usage)
 	return s.finishInvestigation(context.WithoutCancel(ctx), inc.ID, inv.ID, res, actor)
 }
 
-func (s *Service) skipInvestigation(ctx context.Context, id int, reason string) error {
+func (s *Service) skipInvestigation(ctx context.Context, id int, key, reason string) error {
+	s.m.skipped.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", key)))
 	return s.tx(ctx, func(tx *ent.Tx) error {
 		inc, err := s.lockIncident(ctx, tx, id)
 		if err != nil {
 			return err
 		}
-		if inc, err = tx.Incident.UpdateOne(inc).SetInvestigationState(incident.InvestigationStateSkipped).Save(ctx); err != nil {
+		if inc, err = tx.Incident.UpdateOne(inc).SetInvestigationState(incident.InvestigationStateSkipped).SetInvestigationNote(truncate(reason, 300)).Save(ctx); err != nil {
 			return err
 		}
-		if _, err := s.addEvent(ctx, tx, inc, domain.EventInvestigationSkipped, domain.System, map[string]any{"reason": reason}); err != nil {
+		if _, err := s.addEvent(ctx, tx, inc, domain.EventInvestigationSkipped, domain.System, map[string]any{"reason": reason, "reason_key": key}); err != nil {
 			return err
 		}
 		_, err = s.decideNotification(ctx, tx, inc, "AI investigation skipped: "+reason)
@@ -200,7 +245,11 @@ func (s *Service) finishInvestigationFailed(ctx context.Context, incID, invID in
 		if err := tx.Investigation.UpdateOneID(invID).SetStatus(status).SetError(truncate(aerr.Error(), 4000)).SetFinishedAt(s.now()).Exec(ctx); err != nil {
 			return err
 		}
-		if inc, err = tx.Incident.UpdateOne(inc).SetInvestigationState(incident.InvestigationStateFailed).Save(ctx); err != nil {
+		note := "AI investigation unavailable"
+		if strings.HasPrefix(aerr.Error(), budgetPrefix) {
+			note = "AI budget reached"
+		}
+		if inc, err = tx.Incident.UpdateOne(inc).SetInvestigationState(incident.InvestigationStateFailed).SetInvestigationNote(note).Save(ctx); err != nil {
 			return err
 		}
 		if _, err := s.addEvent(ctx, tx, inc, domain.EventInvestigationFailed, actor, map[string]any{
@@ -208,7 +257,7 @@ func (s *Service) finishInvestigationFailed(ctx context.Context, incID, invID in
 		}); err != nil {
 			return err
 		}
-		_, err = s.decideNotification(ctx, tx, inc, "AI investigation unavailable (fail open)")
+		_, err = s.decideNotification(ctx, tx, inc, note+" (fail open)")
 		return err
 	})
 }
@@ -233,7 +282,7 @@ func (s *Service) finishInvestigation(ctx context.Context, incID, invID int, res
 		if err := u.Exec(ctx); err != nil {
 			return err
 		}
-		iu := tx.Incident.UpdateOne(inc).SetInvestigationState(incident.InvestigationStateDone).
+		iu := tx.Incident.UpdateOne(inc).SetInvestigationState(incident.InvestigationStateDone).SetInvestigationNote("").
 			SetVerdict(incident.Verdict(verdict)).SetSummary(firstNonEmpty(res.Summary, truncate(res.Analysis, 600))).
 			SetLastInvestigatedAt(s.now())
 		if len(res.Conversation) > 0 && json.Valid(res.Conversation) {

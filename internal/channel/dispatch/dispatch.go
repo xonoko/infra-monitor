@@ -589,8 +589,12 @@ func (d *Dispatcher) button(ctx context.Context, actor domain.Actor, b channel.B
 		_, err = d.svc.Resolve(ctx, actor, b.IncidentID, "resolved via chat")
 		msg = "Resolved"
 	case "reinvestigate":
-		_, err = d.svc.Reinvestigate(ctx, actor, b.IncidentID)
+		deep := b.Arg == "deep"
+		_, err = d.svc.ReinvestigateWith(ctx, actor, b.IncidentID, deep)
 		msg = "Investigation queued"
+		if deep {
+			msg = "Deep investigation queued"
+		}
 	case "mute":
 		dur, perr := time.ParseDuration(firstNonEmpty(b.Arg, "1h"))
 		if perr != nil {

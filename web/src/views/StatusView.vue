@@ -114,7 +114,11 @@ const capList = (c?: Record<string, unknown>) =>
           <template v-if="s.agent?.model"><dt>model</dt><dd>{{ s.agent.model }}</dd></template>
           <template v-if="s.agent?.url_host || s.agent?.url"><dt>endpoint</dt><dd>{{ s.agent.url_host || s.agent.url }}</dd></template>
           <template v-if="s.agent?.max_concurrent"><dt>concurrency</dt><dd>{{ s.agent.max_concurrent }}</dd></template>
-          <template v-if="s.agent?.max_per_hour"><dt>per hour</dt><dd>{{ s.agent.max_per_hour }}</dd></template>
+          <template v-if="s.agent?.max_per_hour"><dt>calls / hour</dt><dd>{{ s.agent.calls_last_hour ?? 0 }} / {{ s.agent.max_per_hour }}</dd></template>
+          <template v-if="s.agent?.max_per_day"><dt>calls / 24h</dt><dd>{{ s.agent.calls_today ?? 0 }} / {{ s.agent.max_per_day }}</dd></template>
+          <template v-if="s.agent?.deep_model"><dt>deep model</dt><dd>{{ s.agent.deep_model }}</dd></template>
+          <template v-if="s.agent?.storm_threshold"><dt>storm mode</dt><dd>&gt; {{ s.agent.storm_threshold }} incidents / {{ Math.round((s.agent.storm_window_seconds ?? 0) / 60) }}m</dd></template>
+          <template v-if="s.agent?.budget_paused_until"><dt>budget</dt><dd><span class="state state--silent">paused until {{ new Date(s.agent.budget_paused_until).toLocaleTimeString() }}</span></dd></template>
         </dl>
         <template v-if="leases.length">
           <h3 class="box__sub section-title">Leases on this replica</h3>

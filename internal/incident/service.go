@@ -77,6 +77,9 @@ type metrics struct {
 	investigations metric.Int64Counter
 	actions        metric.Int64Counter
 	routed         metric.Int64Counter
+	skipped        metric.Int64Counter
+	tokens         metric.Int64Counter
+	cost           metric.Float64Counter
 }
 
 func New(d Deps) (*Service, error) {
@@ -108,6 +111,9 @@ func New(d Deps) (*Service, error) {
 	s.m.investigations, _ = meter.Int64Counter("infra_monitor_investigations", metric.WithDescription("Investigations by outcome"))
 	s.m.actions, _ = meter.Int64Counter("infra_monitor_actions", metric.WithDescription("Action transitions by type and status"))
 	s.m.routed, _ = meter.Int64Counter("infra_monitor_notifications_routed", metric.WithDescription("Incidents routed to channels"))
+	s.m.skipped, _ = meter.Int64Counter("infra_monitor_investigations_skipped", metric.WithDescription("Investigations not run, by reason (storm, cap, budget, severity, cooldown, state)"))
+	s.m.tokens, _ = meter.Int64Counter("infra_monitor_agent_tokens", metric.WithDescription("LLM tokens reported by the agent"))
+	s.m.cost, _ = meter.Float64Counter("infra_monitor_agent_cost_usd", metric.WithDescription("Estimated LLM cost (agent.price_*_per_mtok)"))
 	_, _ = meter.Int64ObservableGauge("infra_monitor_open_incidents", metric.WithDescription("Open or acknowledged incidents"),
 		metric.WithInt64Callback(func(ctx context.Context, o metric.Int64Observer) error {
 			var n int64

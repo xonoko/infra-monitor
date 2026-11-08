@@ -31,6 +31,8 @@ func (Incident) Fields() []ent.Field {
 		field.Bool("muted").Default(false),
 		field.Int("mute_id").Optional().Nillable(),
 		field.Bool("internal").Default(false),
+		// StormID links an incident to the "alert storm" incident that groups it.
+		field.Int("storm_id").Optional().Nillable(),
 		field.Int("assignee_id").Optional().Nillable(),
 		field.Time("opened_at").Default(time.Now),
 		field.Time("acknowledged_at").Optional().Nillable(),
@@ -43,6 +45,8 @@ func (Incident) Fields() []ent.Field {
 		field.Time("notified_at").Optional().Nillable(),
 		field.Enum("investigation_state").Values("none", "pending", "running", "done", "failed", "skipped").Default("none"),
 		field.Time("last_investigated_at").Optional().Nillable(),
+		// InvestigationNote explains a skipped/failed investigation (budget, cap, storm, severity...).
+		field.String("investigation_note").Default(""),
 		// Opaque conversation history returned by the agent (kept for follow-up chat).
 		field.JSON("agent_conversation", json.RawMessage{}).Optional(),
 		field.String("trace_id").Default(""),

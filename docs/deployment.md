@@ -175,11 +175,16 @@ config:
     type: holmes
     url: https://holmes-holmes.holmes.svc.cluster.local   # https with a ca-issuer cert; confirm the port
     api_key_file: /etc/infra-monitor/secrets/holmes-api-key
-    model: investigate       # key of Holmes' modelList
+    model: claude-haiku-5-5        # key of Holmes' modelList
+    deep_model: claude-sonnet-5-5  # explicit "dig deeper" only
     timeout: 5m
     notify_timeout: 4m
-    max_concurrent: 2
-    max_per_hour: 20
+    max_concurrent: 1
+    max_per_hour: 10
+    max_per_day: 50
+    investigate_severities: [critical, warning]
+    storm: { enabled: true, threshold: 5, window: 10m }
+    budget_pause: 1h
   actions:
     enabled: [k8s.rollout_restart, k8s.delete_pod, k8s.scale, alertmanager.silence, agent.reinvestigate]
     auto_approve: []

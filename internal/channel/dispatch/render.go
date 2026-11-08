@@ -50,9 +50,9 @@ func buildCard(in cardInput, caps channel.Capabilities) channel.Card {
 	case incident.InvestigationStatePending, incident.InvestigationStateRunning:
 		c.Notice = "AI investigation in progress…"
 	case incident.InvestigationStateFailed:
-		c.Notice = "AI investigation unavailable"
+		c.Notice = firstNonEmpty(inc.InvestigationNote, "AI investigation unavailable")
 	case incident.InvestigationStateSkipped:
-		c.Notice = "AI investigation skipped"
+		c.Notice = "AI investigation skipped: " + firstNonEmpty(inc.InvestigationNote, "limits")
 	case incident.InvestigationStateNone:
 		if in.agentEnabled && !inc.Internal {
 			c.Notice = "AI investigation unavailable"

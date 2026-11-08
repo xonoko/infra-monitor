@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 
 	"github.com/xonoko/infra-monitor/internal/agent"
 	"github.com/xonoko/infra-monitor/internal/db/ent"
@@ -69,6 +70,12 @@ func (s *Service) runChatReply(ctx context.Context, p chatPayload) error {
 	if err != nil {
 		return notFoundPermanent(err)
 	}
+	if key, reason, err := s.capReason(ctx); err != nil {
+		return err
+	} else if key != "" {
+		s.m.skipped.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", key)))
+		return s.chatRefused(ctx, inc.ID, userMsg.ID, reason)
+	}
 	ic, err := s.BuildContext(ctx, inc)
 	if err != nil {
 		return err
@@ -87,6 +94,9 @@ func (s *Service) runChatReply(ctx context.Context, p chatPayload) error {
 	span.End()
 	s.publishProgress(ctx, Progress{IncidentID: inc.ID, Kind: "done"})
 
+	if aerr == nil {
+		s.recordUsage(ctx, "chat", res.Model, res.Usage)
+	}
 	actor := domain.Agent
 	actor.Name = s.agent.Name()
 	ctx = context.WithoutCancel(ctx)
@@ -99,7 +109,7 @@ func (s *Service) runChatReply(ctx context.Context, p chatPayload) error {
 			s.log.WarnContext(ctx, "agent chat failed", "incident_id", inc.ID, "error", aerr)
 			m, err := tx.Message.Create().SetIncidentID(inc.ID).SetRole(message.RoleSystem).SetAuthorName("infra-monitor").
 				SetChannel(domain.OriginSystem).SetStatus(message.StatusFailed).SetReplyToID(userMsg.ID).
-				SetContent("The agent could not answer: " + truncate(aerr.Error(), 500)).Save(ctx)
+				SetContent(chatFailureText(aerr)).Save(ctx)
 			if err != nil {
 				return err
 			}
@@ -131,5 +141,32 @@ func (s *Service) runChatReply(ctx context.Context, p chatPayload) error {
 			return tx.Message.UpdateOne(m).SetActionIds(ids).Exec(ctx)
 		}
 		return nil
+	})
+}
+
+func chatFailureText(err error) string {
+	if agent.IsBudgetExceeded(err) {
+		return budgetPrefix + "the agent can't answer right now (" + truncate(err.Error(), 300) + ")"
+	}
+	return "The agent could not answer: " + truncate(err.Error(), 500)
+}
+
+// chatRefused answers a chat message with a system message when caps or the budget block the agent.
+func (s *Service) chatRefused(ctx context.Context, incID, userMsgID int, reason string) error {
+	return s.tx(ctx, func(tx *ent.Tx) error {
+		inc, err := s.lockIncident(ctx, tx, incID)
+		if err != nil {
+			return err
+		}
+		m, err := tx.Message.Create().SetIncidentID(inc.ID).SetRole(message.RoleSystem).SetAuthorName("infra-monitor").
+			SetChannel(domain.OriginSystem).SetStatus(message.StatusFailed).SetReplyToID(userMsgID).
+			SetContent("The agent is not available: " + reason).Save(ctx)
+		if err != nil {
+			return err
+		}
+		_, err = s.addEvent(ctx, tx, inc, domain.EventMessage, domain.System, map[string]any{
+			"message_id": m.ID, "role": "system", "content": m.Content, "failed": true,
+		})
+		return err
 	})
 }
