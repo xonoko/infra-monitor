@@ -141,6 +141,9 @@ type ExternalUser struct {
 type InboundEvent struct {
 	Channel string // instance name
 	Kind    InboundKind
+	// EventID uniquely identifies the delivery in the external system (e.g. Telegram update_id).
+	// The core uses it to drop duplicates (pollers are at-least-once across restarts).
+	EventID string
 	User    ExternalUser
 	ChatID  string
 	// MessageID of the inbound message; ReplyToMessageID is the message it replies to (used to find the incident).

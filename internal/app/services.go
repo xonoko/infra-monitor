@@ -174,6 +174,7 @@ func (a *App) runScheduler(ctx context.Context) error {
 		run("retention", func(ctx context.Context) error { _, err := svc.Retention(ctx); return err })
 		run("jobs_cleanup", func(ctx context.Context) error { _, err := a.Queue.Cleanup(ctx, a.Cfg.Retention.Jobs); return err })
 		run("auth_cleanup", a.svc.auth.Cleanup)
+		run("inbound_cleanup", a.svc.dispatcher.CleanupInbound)
 	}
 	tick()
 	housekeeping()

@@ -6,6 +6,7 @@ package dispatch
 
 import (
 	"context"
+	stdsql "database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -24,6 +25,7 @@ import (
 	"github.com/xonoko/infra-monitor/internal/db/ent/channelmessage"
 	"github.com/xonoko/infra-monitor/internal/db/ent/channelthread"
 	"github.com/xonoko/infra-monitor/internal/db/ent/incident"
+	"github.com/xonoko/infra-monitor/internal/db/ent/inboundevent"
 	"github.com/xonoko/infra-monitor/internal/db/ent/signal"
 	"github.com/xonoko/infra-monitor/internal/db/ent/timelineevent"
 	"github.com/xonoko/infra-monitor/internal/domain"
@@ -472,6 +474,16 @@ func (d *Dispatcher) Handle(ctx context.Context, ev channel.InboundEvent) channe
 	if !ok {
 		return channel.Response{Silent: true}
 	}
+	if ev.EventID != "" {
+		n, err := d.ent.InboundEvent.Create().SetChannel(ev.Channel).SetEventID(ev.EventID).
+			OnConflictColumns(inboundevent.FieldChannel, inboundevent.FieldEventID).DoNothing().ID(ctx)
+		if err != nil && !errors.Is(err, stdsql.ErrNoRows) {
+			d.log.WarnContext(ctx, "inbound dedup failed, processing anyway", "error", err)
+		} else if n == 0 {
+			d.log.InfoContext(ctx, "duplicate inbound event ignored", "channel", ev.Channel, "event_id", ev.EventID)
+			return channel.Response{Silent: true}
+		}
+	}
 	resp, err := d.handle(ctx, ch, ev)
 	d.log.InfoContext(ctx, "inbound event", "channel", ev.Channel, "kind", ev.Kind, "command", ev.Command, "reply_to", ev.ReplyToMessageID,
 		"external_user", ev.User.ID, "error", err, "silent", resp.Silent)
@@ -612,4 +624,10 @@ func (d *Dispatcher) button(ctx context.Context, actor domain.Actor, b channel.B
 		return channel.Response{}, err
 	}
 	return channel.Response{Text: msg}, nil
+}
+
+// CleanupInbound deletes dedup records older than two days (scheduler).
+func (d *Dispatcher) CleanupInbound(ctx context.Context) error {
+	_, err := d.ent.InboundEvent.Delete().Where(inboundevent.CreatedAtLT(time.Now().Add(-48 * time.Hour))).Exec(ctx)
+	return err
 }

@@ -228,6 +228,31 @@ var (
 		Columns:    HeartbeatsColumns,
 		PrimaryKey: []*schema.Column{HeartbeatsColumns[0]},
 	}
+	// InboundEventsColumns holds the columns for the "inbound_events" table.
+	InboundEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "channel", Type: field.TypeString},
+		{Name: "event_id", Type: field.TypeString},
+	}
+	// InboundEventsTable holds the schema information for the "inbound_events" table.
+	InboundEventsTable = &schema.Table{
+		Name:       "inbound_events",
+		Columns:    InboundEventsColumns,
+		PrimaryKey: []*schema.Column{InboundEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "inboundevent_channel_event_id",
+				Unique:  true,
+				Columns: []*schema.Column{InboundEventsColumns[2], InboundEventsColumns[3]},
+			},
+			{
+				Name:    "inboundevent_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{InboundEventsColumns[1]},
+			},
+		},
+	}
 	// IncidentsColumns holds the columns for the "incidents" table.
 	IncidentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -681,6 +706,7 @@ var (
 		ChannelThreadsTable,
 		ExternalIdentitiesTable,
 		HeartbeatsTable,
+		InboundEventsTable,
 		IncidentsTable,
 		InvestigationsTable,
 		JobsTable,

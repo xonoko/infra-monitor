@@ -26,6 +26,8 @@ type Tx struct {
 	ExternalIdentity *ExternalIdentityClient
 	// Heartbeat is the client for interacting with the Heartbeat builders.
 	Heartbeat *HeartbeatClient
+	// InboundEvent is the client for interacting with the InboundEvent builders.
+	InboundEvent *InboundEventClient
 	// Incident is the client for interacting with the Incident builders.
 	Incident *IncidentClient
 	// Investigation is the client for interacting with the Investigation builders.
@@ -187,6 +189,7 @@ func (tx *Tx) init() {
 	tx.ChannelThread = NewChannelThreadClient(tx.config)
 	tx.ExternalIdentity = NewExternalIdentityClient(tx.config)
 	tx.Heartbeat = NewHeartbeatClient(tx.config)
+	tx.InboundEvent = NewInboundEventClient(tx.config)
 	tx.Incident = NewIncidentClient(tx.config)
 	tx.Investigation = NewInvestigationClient(tx.config)
 	tx.Job = NewJobClient(tx.config)

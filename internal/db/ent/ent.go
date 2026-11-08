@@ -18,6 +18,7 @@ import (
 	"github.com/xonoko/infra-monitor/internal/db/ent/channelthread"
 	"github.com/xonoko/infra-monitor/internal/db/ent/externalidentity"
 	"github.com/xonoko/infra-monitor/internal/db/ent/heartbeat"
+	"github.com/xonoko/infra-monitor/internal/db/ent/inboundevent"
 	"github.com/xonoko/infra-monitor/internal/db/ent/incident"
 	"github.com/xonoko/infra-monitor/internal/db/ent/investigation"
 	"github.com/xonoko/infra-monitor/internal/db/ent/job"
@@ -96,6 +97,7 @@ func checkColumn(t, c string) error {
 			channelthread.Table:    channelthread.ValidColumn,
 			externalidentity.Table: externalidentity.ValidColumn,
 			heartbeat.Table:        heartbeat.ValidColumn,
+			inboundevent.Table:     inboundevent.ValidColumn,
 			incident.Table:         incident.ValidColumn,
 			investigation.Table:    investigation.ValidColumn,
 			job.Table:              job.ValidColumn,

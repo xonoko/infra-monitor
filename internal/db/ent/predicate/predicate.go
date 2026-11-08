@@ -24,6 +24,9 @@ type ExternalIdentity func(*sql.Selector)
 // Heartbeat is the predicate function for heartbeat builders.
 type Heartbeat func(*sql.Selector)
 
+// InboundEvent is the predicate function for inboundevent builders.
+type InboundEvent func(*sql.Selector)
+
 // Incident is the predicate function for incident builders.
 type Incident func(*sql.Selector)
 

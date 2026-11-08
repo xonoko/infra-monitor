@@ -81,6 +81,18 @@ func (f HeartbeatFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.HeartbeatMutation", m)
 }
 
+// The InboundEventFunc type is an adapter to allow the use of ordinary
+// function as InboundEvent mutator.
+type InboundEventFunc func(context.Context, *ent.InboundEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f InboundEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.InboundEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.InboundEventMutation", m)
+}
+
 // The IncidentFunc type is an adapter to allow the use of ordinary
 // function as Incident mutator.
 type IncidentFunc func(context.Context, *ent.IncidentMutation) (ent.Value, error)

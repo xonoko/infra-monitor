@@ -11,6 +11,7 @@ import (
 	"github.com/xonoko/infra-monitor/internal/db/ent/channelthread"
 	"github.com/xonoko/infra-monitor/internal/db/ent/externalidentity"
 	"github.com/xonoko/infra-monitor/internal/db/ent/heartbeat"
+	"github.com/xonoko/infra-monitor/internal/db/ent/inboundevent"
 	"github.com/xonoko/infra-monitor/internal/db/ent/incident"
 	"github.com/xonoko/infra-monitor/internal/db/ent/investigation"
 	"github.com/xonoko/infra-monitor/internal/db/ent/job"
@@ -174,6 +175,15 @@ func init() {
 	heartbeatDescLastPingError := heartbeatFields[6].Descriptor()
 	// heartbeat.DefaultLastPingError holds the default value on creation for the last_ping_error field.
 	heartbeat.DefaultLastPingError = heartbeatDescLastPingError.Default.(string)
+	inboundeventMixin := schema.InboundEvent{}.Mixin()
+	inboundeventMixinFields0 := inboundeventMixin[0].Fields()
+	_ = inboundeventMixinFields0
+	inboundeventFields := schema.InboundEvent{}.Fields()
+	_ = inboundeventFields
+	// inboundeventDescCreatedAt is the schema descriptor for created_at field.
+	inboundeventDescCreatedAt := inboundeventMixinFields0[0].Descriptor()
+	// inboundevent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	inboundevent.DefaultCreatedAt = inboundeventDescCreatedAt.Default.(func() time.Time)
 	incidentMixin := schema.Incident{}.Mixin()
 	incidentMixinFields0 := incidentMixin[0].Fields()
 	_ = incidentMixinFields0

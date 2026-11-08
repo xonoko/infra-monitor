@@ -14,6 +14,7 @@ import (
 	"github.com/xonoko/infra-monitor/internal/db/ent/channelthread"
 	"github.com/xonoko/infra-monitor/internal/db/ent/externalidentity"
 	"github.com/xonoko/infra-monitor/internal/db/ent/heartbeat"
+	"github.com/xonoko/infra-monitor/internal/db/ent/inboundevent"
 	"github.com/xonoko/infra-monitor/internal/db/ent/incident"
 	"github.com/xonoko/infra-monitor/internal/db/ent/investigation"
 	"github.com/xonoko/infra-monitor/internal/db/ent/job"
@@ -245,6 +246,33 @@ func (f TraverseHeartbeat) Traverse(ctx context.Context, q ent.Query) error {
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.HeartbeatQuery", q)
+}
+
+// The InboundEventFunc type is an adapter to allow the use of ordinary function as a Querier.
+type InboundEventFunc func(context.Context, *ent.InboundEventQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f InboundEventFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.InboundEventQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.InboundEventQuery", q)
+}
+
+// The TraverseInboundEvent type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseInboundEvent func(context.Context, *ent.InboundEventQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseInboundEvent) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseInboundEvent) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.InboundEventQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.InboundEventQuery", q)
 }
 
 // The IncidentFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -586,6 +614,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.ExternalIdentityQuery, predicate.ExternalIdentity, externalidentity.OrderOption]{typ: ent.TypeExternalIdentity, tq: q}, nil
 	case *ent.HeartbeatQuery:
 		return &query[*ent.HeartbeatQuery, predicate.Heartbeat, heartbeat.OrderOption]{typ: ent.TypeHeartbeat, tq: q}, nil
+	case *ent.InboundEventQuery:
+		return &query[*ent.InboundEventQuery, predicate.InboundEvent, inboundevent.OrderOption]{typ: ent.TypeInboundEvent, tq: q}, nil
 	case *ent.IncidentQuery:
 		return &query[*ent.IncidentQuery, predicate.Incident, incident.OrderOption]{typ: ent.TypeIncident, tq: q}, nil
 	case *ent.InvestigationQuery:

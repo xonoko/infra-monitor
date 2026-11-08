@@ -219,6 +219,22 @@ func TestDispatcherEndToEnd(t *testing.T) {
 	}
 	require.True(t, mirrored)
 
+	// the same delivery twice (poller restart) is handled once
+	dup := channel.InboundEvent{Channel: "tg", Kind: channel.InboundMessage, EventID: "upd-42", User: channel.ExternalUser{ID: "77"},
+		ChatID: "chat", ReplyToMessageID: cardID, Text: "only once"}
+	disp.Handle(ctx, dup)
+	resp = disp.Handle(ctx, dup)
+	require.True(t, resp.Silent)
+	msgs, err := svc.Messages(ctx, card.IncidentID)
+	require.NoError(t, err)
+	once := 0
+	for _, m := range msgs {
+		if m.Content == "only once" {
+			once++
+		}
+	}
+	require.Equal(t, 1, once)
+
 	// commands
 	resp = disp.Handle(ctx, channel.InboundEvent{Channel: "tg", Kind: channel.InboundCommand, Command: "status", ChatID: "chat"})
 	require.Contains(t, resp.Text, "1 open incident")

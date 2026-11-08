@@ -67,6 +67,14 @@ func (c *Channel) Receive(ctx context.Context, sink channel.InboundSink) error {
 			c.dispatch(ctx, &updates[i], sink)
 		}
 	}
+	if offset > 0 {
+		// Confirm processed updates so the next poller (e.g. after a rollout) doesn't get them again.
+		actx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		if err := c.ackOffset(actx, offset); err != nil {
+			c.log.Warn("telegram offset confirmation failed", "error", err)
+		}
+		cancel()
+	}
 	c.log.Info("telegram polling stopped")
 	return nil
 }
@@ -191,11 +199,12 @@ func (c *Channel) dispatch(ctx context.Context, upd *models.Update, sink channel
 			c.log.ErrorContext(ctx, "panic handling telegram update", "panic", p)
 		}
 	}()
+	id := strconv.FormatInt(upd.ID, 10)
 	switch {
 	case upd.CallbackQuery != nil:
-		c.handleCallback(ctx, upd.CallbackQuery, sink)
+		c.handleCallback(ctx, id, upd.CallbackQuery, sink)
 	case upd.Message != nil:
-		c.handleMessage(ctx, upd.Message, sink)
+		c.handleMessage(ctx, id, upd.Message, sink)
 	}
 }
 
@@ -262,8 +271,9 @@ func parseCommand(text string) (string, []string) {
 	return strings.ToLower(cmd), fields[1:]
 }
 
-func (c *Channel) handleMessage(ctx context.Context, m *models.Message, sink channel.InboundSink) {
+func (c *Channel) handleMessage(ctx context.Context, updateID string, m *models.Message, sink channel.InboundSink) {
 	ev, ok := c.MapMessage(m)
+	ev.EventID = updateID
 	c.log.InfoContext(ctx, "telegram message received", "channel", c.cfg.Name, "chat_id", m.Chat.ID, "chat_type", string(m.Chat.Type),
 		"is_reply", m.ReplyToMessage != nil, "is_command", strings.HasPrefix(strings.TrimSpace(m.Text), "/"), "text_len", len(m.Text), "accepted", ok)
 	if !ok {
@@ -276,7 +286,7 @@ func (c *Channel) handleMessage(ctx context.Context, m *models.Message, sink cha
 	c.reply(ctx, m.Chat.ID, m.ID, resp.Text)
 }
 
-func (c *Channel) handleCallback(ctx context.Context, cq *models.CallbackQuery, sink channel.InboundSink) {
+func (c *Channel) handleCallback(ctx context.Context, updateID string, cq *models.CallbackQuery, sink channel.InboundSink) {
 	if cq.From.IsBot {
 		c.answerCallback(ctx, cq.ID, channel.Response{Silent: true})
 		return
@@ -298,6 +308,7 @@ func (c *Channel) handleCallback(ctx context.Context, cq *models.CallbackQuery, 
 	user := cq.From
 	ev := channel.InboundEvent{
 		Channel: c.cfg.Name,
+		EventID: updateID,
 		Kind:    channel.InboundButton,
 		User:    externalUser(&user),
 		ChatID:  strconv.FormatInt(chatID, 10),
@@ -316,4 +327,20 @@ func (c *Channel) handleCallback(ctx context.Context, cq *models.CallbackQuery, 
 		ev.MessageID = strconv.Itoa(im.MessageID)
 	}
 	c.answerCallback(ctx, cq.ID, sink.Handle(ctx, ev))
+}
+
+// ackOffset confirms updates below offset without waiting for new ones.
+func (c *Channel) ackOffset(ctx context.Context, offset int64) error {
+	body, _ := json.Marshal(map[string]any{"offset": offset, "timeout": 0, "limit": 1, "allowed_updates": allowedUpdates})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.apiURL+"/bot"+c.cfg.BotToken+"/getUpdates", bytes.NewReader(body))
+	if err != nil {
+		return c.redact(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.pollClient.Do(req)
+	if err != nil {
+		return c.redact(err)
+	}
+	_ = resp.Body.Close()
+	return nil
 }
