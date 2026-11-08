@@ -42,12 +42,14 @@ func viewer() domain.Actor {
 }
 
 type fakeAgent struct {
-	mu      sync.Mutex
-	result  *agent.InvestigationResult
-	err     error
-	chat    *agent.ChatResult
-	calls   int
-	lastReq agent.ChatRequest
+	mu          sync.Mutex
+	result      *agent.InvestigationResult
+	err         error
+	chat        *agent.ChatResult
+	calls       int
+	lastReq     agent.ChatRequest
+	checks      []string
+	stillNeeded bool
 }
 
 func (f *fakeAgent) Name() string  { return "fake" }

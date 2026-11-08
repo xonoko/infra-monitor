@@ -123,3 +123,18 @@ func IsBudgetExceeded(err error) bool {
 	}
 	return false
 }
+
+// ActionCheck is the agent's verdict on whether an approved action is still needed right before it runs.
+type ActionCheck struct {
+	StillNeeded bool
+	Reason      string
+	Model       string
+	Usage       Usage
+}
+
+// ActionChecker is implemented by agents that can re-check an action against the live state.
+type ActionChecker interface {
+	// CheckAction looks at the current state (with tools) and says whether `action` (a precise
+	// description: type, target, payload, why it was proposed) is still needed and safe to run now.
+	CheckAction(ctx context.Context, ic IncidentContext, action string) (*ActionCheck, error)
+}

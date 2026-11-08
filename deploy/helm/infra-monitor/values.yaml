@@ -295,7 +295,7 @@ config:
   actions:
     in_cluster: true
     namespace_deny: [kube-system]
-    proposal_ttl: 1h
+    proposal_ttl: 168h
   channels: []
   routing: []
   retention:

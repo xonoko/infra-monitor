@@ -408,7 +408,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("actions.namespace_allow", []string{})
 	v.SetDefault("actions.in_cluster", true)
 	v.SetDefault("actions.in_cluster_name", "")
-	v.SetDefault("actions.proposal_ttl", time.Hour)
+	v.SetDefault("actions.proposal_ttl", 7*24*time.Hour)
 	v.SetDefault("actions.max_replicas", 10)
 	v.SetDefault("actions.max_silence", 24*time.Hour)
 	v.SetDefault("actions.timeout", 2*time.Minute)

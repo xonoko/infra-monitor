@@ -143,7 +143,7 @@ actions:
   in_cluster_name: ""      # cluster label served by the in-cluster account ("" = any cluster without a kubeconfig)
   kubeconfigs: {}          # per-cluster kubeconfig paths, keyed by the alert's cluster label
   #   prod: /etc/infra-monitor/kubeconfigs/prod
-  proposal_ttl: 1h         # proposals expire after this
+  proposal_ttl: 168h       # proposals expire after a week; before running, the agent re-checks they are still needed
   max_replicas: 10         # upper bound for k8s.scale
   max_silence: 24h         # upper bound for alertmanager.silence
   timeout: 2m

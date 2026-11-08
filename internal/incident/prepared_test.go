@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/xonoko/infra-monitor/internal/actions"
+	"github.com/xonoko/infra-monitor/internal/agent"
 	"github.com/xonoko/infra-monitor/internal/config"
 	"github.com/xonoko/infra-monitor/internal/incident"
 )
@@ -111,4 +113,43 @@ func TestPreciseApprovalTargetChanged(t *testing.T) {
 	again, _ := e.svc.GetAction(ctx, *fresh.SupersededBy)
 	require.Equal(t, "proposed", string(again.Status))
 	require.Zero(t, pe.runs)
+}
+
+func (f *fakeAgent) CheckAction(_ context.Context, _ agent.IncidentContext, desc string) (*agent.ActionCheck, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.checks = append(f.checks, desc)
+	return &agent.ActionCheck{StillNeeded: f.stillNeeded, Reason: "observed the pod", Model: "fake-model"}, nil
+}
+
+func TestPreExecutionCheck(t *testing.T) {
+	for _, still := range []bool{true, false} {
+		e := newEnv(t, true)
+		e.agent.result.ProposedActions = nil
+		e.agent.stillNeeded = still
+		ctx := context.Background()
+		e.ingest(alert("OOM", "demo", "firing", "o"))
+		e.drain()
+		inc := e.onlyIncident()
+		a, err := e.svc.ProposeAction(ctx, operator(), inc.ID, "test.echo", map[string]any{"msg": "fix"}, "")
+		require.NoError(t, err)
+		e.clock.Add(30 * time.Minute) // approved half an hour later
+		_, err = e.svc.Approve(ctx, operator(), a.ID)
+		require.NoError(t, err)
+		e.drain()
+		a, _ = e.svc.GetAction(ctx, a.ID)
+		require.Len(t, e.agent.checks, 1, "the agent re-checks before running")
+		require.Contains(t, e.agent.checks[0], "test.echo")
+		if still {
+			require.Equal(t, "succeeded", string(a.Status))
+			require.Equal(t, 1, e.exec.runs)
+		} else {
+			require.Equal(t, "expired", string(a.Status))
+			require.Contains(t, a.Error, "cancelled before running")
+			require.Zero(t, e.exec.runs)
+		}
+		c, err := e.svc.Cost(ctx, inc.ID, time.Time{})
+		require.NoError(t, err)
+		require.Equal(t, 1, c.Remediation.Calls, "the check counts as remediation")
+	}
 }

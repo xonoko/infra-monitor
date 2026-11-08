@@ -130,6 +130,7 @@ const (
 	EventActionSucceeded        = "action_succeeded"
 	EventActionFailed           = "action_failed"
 	EventActionExpired          = "action_expired"
+	EventActionChecked          = "action_checked"
 	EventMessage                = "message"
 	EventMuteCreated            = "mute_created"
 	EventMuteEnded              = "mute_ended"

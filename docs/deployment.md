@@ -191,7 +191,7 @@ config:
     namespace_deny: [kube-system]
     in_cluster: true
     in_cluster_name: manager
-    proposal_ttl: 1h
+    proposal_ttl: 168h
   channels:
     - name: infra
       type: telegram
