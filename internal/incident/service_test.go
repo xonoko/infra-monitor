@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
@@ -444,4 +446,29 @@ func TestListAndHistogram(t *testing.T) {
 
 func agentProposal(typ string) agent.ProposedAction {
 	return agent.ProposedAction{Type: typ, Params: map[string]any{}, Rationale: "check again"}
+}
+
+func TestHeartbeatPingCadence(t *testing.T) {
+	hits := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { hits++ }))
+	defer srv.Close()
+	e := newEnv(t, false, func(c *config.Config) { c.Heartbeat.PingURL = srv.URL })
+	ctx := context.Background()
+	require.NoError(t, e.svc.EnsureHeartbeats(ctx))
+	require.NoError(t, e.svc.PingHeartbeats(ctx))
+	require.Zero(t, hits, "no ping before the first heartbeat")
+
+	e.ingest(domain.Signal{Fingerprint: "wd", Status: "firing", Labels: map[string]string{"alertname": "Watchdog"}})
+	require.NoError(t, e.svc.PingHeartbeats(ctx))
+	require.Equal(t, 1, hits)
+	e.clock.Add(20 * time.Second)
+	require.NoError(t, e.svc.PingHeartbeats(ctx))
+	require.Equal(t, 1, hits, "not before the interval")
+	e.clock.Add(45 * time.Second) // 65s after the last ping, Watchdog still fresh (< silent_after)
+	require.NoError(t, e.svc.PingHeartbeats(ctx))
+	require.Equal(t, 2, hits, "fixed cadence, independent of Watchdog deliveries")
+
+	e.clock.Add(11 * time.Minute) // Watchdog silent: stop pinging
+	require.NoError(t, e.svc.PingHeartbeats(ctx))
+	require.Equal(t, 2, hits)
 }

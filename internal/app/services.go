@@ -139,6 +139,8 @@ func (a *App) runScheduler(ctx context.Context) error {
 	defer fast.Stop()
 	slow := time.NewTicker(time.Hour)
 	defer slow.Stop()
+	ping := time.NewTicker(15 * time.Second)
+	defer ping.Stop()
 	nextReconcile := map[string]time.Time{}
 	run := func(name string, fn func(context.Context) error) {
 		if err := fn(ctx); err != nil && ctx.Err() == nil {
@@ -177,6 +179,7 @@ func (a *App) runScheduler(ctx context.Context) error {
 		run("auth_cleanup", a.svc.auth.Cleanup)
 		run("inbound_cleanup", a.svc.dispatcher.CleanupInbound)
 	}
+	run("heartbeat_ping", svc.PingHeartbeats)
 	tick()
 	housekeeping()
 	for {
@@ -187,6 +190,8 @@ func (a *App) runScheduler(ctx context.Context) error {
 			tick()
 		case <-slow.C:
 			housekeeping()
+		case <-ping.C:
+			run("heartbeat_ping", svc.PingHeartbeats)
 		}
 	}
 }

@@ -65,9 +65,7 @@ func (s *Service) touchHeartbeat(ctx context.Context, tx *ent.Tx, sourceName str
 		}
 		s.log.InfoContext(ctx, "heartbeat back", "source", sourceName)
 	}
-	if s.cfg.Heartbeat.PingURL != "" && (hb.LastPingAt == nil || now.Sub(*hb.LastPingAt) >= s.cfg.Heartbeat.PingInterval) {
-		return enqueue(ctx, tx, JobHeartbeatPing, heartbeatPayload{Key: key}, queue.Opts{UniqueKey: "hb-ping:" + key, MaxAttempts: 2})
-	}
+	// Pings are sent by PingHeartbeats on the scheduler replica (fixed cadence), not per Watchdog delivery.
 	return nil
 }
 
@@ -97,7 +95,11 @@ func (s *Service) pingHeartbeat(ctx context.Context, key string) error {
 		}
 	}
 	now := s.now()
-	if uerr := s.ent.Heartbeat.Update().Where(heartbeat.Key(key)).SetLastPingAt(now).SetLastPingError(pingErr).Exec(ctx); uerr != nil {
+	upd := s.ent.Heartbeat.Update()
+	if key != "" {
+		upd.Where(heartbeat.Key(key))
+	}
+	if uerr := upd.SetLastPingAt(now).SetLastPingError(pingErr).Exec(ctx); uerr != nil {
 		return uerr
 	}
 	outcome := "success"
@@ -192,4 +194,38 @@ func (s *Service) markSilent(ctx context.Context, hbID int, last time.Time) erro
 		s.log.WarnContext(ctx, "heartbeat silent", "source", hb.Key, "last_seen", last)
 		return tx.Heartbeat.UpdateOne(hb).SetState(heartbeat.StateSilent).SetIncidentID(inc.ID).Exec(ctx)
 	})
+}
+
+// PingHeartbeats calls the external dead-man's-switch URL at a fixed cadence (heartbeat.ping_interval)
+// while every source's heartbeat is fresh (seen within heartbeat.silent_after). It runs on the
+// scheduler replica every few seconds; the last ping time lives in Postgres, so a new or failed-over
+// replica keeps the cadence. When a source goes silent the pings stop, and the external check alerts
+// even if infra-monitor's own notifications are broken.
+func (s *Service) PingHeartbeats(ctx context.Context) error {
+	if !s.cfg.Heartbeat.Enabled || s.cfg.Heartbeat.PingURL == "" {
+		return nil
+	}
+	now := s.now()
+	hbs, err := s.ent.Heartbeat.Query().All(ctx)
+	if err != nil || len(hbs) == 0 {
+		return err
+	}
+	var lastPing time.Time
+	for _, hb := range hbs {
+		if hb.LastSeenAt == nil || now.Sub(*hb.LastSeenAt) > s.cfg.Heartbeat.SilentAfter {
+			return nil // a source is silent: stop pinging so the external check fires
+		}
+		if hb.LastPingAt != nil && hb.LastPingAt.After(lastPing) {
+			lastPing = *hb.LastPingAt
+		}
+	}
+	interval := s.cfg.Heartbeat.PingInterval
+	if interval <= 0 {
+		interval = time.Minute
+	}
+	// small tolerance so a 15s ticker keeps a steady ~interval cadence
+	if !lastPing.IsZero() && now.Sub(lastPing) < interval-10*time.Second {
+		return nil
+	}
+	return s.pingHeartbeat(ctx, "")
 }
