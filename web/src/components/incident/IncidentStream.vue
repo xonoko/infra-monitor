@@ -332,8 +332,10 @@ const suggestions = ['What changed right before this started?', 'Show the logs o
               :action="row.action"
               :can-decide="isOperator"
               :busy="decisions.busyFor(row.action)"
+              :rollback-busy="decisions.proposing.value"
               @approve="decisions.approve(row.action)"
               @reject="(r?: string) => decisions.reject(row.action, r)"
+              @rollback="decisions.proposeRollback(row.action)"
             />
           </div>
 

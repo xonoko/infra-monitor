@@ -18,8 +18,8 @@ import (
 	"github.com/xonoko/infra-monitor/internal/db/ent/action"
 	"github.com/xonoko/infra-monitor/internal/db/ent/incident"
 	"github.com/xonoko/infra-monitor/internal/domain"
-	"github.com/xonoko/infra-monitor/internal/redact"
 	"github.com/xonoko/infra-monitor/internal/queue"
+	"github.com/xonoko/infra-monitor/internal/redact"
 	"github.com/xonoko/infra-monitor/internal/telemetry"
 )
 

@@ -13,6 +13,7 @@ import IncidentGlance from './IncidentGlance.vue'
 import SignalsTab from './SignalsTab.vue'
 import DetailsTab from './DetailsTab.vue'
 import ProposeActionForm from './ProposeActionForm.vue'
+import ApproveDialog from './ApproveDialog.vue'
 import { useActionTypes, useIncidentData, useIncidentMutations } from '@/composables/useIncident'
 import { useMe } from '@/composables/useMe'
 import { startIncidentStream } from '@/api/sse'
@@ -214,6 +215,7 @@ defineExpose({ openChat })
         />
         <p v-else class="muted">No action type is enabled on this server.</p>
       </Modal>
+      <ApproveDialog />
     </template>
   </div>
 </template>

@@ -9,8 +9,8 @@ import (
 
 	"github.com/xonoko/infra-monitor/internal/actions"
 	"github.com/xonoko/infra-monitor/internal/db/ent"
-	"github.com/xonoko/infra-monitor/internal/redact"
 	"github.com/xonoko/infra-monitor/internal/domain"
+	"github.com/xonoko/infra-monitor/internal/redact"
 )
 
 // prepare runs the executor's Preparer (dry-run, diff, rollback, precondition) if it has one.

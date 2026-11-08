@@ -141,6 +141,30 @@ export interface Action {
   output: string
   error: string
   created_at: Timestamp
+  /** Exact, server-prepared change for generic actions (k8s.patch/apply/delete, kubectl.exec, gitops.change). */
+  prepared?: PreparedAction | null
+  /** sha256 of the prepared payload; approval must echo it. */
+  payload_hash?: string
+  requires_approval?: boolean
+  superseded_by?: ID | null
+}
+
+export interface PreparedAction {
+  target: string
+  operation: string
+  payload: string
+  payload_format: 'yaml' | 'json' | 'diff' | 'text'
+  dry_run: string
+  dry_run_ok: boolean
+  effect: string
+  rollback: string
+  rollback_action?: { type: string; params: Record<string, unknown> } | null
+  risk: 'low' | 'medium' | 'high'
+  precondition: string
+  core_infrastructure: boolean
+  /** Argo CD application name when the target is managed by Argo (may be `true` when unknown). */
+  argo_managed?: string | boolean | null
+  warnings?: string[] | null
 }
 
 export interface TimelineEvent {

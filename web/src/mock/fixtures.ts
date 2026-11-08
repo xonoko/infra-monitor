@@ -666,3 +666,232 @@ investigations[137] = [
   { ...investigations[142][0], id: 78, model: 'investigate', cost_usd: 0.0612, prompt_tokens: 15020, completion_tokens: 1100, created_at: ago(419), started_at: ago(419), finished_at: ago(417) },
 ]
 Object.assign(messages[142][1], { model: 'investigate', prompt_tokens: 21410, completion_tokens: 412, cost_usd: 0.0704 })
+
+// ---- precise approval: prepared generic actions ----
+function act(p: Partial<Action> & Pick<Action, 'id' | 'incident_id' | 'type'>): Action {
+  return {
+    params: {},
+    rationale: '',
+    risk: 'medium',
+    proposed_by: 'agent',
+    status: 'proposed',
+    summary: '',
+    decided_by_name: '',
+    decided_via: '',
+    decided_at: null,
+    expires_at: later(50),
+    started_at: null,
+    finished_at: null,
+    output: '',
+    error: '',
+    created_at: ago(6),
+    requires_approval: true,
+    ...p,
+  }
+}
+
+const oomPatch = `spec:
+  template:
+    spec:
+      containers:
+        - name: demo-api
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              memory: 128Mi`
+const oomRollbackPatch = oomPatch.replace('256Mi', '64Mi').replace('128Mi', '32Mi')
+const oomDryRun = `--- live    apps/v1 Deployment demo-incident/demo-api
++++ dry-run apps/v1 Deployment demo-incident/demo-api
+@@ metadata @@
+-  generation: 14
++  generation: 15
+@@ spec.template.spec.containers[name=demo-api].resources @@
+       resources:
+         limits:
+-          memory: 64Mi
++          memory: 256Mi
+         requests:
+-          memory: 32Mi
++          memory: 128Mi`
+const oomPrepared = (resourceVersion: string) => ({
+  target: 'apps/v1 Deployment demo-incident/demo-api (cluster manager)',
+  operation: 'patch (strategic merge)',
+  payload: oomPatch,
+  payload_format: 'yaml' as const,
+  dry_run: oomDryRun,
+  dry_run_ok: true,
+  effect: 'rolling restart of demo-api (2 replicas, maxUnavailable 0)',
+  rollback: 'strategic merge patch restoring limits.memory 64Mi / requests.memory 32Mi',
+  rollback_action: {
+    type: 'k8s.patch',
+    params: { kind: 'Deployment', namespace: 'demo-incident', name: 'demo-api', patch_type: 'strategic', patch: oomRollbackPatch },
+  },
+  risk: 'low' as const,
+  precondition: `resourceVersion ${resourceVersion} · containers[demo-api].resources.limits.memory == 64Mi`,
+  core_infrastructure: false,
+  argo_managed: 'demo-incident',
+  warnings: ['Argo app demo-incident has selfHeal enabled: the next sync reverts a live patch.'],
+})
+
+const gitopsDiff = (index: string) => `diff --git a/apps/demo-incident/values.yaml b/apps/demo-incident/values.yaml
+index ${index} 100644
+--- a/apps/demo-incident/values.yaml
++++ b/apps/demo-incident/values.yaml
+@@ -18,10 +18,10 @@ api:
+   image:
+     repository: ghcr.io/xonoko/demo-api
+     tag: "1.4.2"
+   resources:
+     limits:
+-      memory: 64Mi
++      memory: 256Mi
+     requests:
+-      memory: 32Mi
++      memory: 128Mi
+   replicas: 2`
+const gitopsPrepared = (base: string, index: string) => ({
+  target: 'github.com/xonoko/infra-argocd@main: apps/demo-incident/values.yaml',
+  operation: 'commit + push to main',
+  payload: gitopsDiff(index),
+  payload_format: 'diff' as const,
+  dry_run: `git apply --check: ok (base ${base})\nhelm template apps/demo-incident: ok, 1 resource changed\nargocd app diff demo-incident --local: Deployment demo-incident/demo-api (memory 64Mi → 256Mi)`,
+  dry_run_ok: true,
+  effect: 'Argo CD syncs demo-incident within ~3 min, then a rolling restart of demo-api',
+  rollback: 'git revert of the commit',
+  rollback_action: { type: 'gitops.change', params: { repo: 'infra-argocd', revert_of: 'HEAD' } },
+  risk: 'low' as const,
+  precondition: `main at ${base}`,
+  core_infrastructure: false,
+  argo_managed: null,
+  warnings: [],
+})
+
+incidents.unshift(
+  inc({
+    id: 151,
+    title: 'KubeContainerOOMKilled: demo-api',
+    severity: 'warning',
+    cluster: 'manager',
+    namespace: 'demo-incident',
+    verdict: 'actionable',
+    summary: 'demo-api is OOMKilled at 64Mi under normal load; the heap needs ~180Mi.',
+    opened_at: ago(14),
+    last_signal_at: ago(2),
+    signal_count: 2,
+    firing_count: 2,
+    pending_actions: 2,
+    notify_channels: ['telegram-infra'],
+    labels: { alertname: 'KubeContainerOOMKilled', severity: 'warning', cluster: 'manager', namespace: 'demo-incident', deployment: 'demo-api', container: 'demo-api' },
+  }),
+)
+investigations[151] = [
+  {
+    ...investigations[142][0],
+    id: 81,
+    summary: 'demo-api is OOMKilled at 64Mi under normal load; the heap needs ~180Mi.',
+    root_cause: 'Container `demo-api` has `limits.memory: 64Mi`. Working set reaches 170-190Mi within 2 minutes of start (container_memory_working_set_bytes), so the kernel kills it (exit code 137, 9 restarts).',
+    analysis: '## Findings\n\n- `kubectl describe pod` → `Last State: Terminated, Reason: OOMKilled, Exit Code: 137`.\n- Peak working set 188Mi over the last hour.\n\n## Recommendation\n\nRaise the limit to 256Mi. The deployment is managed by Argo app `demo-incident`, so the durable fix is the values file (GitOps proposal); the live patch only buys time.',
+    confidence: 0.92,
+    cost_usd: 0.0583,
+    created_at: ago(12),
+    started_at: ago(12),
+    finished_at: ago(11),
+  },
+]
+actions[151] = [
+  act({
+    id: 60,
+    incident_id: 151,
+    type: 'k8s.patch',
+    risk: 'low',
+    created_at: ago(11),
+    rationale: 'Raise the memory limit so the pod stops being OOMKilled.',
+    summary: 'patch Deployment demo-incident/demo-api memory 64Mi → 256Mi',
+    prepared: oomPrepared('1834402'),
+    payload_hash: '5b1e0c2f9a7d43e8b6c1f0a2d4e6f8091a3b5c7d9e1f2a4b6c8d0e2f4a6b8c0d',
+    superseded_by: 61,
+  }),
+  act({
+    id: 61,
+    incident_id: 151,
+    type: 'k8s.patch',
+    risk: 'low',
+    created_at: ago(9),
+    rationale: 'Re-prepared after Argo synced the deployment (resourceVersion changed). Raises the memory limit so the pod stops being OOMKilled; the GitOps proposal makes it durable.',
+    summary: 'patch Deployment demo-incident/demo-api memory 64Mi → 256Mi',
+    prepared: oomPrepared('1834471'),
+    payload_hash: 'a3f91c07d2e84b6f90c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f1a3b5c7d9e1f3a5',
+  }),
+  act({
+    id: 62,
+    incident_id: 151,
+    type: 'gitops.change',
+    risk: 'low',
+    created_at: ago(9),
+    rationale: 'Durable fix: the same limits in the Argo-managed values file.',
+    summary: 'commit apps/demo-incident/values.yaml memory 64Mi → 256Mi',
+    prepared: gitopsPrepared('3f2a9c1', '3f2a9c1..8b7d0e4'),
+    payload_hash: '7c2d84e1b0a94f36d8e2c4a6b8d0f2e4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4b6',
+  }),
+]
+timeline[151] = [
+  ev(151, 14, 'incident_opened'),
+  ...[14, 12.5, 11].map((min) => ev(151, min, 'signal_firing', { payload: { name: 'KubeContainerOOMKilled' } })),
+  ev(151, 12, 'investigation_started', { actor_type: 'agent', actor_name: 'holmes', payload: { trigger: 'auto' } }),
+  ev(151, 11, 'investigation_completed', { actor_type: 'agent', actor_name: 'holmes', payload: { investigation_id: 81, verdict: 'actionable', confidence: 0.92 } }),
+  ev(151, 11, 'action_proposed', {
+    actor_type: 'agent',
+    actor_name: 'holmes',
+    payload: { action_id: 60, type: 'k8s.patch', target: 'apps/v1 Deployment demo-incident/demo-api', operation: 'patch', payload_hash: '5b1e0c2f', dry_run_ok: true, argo_managed: 'demo-incident' },
+  }),
+  ev(151, 9, 'action_proposed', {
+    actor_type: 'agent',
+    actor_name: 'holmes',
+    payload: { action_id: 61, type: 'k8s.patch', target: 'apps/v1 Deployment demo-incident/demo-api', operation: 'patch', payload_hash: 'a3f91c07', dry_run_ok: true, argo_managed: 'demo-incident' },
+  }),
+  ev(151, 9, 'action_proposed', {
+    actor_type: 'agent',
+    actor_name: 'holmes',
+    payload: { action_id: 62, type: 'gitops.change', target: 'infra-argocd:apps/demo-incident/values.yaml', operation: 'commit', payload_hash: '7c2d84e1', dry_run_ok: true },
+  }),
+]
+timeline[151].forEach((e, i) => (e.id = 7000 + i))
+
+// Core infrastructure: kube-system, and the server dry-run refused it.
+actions[140] = [
+  act({
+    id: 63,
+    incident_id: 140,
+    type: 'k8s.delete',
+    risk: 'high',
+    created_at: ago(7),
+    rationale: 'coredns-6799fbcd5-q8j2x is stuck in CrashLoopBackOff; deleting it lets the ReplicaSet recreate it.',
+    summary: 'delete Pod kube-system/coredns-6799fbcd5-q8j2x',
+    prepared: {
+      target: 'v1 Pod kube-system/coredns-6799fbcd5-q8j2x (cluster manager)',
+      operation: 'delete (grace period 30s)',
+      payload: 'apiVersion: v1\nkind: Pod\nmetadata:\n  name: coredns-6799fbcd5-q8j2x\n  namespace: kube-system\n  uid: 4b8f2c1e-93a7-4d2b-8e6f-1c0a9b7d5e3f\ngracePeriodSeconds: 30',
+      payload_format: 'yaml',
+      dry_run:
+        'Error from server (Forbidden): admission webhook "protect.infra-monitor.io" denied the request:\nkube-system pods need a healthy PodDisruptionBudget (1 of 2 coredns replicas Ready)',
+      dry_run_ok: false,
+      effect: 'cluster DNS runs on a single replica until the new pod is Ready',
+      rollback: 'none: the ReplicaSet recreates the pod',
+      rollback_action: null,
+      risk: 'high',
+      precondition: 'pod uid 4b8f2c1e-93a7-4d2b-8e6f-1c0a9b7d5e3f',
+      core_infrastructure: true,
+      argo_managed: null,
+      warnings: ['Only 1 of 2 coredns replicas is Ready: deleting this pod can break cluster DNS.'],
+    },
+    payload_hash: 'e09b4d2c7a1f3e5b8d0c2a4e6f8b0d2c4e6a8f0b2d4c6e8a0f2b4d6c8e0a2f4b',
+  }),
+]
+timeline[140].push(
+  ev(140, 7, 'action_proposed', {
+    actor_type: 'agent',
+    actor_name: 'holmes',
+    payload: { action_id: 63, type: 'k8s.delete', target: 'v1 Pod kube-system/coredns-6799fbcd5-q8j2x', operation: 'delete', payload_hash: 'e09b4d2c', dry_run_ok: false, core_infrastructure: true },
+  }),
+)

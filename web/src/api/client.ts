@@ -160,7 +160,8 @@ export const api = {
   muteIncident: (id: number, duration: string, reason?: string) => post<Mute>(`/incidents/${id}/mute`, { duration, reason }),
 
   // actions
-  approve: (id: number) => post<Action>(`/actions/${id}/approve`),
+  /** For prepared actions, payloadHash binds the approval to the exact payload (409 if it changed). */
+  approve: (id: number, payloadHash?: string) => post<Action>(`/actions/${id}/approve`, payloadHash ? { payload_hash: payloadHash } : undefined),
   reject: (id: number, reason?: string) => post<Action>(`/actions/${id}/reject`, { reason }),
   actionTypes: () => get<List<ActionType>>('/action-types'),
 

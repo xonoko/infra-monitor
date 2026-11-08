@@ -357,9 +357,31 @@ route('POST', '/incidents/(\\d+)/actions', (m, _u, b) => {
     error: '',
     created_at: new Date().toISOString(),
   }
+  // Generic actions are prepared by the server; the mock prepares rollbacks from the original proposal.
+  const of = /rollback of #(\d+)/.exec(a.rationale)
+  const orig = of ? findAction(Number(of[1])) : null
+  if (orig?.prepared) {
+    const rbPayload = typeof b.params?.patch === 'string' ? b.params.patch : `git revert ${orig.id}`
+    a.summary = `rollback of #${orig.id}`
+    a.risk = 'low'
+    a.requires_approval = true
+    a.payload_hash = Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('')
+    a.prepared = {
+      ...orig.prepared,
+      payload: rbPayload,
+      dry_run: orig.prepared.dry_run
+        .split('\n')
+        .map((l) => (l.startsWith('+') && !l.startsWith('+++') ? '-' + l.slice(1) : l.startsWith('-') && !l.startsWith('---') ? '+' + l.slice(1) : l))
+        .join('\n'),
+      effect: `reverts #${orig.id}: ${orig.prepared.effect}`,
+      rollback: `re-apply #${orig.id}`,
+      rollback_action: null,
+      warnings: orig.prepared.warnings,
+    }
+  }
   ;(fx.actions[id] ??= []).unshift(a)
   syncPending(id)
-  addEvent(id, 'action_proposed', { ...userActor(), payload: { action_id: a.id, type: a.type, summary: a.summary } })
+  addEvent(id, 'action_proposed', { ...userActor(), payload: { action_id: a.id, type: a.type, summary: a.summary, payload_hash: a.payload_hash?.slice(0, 8) } })
   return a
 })
 
@@ -370,9 +392,43 @@ function findAction(id: number): Action {
   }
   throw new HttpError(404, 'action not found')
 }
-route('POST', '/actions/(\\d+)/approve', (m) => {
+// The GitOps proposal #62 is re-prepared on the first approval attempt (main moved), to demo the 409 flow.
+let gitopsMoved = false
+route('POST', '/actions/(\\d+)/approve', (m, _u, b) => {
   const a = findAction(Number(m[1]))
+  if (a.superseded_by) throw new HttpError(409, `proposal changed: review the updated proposal #${a.superseded_by}`)
   if (a.status !== 'proposed') throw new HttpError(409, `action is ${a.status}`)
+  if (a.payload_hash) {
+    const h = String(b?.payload_hash ?? '')
+    if (!h) throw new HttpError(422, 'payload_hash is required to approve a prepared action')
+    if (h.length < 8 || !a.payload_hash.startsWith(h)) throw new HttpError(409, `payload changed since you reviewed it: review the updated proposal #${a.id}`)
+    if (a.prepared && !a.prepared.dry_run_ok) throw new HttpError(409, 'the server dry-run failed: this change cannot be approved')
+    if (a.id === 62 && !gitopsMoved) {
+      gitopsMoved = true
+      const next: Action = {
+        ...a,
+        id: fx.nextId(),
+        created_at: new Date().toISOString(),
+        rationale: 'Re-prepared: main moved (9d41e07) since the first proposal. Same change on the new base.',
+        payload_hash: 'd84f0b6e2c1a9375e0b2d4f6a8c0e2d4f6b8a0c2e4d6f8b0a2c4e6d8f0b2a4c6',
+        prepared: {
+          ...a.prepared!,
+          payload: a.prepared!.payload.replace('3f2a9c1..8b7d0e4', '9d41e07..c5e2a18'),
+          precondition: 'main at 9d41e07',
+          dry_run: a.prepared!.dry_run.replace('base 3f2a9c1', 'base 9d41e07'),
+        },
+      }
+      fx.actions[a.incident_id].unshift(next)
+      a.superseded_by = next.id
+      syncPending(a.incident_id)
+      addEvent(a.incident_id, 'action_proposed', {
+        actor_type: 'agent',
+        actor_name: 'holmes',
+        payload: { action_id: next.id, type: next.type, target: next.prepared!.target, operation: 'commit', payload_hash: next.payload_hash!.slice(0, 8), dry_run_ok: true },
+      })
+      throw new HttpError(409, `proposal changed: main moved to 9d41e07 and the change was re-prepared, review the updated proposal #${next.id}`)
+    }
+  }
   a.status = 'approved'
   a.decided_by_name = fx.me.display_name
   a.decided_via = 'ui'
@@ -387,7 +443,12 @@ route('POST', '/actions/(\\d+)/approve', (m) => {
     await sleep(1500)
     a.status = 'succeeded'
     a.finished_at = new Date().toISOString()
-    a.output = 'deployment.apps/api-gateway restarted\nWaiting for rollout: 3 of 3 updated replicas are available'
+    a.output =
+      a.type === 'k8s.patch'
+        ? 'deployment.apps/demo-api patched\nWaiting for rollout: 2 of 2 updated replicas are available'
+        : a.type === 'gitops.change'
+          ? '[main c5e2a18] fix(demo-incident): raise demo-api memory to 256Mi\n 1 file changed, 2 insertions(+), 2 deletions(-)\npushed to github.com/xonoko/infra-argocd'
+          : 'deployment.apps/api-gateway restarted\nWaiting for rollout: 3 of 3 updated replicas are available'
     addEvent(a.incident_id, 'action_succeeded', { payload: { action_id: a.id, summary: a.summary, output: a.output } })
   })()
   return a

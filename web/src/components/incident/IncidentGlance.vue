@@ -10,6 +10,7 @@ import { useMe } from '@/composables/useMe'
 import { useActionDecisions } from '@/composables/useActionDecisions'
 import { absTime, age, countdown, duration, relTime, sevKey, usd } from '@/lib/format'
 import { useNow } from '@/lib/now'
+import { hash8, revealAction } from '@/lib/approval'
 
 const props = defineProps<{
   incident: IncidentDetail
@@ -26,7 +27,7 @@ const { isOperator } = useMe()
 const decisions = useActionDecisions(computed(() => props.incident.id))
 const more = ref(false)
 
-const pending = computed(() => (props.actions ?? []).filter((a) => a.status === 'proposed'))
+const pending = computed(() => (props.actions ?? []).filter((a) => a.status === 'proposed' && !a.superseded_by))
 const firing = computed(() => (props.signals ?? []).filter((s) => s.status === 'firing'))
 const total = computed(() => props.signals?.length ?? props.incident.signal_count)
 const dur = computed(() => {
@@ -86,15 +87,31 @@ const signalHint = (s: Signal) => s.labels.pod || s.labels.instance || s.labels.
     <section v-if="pending.length" class="gl__sec gl__pending">
       <h3 class="gl__h gl__h--warn"><Icon name="bolt" :size="13" /> Awaiting decision <span class="mono">{{ pending.length }}</span></h3>
       <div v-for="a in pending" :key="a.id" class="pa">
-        <div class="pa__sum mono">{{ a.summary || a.type }}</div>
+        <div v-if="a.prepared" class="pa__sum mono">
+          <span class="pa__op">{{ a.prepared.operation }}</span> {{ a.prepared.target }}
+        </div>
+        <div v-else class="pa__sum mono">{{ a.summary || a.type }}</div>
         <div class="pa__meta mono">
-          <Chip kind="risk" :value="a.risk" dense />
-          <span>{{ a.proposed_by }}</span>
+          <span v-if="a.prepared?.core_infrastructure" class="pa__core">core infra</span>
+          <Chip kind="risk" :value="a.prepared?.risk ?? a.risk" dense />
+          <span>{{ a.type }}</span>
+          <span v-if="a.payload_hash" :title="a.payload_hash"><Icon name="key" :size="10" /> {{ hash8(a.payload_hash) }}</span>
           <span :class="{ 'pa__exp--soon': new Date(a.expires_at).getTime() - now < 5 * 60e3 }"><Icon name="clock" :size="10" /> {{ countdown(a.expires_at, now) }}</span>
         </div>
+        <div v-if="a.prepared?.argo_managed" class="pa__note">Argo-managed: a live change will be reverted</div>
+        <div v-if="a.prepared && !a.prepared.dry_run_ok" class="pa__note pa__note--bad">Dry-run failed: can't be approved</div>
         <div class="pa__btns">
-          <Btn size="sm" variant="primary" icon="check" :disabled="!isOperator" :loading="decisions.busyFor(a) === 'approve'" @click="decisions.approve(a)">Approve</Btn>
+          <Btn
+            size="sm"
+            variant="primary"
+            icon="check"
+            :disabled="!isOperator || (!!a.prepared && !a.prepared.dry_run_ok)"
+            :loading="decisions.busyFor(a) === 'approve'"
+            @click="decisions.approve(a)"
+            >{{ a.prepared ? 'Review…' : 'Approve' }}</Btn
+          >
           <Btn size="sm" variant="danger" icon="x" :disabled="!isOperator" :loading="decisions.busyFor(a) === 'reject'" @click="decisions.reject(a)">Reject</Btn>
+          <button v-if="a.prepared" class="link small" @click="revealAction(a.id)">See payload</button>
         </div>
       </div>
     </section>
@@ -313,6 +330,28 @@ const signalHint = (s: Signal) => s.labels.pod || s.labels.instance || s.labels.
   margin-top: 4px;
   font-size: var(--fs-xs);
   color: var(--text-dim);
+}
+.pa__op {
+  color: var(--sev-warning);
+}
+.pa__core {
+  color: var(--text-inverse);
+  background: var(--danger);
+  border-radius: 3px;
+  padding: 0 5px;
+  font-weight: 600;
+}
+.pa__note {
+  margin-top: 4px;
+  font-size: var(--fs-xs);
+  color: var(--sev-warning);
+}
+.pa__note--bad {
+  color: var(--danger);
+  font-weight: 600;
+}
+.pa__btns {
+  align-items: center;
 }
 .pa__exp--soon {
   color: var(--sev-critical);
