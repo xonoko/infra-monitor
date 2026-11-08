@@ -25,8 +25,10 @@ func (*patchExec) Schema() json.RawMessage {
 	return json.RawMessage(`{"type":"object","properties":{"name":{"type":"string"},"patch":{"type":"object"}}}`)
 }
 func (*patchExec) Validate(context.Context, map[string]any, actions.Target) error { return nil }
-func (*patchExec) Summary(p map[string]any, _ actions.Target) string          { return "patch " + p["name"].(string) }
-func (*patchExec) RequiresApproval() bool                                     { return true }
+func (*patchExec) Summary(p map[string]any, _ actions.Target) string {
+	return "patch " + p["name"].(string)
+}
+func (*patchExec) RequiresApproval() bool { return true }
 func (e *patchExec) Execute(context.Context, map[string]any, actions.Target) (string, error) {
 	return "", nil
 }
