@@ -76,7 +76,8 @@ func (a *App) buildServices(ctx context.Context) error {
 		}
 	}
 
-	a.svc.incidents, err = incident.New(incident.Deps{Config: cfg, DB: a.DB, Log: a.Log, Registry: reg, Agent: ag, Silencers: silencers})
+	a.svc.incidents, err = incident.New(incident.Deps{Config: cfg, DB: a.DB, Log: a.Log, Registry: reg, Agent: ag, Silencers: silencers,
+		NamespaceAnnotations: k8s.NewNamespaceAnnotations(k8sClients)})
 	if err != nil {
 		return err
 	}

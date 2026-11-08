@@ -110,7 +110,7 @@ func testConfig() *config.Config {
 		Heartbeat:   config.HeartbeatConfig{Enabled: true, Matchers: []string{"alertname=Watchdog"}, ExpectedInterval: time.Minute, SilentAfter: 10 * time.Minute, PingInterval: time.Minute},
 		Correlation: config.CorrelationConfig{GroupBy: []string{"alertname", "cluster", "namespace"}, ReopenWindow: 30 * time.Minute, Debounce: 30 * time.Second, ResolveGrace: time.Minute},
 		Agent:       config.AgentConfig{Enabled: true, Timeout: time.Minute, NotifyTimeout: 2 * time.Minute, MaxConcurrent: 2, MaxPerHour: 10, Cooldown: 15 * time.Minute},
-		Actions:     config.ActionsConfig{ProposalTTL: time.Hour, Timeout: time.Minute},
+		Actions:     config.ActionsConfig{ProposalTTL: time.Hour, Timeout: time.Minute, MaxAutoPerHour: 2},
 		Channels:    []config.ChannelConfig{{Name: "tg", Type: "telegram"}},
 	}
 }
@@ -135,7 +135,7 @@ func newEnv(t *testing.T, withAgent bool, mutate ...func(*config.Config)) *env {
 		},
 		Conversation: json.RawMessage(`[{"role":"system","content":"x"}]`),
 	}, chat: &agent.ChatResult{Reply: "It is the memory limit.", Conversation: json.RawMessage(`[{"role":"system","content":"y"}]`)}}
-	deps := incident.Deps{Config: cfg, DB: d, Log: pgtest.Logger(), Registry: reg, Now: c.Now}
+	deps := incident.Deps{Config: cfg, DB: d, Log: pgtest.Logger(), Registry: reg, Now: c.Now, NamespaceAnnotations: testAnnotations}
 	if withAgent {
 		deps.Agent = fa
 	}
@@ -440,4 +440,8 @@ func TestListAndHistogram(t *testing.T) {
 		total += b.Critical
 	}
 	require.Equal(t, 2, total)
+}
+
+func agentProposal(typ string) agent.ProposedAction {
+	return agent.ProposedAction{Type: typ, Params: map[string]any{}, Rationale: "check again"}
 }

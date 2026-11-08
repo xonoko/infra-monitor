@@ -118,3 +118,56 @@ func TestBudgetErrorIsFinalAndPauses(t *testing.T) {
 	e.drain()
 	require.Equal(t, 2, e.agent.calls)
 }
+
+func TestAutoApproveLoopGuard(t *testing.T) {
+	e := newEnv(t, true, func(c *config.Config) { c.Actions.AutoApprove = []string{"test.echo", "agent.reinvestigate"} })
+	e.agent.result.ProposedActions = append(e.agent.result.ProposedActions, agentProposal("agent.reinvestigate"))
+	e.ingest(alert("Loop", "shop", "firing", "l"))
+	e.drain()
+	inc := e.onlyIncident()
+	// investigation #1 (auto) -> echo + reinvestigate auto-run -> investigation #2 (action) -> no new reinvestigate
+	require.Equal(t, 2, e.agent.calls)
+	acts, err := e.svc.Actions(context.Background(), inc.ID)
+	require.NoError(t, err)
+	auto := 0
+	for _, a := range acts {
+		if a.DecidedByName == "infra-monitor" {
+			auto++
+		}
+	}
+	require.LessOrEqual(t, auto, 2, "at most 2 automatic executions per incident per hour")
+}
+
+type fakeAnnotations map[string]map[string]string
+
+func (f fakeAnnotations) Annotations(_ context.Context, cluster, ns string) (map[string]string, error) {
+	a, ok := f[cluster+"/"+ns]
+	if !ok {
+		return nil, errors.New("namespace not found")
+	}
+	return a, nil
+}
+
+// testAnnotations is used by newEnv: prod-shop opts out of automatic actions.
+var testAnnotations = fakeAnnotations{
+	"manager/prod-shop": {"infra-monitor.xonoko.com/auto-approve": "none"},
+	"manager/batch":     {"infra-monitor.xonoko.com/auto-approve": "test.echo", "infra-monitor.xonoko.com/max-auto-per-hour": "1"},
+}
+
+func TestAutoApproveNamespaceAnnotations(t *testing.T) {
+	e := newEnv(t, true, func(c *config.Config) {
+		c.Actions.AutoApprove = []string{"test.echo"}
+		c.Actions.AnnotationPrefix = "infra-monitor.xonoko.com"
+	})
+	ctx := context.Background()
+	e.ingest(alert("A", "prod-shop", "firing", "p")) // annotation: none
+	e.drain()
+	e.ingest(alert("B", "dev", "firing", "d")) // namespace unreadable: config applies
+	e.drain()
+	incs, err := e.db.Ent.Incident.Query().Order(ent.Asc("id")).All(ctx)
+	require.NoError(t, err)
+	prod, _ := e.svc.Actions(ctx, incs[0].ID)
+	dev, _ := e.svc.Actions(ctx, incs[1].ID)
+	require.Equal(t, "proposed", string(prod[0].Status), "namespace annotation disables automatic actions")
+	require.Equal(t, "succeeded", string(dev[0].Status), "global config applies when the namespace has no annotation")
+}

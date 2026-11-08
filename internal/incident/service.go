@@ -49,18 +49,21 @@ type Deps struct {
 	Agent    agent.Agent // nil when disabled
 	// Silencers by source name (optional).
 	Silencers map[string]Silencer
-	Now       func() time.Time
+	// NamespaceAnnotations overrides the auto-approve policy per namespace (optional).
+	NamespaceAnnotations NamespaceAnnotations
+	Now                  func() time.Time
 }
 
 type Service struct {
-	cfg       *config.Config
-	db        *db.DB
-	ent       *ent.Client
-	log       *slog.Logger
-	registry  *actions.Registry
-	agent     agent.Agent
-	silencers map[string]Silencer
-	now       func() time.Time
+	cfg           *config.Config
+	db            *db.DB
+	ent           *ent.Client
+	log           *slog.Logger
+	registry      *actions.Registry
+	agent         agent.Agent
+	silencers     map[string]Silencer
+	nsAnnotations NamespaceAnnotations
+	now           func() time.Time
 
 	heartbeatMatchers []domain.Matcher
 	routes            []route
@@ -89,6 +92,7 @@ func New(d Deps) (*Service, error) {
 	s := &Service{
 		cfg: d.Config, db: d.DB, ent: d.DB.Ent, log: d.Log, registry: d.Registry, agent: d.Agent,
 		silencers: d.Silencers, now: d.Now,
+		nsAnnotations: d.NamespaceAnnotations,
 	}
 	if s.registry == nil {
 		s.registry = actions.NewRegistry(nil, nil)

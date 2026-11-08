@@ -131,6 +131,12 @@ agent:
 actions:
   enabled: [k8s.rollout_restart, k8s.delete_pod, k8s.scale, alertmanager.silence, agent.reinvestigate]
   auto_approve: []         # action types that run without human approval (default: none)
+  max_auto_per_hour: 2     # loop guard: automatic executions per incident per hour, then a human decides
+  allow_reinvestigate_chain: false   # an action-triggered investigation may not ask for another one
+  # Per-namespace override with annotations on the Kubernetes namespace (read with the executors' credentials):
+  #   infra-monitor.xonoko.com/auto-approve: "agent.reinvestigate,k8s.delete_pod"   ("none" = nothing automatic)
+  #   infra-monitor.xonoko.com/max-auto-per-hour: "1"
+  annotation_prefix: infra-monitor.xonoko.com
   namespace_deny: [kube-system]
   namespace_allow: []      # non-empty = only these namespaces
   in_cluster: true         # use the pod's ServiceAccount

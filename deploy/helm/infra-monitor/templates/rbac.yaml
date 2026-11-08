@@ -5,6 +5,7 @@
   (dict "apiGroups" (list "apps") "resources" (list "deployments" "statefulsets" "daemonsets" "replicasets") "verbs" (list "get" "list" "watch" "patch"))
   (dict "apiGroups" (list "apps") "resources" (list "deployments/scale" "statefulsets/scale") "verbs" (list "get" "update" "patch"))
   (dict "apiGroups" (list "") "resources" (list "pods") "verbs" (list "get" "list" "watch" "delete"))
+  (dict "apiGroups" (list "") "resources" (list "namespaces") "verbs" (list "get" "list" "watch"))
 }}
 {{- end }}
 {{- if .Values.rbac.clusterWide }}

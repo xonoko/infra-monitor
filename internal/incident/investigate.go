@@ -317,7 +317,17 @@ func normalizeVerdict(v string) string {
 // proposeFromAgent validates and stores agent proposals; invalid ones are logged on the timeline.
 func (s *Service) proposeFromAgent(ctx context.Context, tx *ent.Tx, inc *ent.Incident, proposals []agent.ProposedAction, invID *int, actor domain.Actor) ([]int, error) {
 	var ids []int
+	// An investigation triggered by an action may not ask for another re-investigation (no loops).
+	fromAction := false
+	if invID != nil {
+		if inv, err := tx.Investigation.Get(ctx, *invID); err == nil && inv.Trigger == investigation.TriggerAction && !s.cfg.Actions.AllowReinvestigateChain {
+			fromAction = true
+		}
+	}
 	for _, pa := range proposals {
+		if fromAction && pa.Type == "agent.reinvestigate" {
+			continue
+		}
 		a, err := s.createAction(ctx, tx, inc, actionInput{
 			Type: pa.Type, Params: pa.Params, Rationale: pa.Rationale, Risk: pa.Risk,
 			ProposedBy: "agent", InvestigationID: invID,

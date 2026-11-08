@@ -223,6 +223,13 @@ type ActionsConfig struct {
 	MaxReplicas   int           `mapstructure:"max_replicas"`
 	MaxSilence    time.Duration `mapstructure:"max_silence"`
 	Timeout       time.Duration `mapstructure:"timeout"`
+	// MaxAutoPerHour bounds automatic (auto-approved) executions per incident per hour; then a human decides.
+	MaxAutoPerHour int `mapstructure:"max_auto_per_hour"`
+	// AllowReinvestigateChain lets an investigation triggered by an action propose another re-investigation.
+	AllowReinvestigateChain bool `mapstructure:"allow_reinvestigate_chain"`
+	// AnnotationPrefix of the namespace annotations that override the auto-approve policy:
+	// <prefix>/auto-approve ("type,type" or "none") and <prefix>/max-auto-per-hour.
+	AnnotationPrefix string `mapstructure:"annotation_prefix"`
 }
 
 type ChannelConfig struct {
@@ -350,6 +357,9 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("actions.enabled", []string{"k8s.rollout_restart", "k8s.delete_pod", "k8s.scale", "alertmanager.silence", "agent.reinvestigate"})
 	v.SetDefault("actions.auto_approve", []string{})
+	v.SetDefault("actions.max_auto_per_hour", 2)
+	v.SetDefault("actions.allow_reinvestigate_chain", false)
+	v.SetDefault("actions.annotation_prefix", "infra-monitor.xonoko.com")
 	v.SetDefault("actions.namespace_deny", []string{"kube-system"})
 	v.SetDefault("actions.namespace_allow", []string{})
 	v.SetDefault("actions.in_cluster", true)

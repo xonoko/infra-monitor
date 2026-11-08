@@ -95,7 +95,11 @@ An alert storm must never produce a large LLM bill (LiteLLM also enforces budget
 
 Agents and users can only propose. Proposals are schema-validated and policy-checked (namespace deny/allow lists,
 bounds) at proposal time and again at approval. Approval needs `operator`; `actions.auto_approve` lists types that
-skip it (default none). `execute_action` has a single attempt and runs only from `approved`, so a crash can't run an
+skip it (default none). Namespaces override that list with annotations
+(`infra-monitor.xonoko.com/auto-approve: "agent.reinvestigate,k8s.delete_pod"` or `"none"`,
+`infra-monitor.xonoko.com/max-auto-per-hour: "1"`), read through the executors' cluster client and cached for a minute.
+Loop guards: at most `actions.max_auto_per_hour` automatic executions per incident per hour, and an investigation
+triggered by an action can't propose another re-investigation (`allow_reinvestigate_chain: false`). `execute_action` has a single attempt and runs only from `approved`, so a crash can't run an
 action twice. A run lost to a crashed worker is marked failed by the scheduler.
 
 ## Channels

@@ -91,9 +91,19 @@ func (s *Service) createAction(ctx context.Context, tx *ent.Tx, inc *ent.Inciden
 	if _, err := s.addEvent(ctx, tx, inc, domain.EventActionProposed, actor, actionEventPayload(a, nil)); err != nil {
 		return nil, err
 	}
-	if s.registry.AutoApprove(a.Type) {
-		if a, err = s.approveLocked(ctx, tx, inc, a, domain.System, "auto-approved by configuration"); err != nil {
+	if pol := s.autoPolicy(ctx, inc); pol.allows(a.Type) {
+		// Loop guard: at most maxAutoPerHour automatic executions per incident, then a human decides.
+		auto, err := tx.Action.Query().Where(action.IncidentID(inc.ID), action.DecidedByNameEQ(domain.System.Name),
+			action.DecidedAtGT(s.now().Add(-time.Hour))).Count(ctx)
+		if err != nil {
 			return nil, err
+		}
+		if auto < pol.maxAutoPerHour {
+			if a, err = s.approveLocked(ctx, tx, inc, a, domain.System, "auto-approved ("+pol.source+")"); err != nil {
+				return nil, err
+			}
+		} else {
+			s.log.InfoContext(ctx, "auto-approve limit reached, waiting for a human", "incident_id", inc.ID, "action_id", a.ID)
 		}
 	}
 	return a, nil
