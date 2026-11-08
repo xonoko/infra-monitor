@@ -281,7 +281,7 @@ func (e *Patch) Prepare(ctx context.Context, params map[string]any, t actions.Ta
 	}
 	p := &actions.Prepared{
 		Target: target(t.Cluster, ref), Operation: str(params, "patch_type") + " patch (server-side, field manager " + FieldManager + ")",
-		Payload: payload, PayloadFormat: format, Precondition: live.GetResourceVersion(), Risk: "medium",
+		Payload: payload, PayloadFormat: format, Precondition: fingerprint(live), Risk: "medium",
 	}
 	e.annotate(ctx, cl, p, ref.Namespace, live)
 	if p.CoreInfrastructure && workloadKinds[ref.Kind] {
@@ -342,8 +342,8 @@ func (e *Patch) ExecutePrepared(ctx context.Context, params map[string]any, t ac
 	if err != nil {
 		return "", fmt.Errorf("get %s: %w", ref, err)
 	}
-	if live.GetResourceVersion() != p.Precondition {
-		return "", preconditionError(p.Precondition, live.GetResourceVersion())
+	if fingerprint(live) != p.Precondition {
+		return "", preconditionError(p.Precondition, fingerprint(live))
 	}
 	res, err := cl.Patch(ctx, ref, ptType(pt), data, false)
 	if err != nil {
@@ -460,7 +460,7 @@ func (e *Apply) Prepare(ctx context.Context, params map[string]any, t actions.Ta
 	p := &actions.Prepared{Target: target(t.Cluster, ref), Payload: toYAML(o.Object), PayloadFormat: "yaml", Risk: "medium"}
 	if exists {
 		p.Operation = "server-side apply (update, field manager " + FieldManager + ", no force)"
-		p.Precondition = live.GetResourceVersion()
+		p.Precondition = fingerprint(live)
 	} else {
 		p.Operation = "server-side apply (create, field manager " + FieldManager + ")"
 		p.Precondition = "absent"
@@ -526,7 +526,7 @@ func (e *Apply) ExecutePrepared(ctx context.Context, params map[string]any, t ac
 	case err != nil:
 		return "", fmt.Errorf("get %s: %w", ref, err)
 	default:
-		now = live.GetResourceVersion()
+		now = fingerprint(live)
 	}
 	if now != p.Precondition {
 		return "", preconditionError(p.Precondition, now)
@@ -612,8 +612,8 @@ func (e *Delete) Prepare(ctx context.Context, params map[string]any, t actions.T
 	}
 	obj := sanitize(live)
 	p := &actions.Prepared{
-		Target: target(t.Cluster, ref), Operation: "delete (precondition resourceVersion " + live.GetResourceVersion() + ")",
-		Payload: toYAML(obj), PayloadFormat: "yaml", Precondition: live.GetResourceVersion(), Risk: "medium",
+		Target: target(t.Cluster, ref), Operation: "delete (precondition: unchanged spec, uid " + string(live.GetUID()) + ")",
+		Payload: toYAML(obj), PayloadFormat: "yaml", Precondition: fingerprint(live), Risk: "medium",
 	}
 	if prop := str(params, "propagation"); prop != "" {
 		p.Operation += ", propagation " + prop
@@ -657,16 +657,16 @@ func (e *Delete) ExecutePrepared(ctx context.Context, params map[string]any, t a
 	if err != nil {
 		return "", fmt.Errorf("get %s: %w", ref, err)
 	}
-	if live.GetResourceVersion() != p.Precondition {
-		return "", preconditionError(p.Precondition, live.GetResourceVersion())
+	if fingerprint(live) != p.Precondition {
+		return "", preconditionError(p.Precondition, fingerprint(live))
 	}
-	if err := cl.Delete(ctx, ref, p.Precondition, propagation(params), false); err != nil {
+	if err := cl.Delete(ctx, ref, live.GetResourceVersion(), propagation(params), false); err != nil {
 		if apierrors.IsConflict(err) {
 			return "", preconditionError(p.Precondition, "modified")
 		}
 		return "", fmt.Errorf("delete %s: %w", ref, err)
 	}
-	return fmt.Sprintf("deleted %s %s (resourceVersion %s)", ref.Kind, ref.Name, p.Precondition), nil
+	return fmt.Sprintf("deleted %s %s (resourceVersion %s)", ref.Kind, ref.Name, live.GetResourceVersion()), nil
 }
 
 // ---------------- kubectl.exec ----------------

@@ -204,7 +204,7 @@ func TestPatchPrepareDiffEffectRollbackAndExecute(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, p.DryRunOK)
 	require.Equal(t, "manager / demo-incident / apps/v1 Deployment demo-api", p.Target)
-	require.Equal(t, "1", p.Precondition)
+	require.True(t, strings.HasPrefix(p.Precondition, "spec:"))
 	require.Contains(t, p.Payload, "memory: 256Mi")
 	require.Contains(t, p.DryRun, "-            memory: 64Mi")
 	require.Contains(t, p.DryRun, "+            memory: 256Mi")
@@ -221,8 +221,14 @@ func TestPatchPrepareDiffEffectRollbackAndExecute(t *testing.T) {
 	require.Contains(t, p.Rollback, "64Mi")
 	require.Equal(t, "1", f.objs["Deployment/demo-incident/demo-api"].GetResourceVersion(), "prepare changes nothing")
 
-	// the target changes after approval: refuse
+	// a status-only update (resourceVersion bump) does not invalidate the approval
 	f.objs["Deployment/demo-incident/demo-api"].SetResourceVersion("2")
+	p2, err := ex.(actions.Preparer).Prepare(ctx, memoryPatch(), tgt)
+	require.NoError(t, err)
+	require.Equal(t, p.Precondition, p2.Precondition)
+
+	// a real change after approval: refuse
+	f.objs["Deployment/demo-incident/demo-api"].SetLabels(map[string]string{"changed": "yes"})
 	_, err = ex.(actions.PreconditionExecutor).ExecutePrepared(ctx, memoryPatch(), tgt, p)
 	require.ErrorIs(t, err, actions.ErrPreconditionChanged)
 
@@ -302,7 +308,7 @@ func TestDeletePreparesRecreateRollback(t *testing.T) {
 	require.Equal(t, "k8s.apply", p.RollbackAction.Type)
 	require.Contains(t, p.Payload, "name: data")
 
-	f.objs["PersistentVolumeClaim/demo-incident/data"].SetResourceVersion("6")
+	f.objs["PersistentVolumeClaim/demo-incident/data"].SetLabels(map[string]string{"changed": "yes"})
 	_, err = ex.(actions.PreconditionExecutor).ExecutePrepared(ctx, params, tgt, p)
 	require.ErrorIs(t, err, actions.ErrPreconditionChanged)
 	p, _ = ex.(actions.Preparer).Prepare(ctx, params, tgt)

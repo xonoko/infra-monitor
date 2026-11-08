@@ -1,6 +1,8 @@
 package generic
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -248,4 +250,16 @@ func argoApp(o *unstructured.Unstructured) string {
 
 func argoWarning(app string) string {
 	return fmt.Sprintf("Argo CD app %q manages this object: selfHeal will revert a live change; prefer gitops.change (or label this as a temporary live fix).", app)
+}
+
+// fingerprint pins the desired state of an object (spec, labels, annotations...), ignoring status and
+// bookkeeping fields such as resourceVersion, which change on every status update (e.g. a crash-looping
+// Deployment) and would otherwise invalidate approvals without any real change.
+func fingerprint(o *unstructured.Unstructured) string {
+	if o == nil {
+		return "absent"
+	}
+	b, _ := json.Marshal(sanitize(o))
+	h := sha256.Sum256(append([]byte(string(o.GetUID())+"\x00"), b...))
+	return "spec:" + hex.EncodeToString(h[:12])
 }
