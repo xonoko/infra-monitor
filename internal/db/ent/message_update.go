@@ -188,6 +188,83 @@ func (_u *MessageUpdate) SetNillableStatus(v *message.Status) *MessageUpdate {
 	return _u
 }
 
+// SetModel sets the "model" field.
+func (_u *MessageUpdate) SetModel(v string) *MessageUpdate {
+	_u.mutation.SetModel(v)
+	return _u
+}
+
+// SetNillableModel sets the "model" field if the given value is not nil.
+func (_u *MessageUpdate) SetNillableModel(v *string) *MessageUpdate {
+	if v != nil {
+		_u.SetModel(*v)
+	}
+	return _u
+}
+
+// SetPromptTokens sets the "prompt_tokens" field.
+func (_u *MessageUpdate) SetPromptTokens(v int) *MessageUpdate {
+	_u.mutation.ResetPromptTokens()
+	_u.mutation.SetPromptTokens(v)
+	return _u
+}
+
+// SetNillablePromptTokens sets the "prompt_tokens" field if the given value is not nil.
+func (_u *MessageUpdate) SetNillablePromptTokens(v *int) *MessageUpdate {
+	if v != nil {
+		_u.SetPromptTokens(*v)
+	}
+	return _u
+}
+
+// AddPromptTokens adds value to the "prompt_tokens" field.
+func (_u *MessageUpdate) AddPromptTokens(v int) *MessageUpdate {
+	_u.mutation.AddPromptTokens(v)
+	return _u
+}
+
+// SetCompletionTokens sets the "completion_tokens" field.
+func (_u *MessageUpdate) SetCompletionTokens(v int) *MessageUpdate {
+	_u.mutation.ResetCompletionTokens()
+	_u.mutation.SetCompletionTokens(v)
+	return _u
+}
+
+// SetNillableCompletionTokens sets the "completion_tokens" field if the given value is not nil.
+func (_u *MessageUpdate) SetNillableCompletionTokens(v *int) *MessageUpdate {
+	if v != nil {
+		_u.SetCompletionTokens(*v)
+	}
+	return _u
+}
+
+// AddCompletionTokens adds value to the "completion_tokens" field.
+func (_u *MessageUpdate) AddCompletionTokens(v int) *MessageUpdate {
+	_u.mutation.AddCompletionTokens(v)
+	return _u
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (_u *MessageUpdate) SetCostUsd(v float64) *MessageUpdate {
+	_u.mutation.ResetCostUsd()
+	_u.mutation.SetCostUsd(v)
+	return _u
+}
+
+// SetNillableCostUsd sets the "cost_usd" field if the given value is not nil.
+func (_u *MessageUpdate) SetNillableCostUsd(v *float64) *MessageUpdate {
+	if v != nil {
+		_u.SetCostUsd(*v)
+	}
+	return _u
+}
+
+// AddCostUsd adds value to the "cost_usd" field.
+func (_u *MessageUpdate) AddCostUsd(v float64) *MessageUpdate {
+	_u.mutation.AddCostUsd(v)
+	return _u
+}
+
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_u *MessageUpdate) SetIncident(v *Incident) *MessageUpdate {
 	return _u.SetIncidentID(v.ID)
@@ -312,6 +389,27 @@ func (_u *MessageUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(message.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Model(); ok {
+		_spec.SetField(message.FieldModel, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PromptTokens(); ok {
+		_spec.SetField(message.FieldPromptTokens, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPromptTokens(); ok {
+		_spec.AddField(message.FieldPromptTokens, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.CompletionTokens(); ok {
+		_spec.SetField(message.FieldCompletionTokens, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedCompletionTokens(); ok {
+		_spec.AddField(message.FieldCompletionTokens, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.CostUsd(); ok {
+		_spec.SetField(message.FieldCostUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCostUsd(); ok {
+		_spec.AddField(message.FieldCostUsd, field.TypeFloat64, value)
 	}
 	if _u.mutation.IncidentCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -550,6 +648,83 @@ func (_u *MessageUpdateOne) SetNillableStatus(v *message.Status) *MessageUpdateO
 	return _u
 }
 
+// SetModel sets the "model" field.
+func (_u *MessageUpdateOne) SetModel(v string) *MessageUpdateOne {
+	_u.mutation.SetModel(v)
+	return _u
+}
+
+// SetNillableModel sets the "model" field if the given value is not nil.
+func (_u *MessageUpdateOne) SetNillableModel(v *string) *MessageUpdateOne {
+	if v != nil {
+		_u.SetModel(*v)
+	}
+	return _u
+}
+
+// SetPromptTokens sets the "prompt_tokens" field.
+func (_u *MessageUpdateOne) SetPromptTokens(v int) *MessageUpdateOne {
+	_u.mutation.ResetPromptTokens()
+	_u.mutation.SetPromptTokens(v)
+	return _u
+}
+
+// SetNillablePromptTokens sets the "prompt_tokens" field if the given value is not nil.
+func (_u *MessageUpdateOne) SetNillablePromptTokens(v *int) *MessageUpdateOne {
+	if v != nil {
+		_u.SetPromptTokens(*v)
+	}
+	return _u
+}
+
+// AddPromptTokens adds value to the "prompt_tokens" field.
+func (_u *MessageUpdateOne) AddPromptTokens(v int) *MessageUpdateOne {
+	_u.mutation.AddPromptTokens(v)
+	return _u
+}
+
+// SetCompletionTokens sets the "completion_tokens" field.
+func (_u *MessageUpdateOne) SetCompletionTokens(v int) *MessageUpdateOne {
+	_u.mutation.ResetCompletionTokens()
+	_u.mutation.SetCompletionTokens(v)
+	return _u
+}
+
+// SetNillableCompletionTokens sets the "completion_tokens" field if the given value is not nil.
+func (_u *MessageUpdateOne) SetNillableCompletionTokens(v *int) *MessageUpdateOne {
+	if v != nil {
+		_u.SetCompletionTokens(*v)
+	}
+	return _u
+}
+
+// AddCompletionTokens adds value to the "completion_tokens" field.
+func (_u *MessageUpdateOne) AddCompletionTokens(v int) *MessageUpdateOne {
+	_u.mutation.AddCompletionTokens(v)
+	return _u
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (_u *MessageUpdateOne) SetCostUsd(v float64) *MessageUpdateOne {
+	_u.mutation.ResetCostUsd()
+	_u.mutation.SetCostUsd(v)
+	return _u
+}
+
+// SetNillableCostUsd sets the "cost_usd" field if the given value is not nil.
+func (_u *MessageUpdateOne) SetNillableCostUsd(v *float64) *MessageUpdateOne {
+	if v != nil {
+		_u.SetCostUsd(*v)
+	}
+	return _u
+}
+
+// AddCostUsd adds value to the "cost_usd" field.
+func (_u *MessageUpdateOne) AddCostUsd(v float64) *MessageUpdateOne {
+	_u.mutation.AddCostUsd(v)
+	return _u
+}
+
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_u *MessageUpdateOne) SetIncident(v *Incident) *MessageUpdateOne {
 	return _u.SetIncidentID(v.ID)
@@ -704,6 +879,27 @@ func (_u *MessageUpdateOne) sqlSave(ctx context.Context) (_node *Message, err er
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(message.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.Model(); ok {
+		_spec.SetField(message.FieldModel, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.PromptTokens(); ok {
+		_spec.SetField(message.FieldPromptTokens, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedPromptTokens(); ok {
+		_spec.AddField(message.FieldPromptTokens, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.CompletionTokens(); ok {
+		_spec.SetField(message.FieldCompletionTokens, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedCompletionTokens(); ok {
+		_spec.AddField(message.FieldCompletionTokens, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.CostUsd(); ok {
+		_spec.SetField(message.FieldCostUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCostUsd(); ok {
+		_spec.AddField(message.FieldCostUsd, field.TypeFloat64, value)
 	}
 	if _u.mutation.IncidentCleared() {
 		edge := &sqlgraph.EdgeSpec{

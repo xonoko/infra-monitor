@@ -32,9 +32,9 @@ Signal { id, source, fingerprint, status: "firing"|"resolved", name, severity, c
          starts_at, ends_at?, generator_url, last_seen_at, fire_count }
 Investigation { id, status: "pending"|"running"|"succeeded"|"failed"|"timed_out", trigger: "auto"|"manual"|"action",
                 agent, model, analysis, summary, root_cause, verdict, confidence, tool_calls: any[], error,
-                prompt_tokens, completion_tokens, created_at, started_at?, finished_at?, trace_id }
+                prompt_tokens, completion_tokens, cost_usd, created_at, started_at?, finished_at?, trace_id }
 Message { id, incident_id, role: "user"|"agent"|"system", author_name, channel, channel_name, content, status: "done"|"pending"|"failed",
-          action_ids: number[], created_at }
+          action_ids: number[], created_at, model?, prompt_tokens?, completion_tokens?, cost_usd? (agent replies) }
 Action { id, incident_id, type, params, rationale, risk: "low"|"medium"|"high", proposed_by: "agent"|"user"|"system",
          status: "proposed"|"approved"|"rejected"|"running"|"succeeded"|"failed"|"expired", summary,
          decided_by_name, decided_via, decided_at?, expires_at, started_at?, finished_at?, output, error, created_at }
@@ -65,7 +65,7 @@ Timeline event types: `incident_opened`, `incident_reopened`, `signal_firing`, `
 | `DELETE /me/identities/{channel_type}` | viewer | unlink |
 | `GET /incidents` | viewer | filters: `status` (csv), `severity` (csv), `cluster`, `namespace`, `verdict` (csv), `q` (text), `since`, `until`, `muted`, `limit` (≤200, default 50), `cursor` → `{items: Incident[], next_cursor?, total}` |
 | `GET /incidents/histogram` | viewer | same filters + `buckets` (default 60) → `{buckets: [{start, end, critical, warning, info, other}]}` |
-| `GET /incidents/{id}` | viewer | `Incident` + `latest_investigation?` |
+| `GET /incidents/{id}` | viewer | `Incident` + `latest_investigation?` + `cost: {investigation, remediation, chat, total}` (each `{calls, prompt_tokens, completion_tokens, usd}`; remediation = investigations triggered by actions) |
 | `GET /incidents/{id}/timeline` | viewer | `after_id` → `{items: TimelineEvent[]}` (ascending) |
 | `GET /incidents/{id}/signals` | viewer | `{items: Signal[]}` |
 | `GET /incidents/{id}/investigations` | viewer | `{items: Investigation[]}` (newest first) |

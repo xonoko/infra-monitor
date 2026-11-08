@@ -146,6 +146,62 @@ func (_c *MessageCreate) SetNillableStatus(v *message.Status) *MessageCreate {
 	return _c
 }
 
+// SetModel sets the "model" field.
+func (_c *MessageCreate) SetModel(v string) *MessageCreate {
+	_c.mutation.SetModel(v)
+	return _c
+}
+
+// SetNillableModel sets the "model" field if the given value is not nil.
+func (_c *MessageCreate) SetNillableModel(v *string) *MessageCreate {
+	if v != nil {
+		_c.SetModel(*v)
+	}
+	return _c
+}
+
+// SetPromptTokens sets the "prompt_tokens" field.
+func (_c *MessageCreate) SetPromptTokens(v int) *MessageCreate {
+	_c.mutation.SetPromptTokens(v)
+	return _c
+}
+
+// SetNillablePromptTokens sets the "prompt_tokens" field if the given value is not nil.
+func (_c *MessageCreate) SetNillablePromptTokens(v *int) *MessageCreate {
+	if v != nil {
+		_c.SetPromptTokens(*v)
+	}
+	return _c
+}
+
+// SetCompletionTokens sets the "completion_tokens" field.
+func (_c *MessageCreate) SetCompletionTokens(v int) *MessageCreate {
+	_c.mutation.SetCompletionTokens(v)
+	return _c
+}
+
+// SetNillableCompletionTokens sets the "completion_tokens" field if the given value is not nil.
+func (_c *MessageCreate) SetNillableCompletionTokens(v *int) *MessageCreate {
+	if v != nil {
+		_c.SetCompletionTokens(*v)
+	}
+	return _c
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (_c *MessageCreate) SetCostUsd(v float64) *MessageCreate {
+	_c.mutation.SetCostUsd(v)
+	return _c
+}
+
+// SetNillableCostUsd sets the "cost_usd" field if the given value is not nil.
+func (_c *MessageCreate) SetNillableCostUsd(v *float64) *MessageCreate {
+	if v != nil {
+		_c.SetCostUsd(*v)
+	}
+	return _c
+}
+
 // SetIncident sets the "incident" edge to the Incident entity.
 func (_c *MessageCreate) SetIncident(v *Incident) *MessageCreate {
 	return _c.SetIncidentID(v.ID)
@@ -215,6 +271,22 @@ func (_c *MessageCreate) defaults() {
 		v := message.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.Model(); !ok {
+		v := message.DefaultModel
+		_c.mutation.SetModel(v)
+	}
+	if _, ok := _c.mutation.PromptTokens(); !ok {
+		v := message.DefaultPromptTokens
+		_c.mutation.SetPromptTokens(v)
+	}
+	if _, ok := _c.mutation.CompletionTokens(); !ok {
+		v := message.DefaultCompletionTokens
+		_c.mutation.SetCompletionTokens(v)
+	}
+	if _, ok := _c.mutation.CostUsd(); !ok {
+		v := message.DefaultCostUsd
+		_c.mutation.SetCostUsd(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -255,6 +327,18 @@ func (_c *MessageCreate) check() error {
 		if err := message.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Message.status": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.Model(); !ok {
+		return &ValidationError{Name: "model", err: errors.New(`ent: missing required field "Message.model"`)}
+	}
+	if _, ok := _c.mutation.PromptTokens(); !ok {
+		return &ValidationError{Name: "prompt_tokens", err: errors.New(`ent: missing required field "Message.prompt_tokens"`)}
+	}
+	if _, ok := _c.mutation.CompletionTokens(); !ok {
+		return &ValidationError{Name: "completion_tokens", err: errors.New(`ent: missing required field "Message.completion_tokens"`)}
+	}
+	if _, ok := _c.mutation.CostUsd(); !ok {
+		return &ValidationError{Name: "cost_usd", err: errors.New(`ent: missing required field "Message.cost_usd"`)}
 	}
 	if len(_c.mutation.IncidentIDs()) == 0 {
 		return &ValidationError{Name: "incident", err: errors.New(`ent: missing required edge "Message.incident"`)}
@@ -321,6 +405,22 @@ func (_c *MessageCreate) createSpec() (*Message, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(message.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
+	}
+	if value, ok := _c.mutation.Model(); ok {
+		_spec.SetField(message.FieldModel, field.TypeString, value)
+		_node.Model = value
+	}
+	if value, ok := _c.mutation.PromptTokens(); ok {
+		_spec.SetField(message.FieldPromptTokens, field.TypeInt, value)
+		_node.PromptTokens = value
+	}
+	if value, ok := _c.mutation.CompletionTokens(); ok {
+		_spec.SetField(message.FieldCompletionTokens, field.TypeInt, value)
+		_node.CompletionTokens = value
+	}
+	if value, ok := _c.mutation.CostUsd(); ok {
+		_spec.SetField(message.FieldCostUsd, field.TypeFloat64, value)
+		_node.CostUsd = value
 	}
 	if nodes := _c.mutation.IncidentIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -546,6 +646,72 @@ func (u *MessageUpsert) UpdateStatus() *MessageUpsert {
 	return u
 }
 
+// SetModel sets the "model" field.
+func (u *MessageUpsert) SetModel(v string) *MessageUpsert {
+	u.Set(message.FieldModel, v)
+	return u
+}
+
+// UpdateModel sets the "model" field to the value that was provided on create.
+func (u *MessageUpsert) UpdateModel() *MessageUpsert {
+	u.SetExcluded(message.FieldModel)
+	return u
+}
+
+// SetPromptTokens sets the "prompt_tokens" field.
+func (u *MessageUpsert) SetPromptTokens(v int) *MessageUpsert {
+	u.Set(message.FieldPromptTokens, v)
+	return u
+}
+
+// UpdatePromptTokens sets the "prompt_tokens" field to the value that was provided on create.
+func (u *MessageUpsert) UpdatePromptTokens() *MessageUpsert {
+	u.SetExcluded(message.FieldPromptTokens)
+	return u
+}
+
+// AddPromptTokens adds v to the "prompt_tokens" field.
+func (u *MessageUpsert) AddPromptTokens(v int) *MessageUpsert {
+	u.Add(message.FieldPromptTokens, v)
+	return u
+}
+
+// SetCompletionTokens sets the "completion_tokens" field.
+func (u *MessageUpsert) SetCompletionTokens(v int) *MessageUpsert {
+	u.Set(message.FieldCompletionTokens, v)
+	return u
+}
+
+// UpdateCompletionTokens sets the "completion_tokens" field to the value that was provided on create.
+func (u *MessageUpsert) UpdateCompletionTokens() *MessageUpsert {
+	u.SetExcluded(message.FieldCompletionTokens)
+	return u
+}
+
+// AddCompletionTokens adds v to the "completion_tokens" field.
+func (u *MessageUpsert) AddCompletionTokens(v int) *MessageUpsert {
+	u.Add(message.FieldCompletionTokens, v)
+	return u
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (u *MessageUpsert) SetCostUsd(v float64) *MessageUpsert {
+	u.Set(message.FieldCostUsd, v)
+	return u
+}
+
+// UpdateCostUsd sets the "cost_usd" field to the value that was provided on create.
+func (u *MessageUpsert) UpdateCostUsd() *MessageUpsert {
+	u.SetExcluded(message.FieldCostUsd)
+	return u
+}
+
+// AddCostUsd adds v to the "cost_usd" field.
+func (u *MessageUpsert) AddCostUsd(v float64) *MessageUpsert {
+	u.Add(message.FieldCostUsd, v)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -749,6 +915,83 @@ func (u *MessageUpsertOne) SetStatus(v message.Status) *MessageUpsertOne {
 func (u *MessageUpsertOne) UpdateStatus() *MessageUpsertOne {
 	return u.Update(func(s *MessageUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetModel sets the "model" field.
+func (u *MessageUpsertOne) SetModel(v string) *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.SetModel(v)
+	})
+}
+
+// UpdateModel sets the "model" field to the value that was provided on create.
+func (u *MessageUpsertOne) UpdateModel() *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.UpdateModel()
+	})
+}
+
+// SetPromptTokens sets the "prompt_tokens" field.
+func (u *MessageUpsertOne) SetPromptTokens(v int) *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.SetPromptTokens(v)
+	})
+}
+
+// AddPromptTokens adds v to the "prompt_tokens" field.
+func (u *MessageUpsertOne) AddPromptTokens(v int) *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.AddPromptTokens(v)
+	})
+}
+
+// UpdatePromptTokens sets the "prompt_tokens" field to the value that was provided on create.
+func (u *MessageUpsertOne) UpdatePromptTokens() *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.UpdatePromptTokens()
+	})
+}
+
+// SetCompletionTokens sets the "completion_tokens" field.
+func (u *MessageUpsertOne) SetCompletionTokens(v int) *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.SetCompletionTokens(v)
+	})
+}
+
+// AddCompletionTokens adds v to the "completion_tokens" field.
+func (u *MessageUpsertOne) AddCompletionTokens(v int) *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.AddCompletionTokens(v)
+	})
+}
+
+// UpdateCompletionTokens sets the "completion_tokens" field to the value that was provided on create.
+func (u *MessageUpsertOne) UpdateCompletionTokens() *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.UpdateCompletionTokens()
+	})
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (u *MessageUpsertOne) SetCostUsd(v float64) *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.SetCostUsd(v)
+	})
+}
+
+// AddCostUsd adds v to the "cost_usd" field.
+func (u *MessageUpsertOne) AddCostUsd(v float64) *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.AddCostUsd(v)
+	})
+}
+
+// UpdateCostUsd sets the "cost_usd" field to the value that was provided on create.
+func (u *MessageUpsertOne) UpdateCostUsd() *MessageUpsertOne {
+	return u.Update(func(s *MessageUpsert) {
+		s.UpdateCostUsd()
 	})
 }
 
@@ -1121,6 +1364,83 @@ func (u *MessageUpsertBulk) SetStatus(v message.Status) *MessageUpsertBulk {
 func (u *MessageUpsertBulk) UpdateStatus() *MessageUpsertBulk {
 	return u.Update(func(s *MessageUpsert) {
 		s.UpdateStatus()
+	})
+}
+
+// SetModel sets the "model" field.
+func (u *MessageUpsertBulk) SetModel(v string) *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.SetModel(v)
+	})
+}
+
+// UpdateModel sets the "model" field to the value that was provided on create.
+func (u *MessageUpsertBulk) UpdateModel() *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.UpdateModel()
+	})
+}
+
+// SetPromptTokens sets the "prompt_tokens" field.
+func (u *MessageUpsertBulk) SetPromptTokens(v int) *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.SetPromptTokens(v)
+	})
+}
+
+// AddPromptTokens adds v to the "prompt_tokens" field.
+func (u *MessageUpsertBulk) AddPromptTokens(v int) *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.AddPromptTokens(v)
+	})
+}
+
+// UpdatePromptTokens sets the "prompt_tokens" field to the value that was provided on create.
+func (u *MessageUpsertBulk) UpdatePromptTokens() *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.UpdatePromptTokens()
+	})
+}
+
+// SetCompletionTokens sets the "completion_tokens" field.
+func (u *MessageUpsertBulk) SetCompletionTokens(v int) *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.SetCompletionTokens(v)
+	})
+}
+
+// AddCompletionTokens adds v to the "completion_tokens" field.
+func (u *MessageUpsertBulk) AddCompletionTokens(v int) *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.AddCompletionTokens(v)
+	})
+}
+
+// UpdateCompletionTokens sets the "completion_tokens" field to the value that was provided on create.
+func (u *MessageUpsertBulk) UpdateCompletionTokens() *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.UpdateCompletionTokens()
+	})
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (u *MessageUpsertBulk) SetCostUsd(v float64) *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.SetCostUsd(v)
+	})
+}
+
+// AddCostUsd adds v to the "cost_usd" field.
+func (u *MessageUpsertBulk) AddCostUsd(v float64) *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.AddCostUsd(v)
+	})
+}
+
+// UpdateCostUsd sets the "cost_usd" field to the value that was provided on create.
+func (u *MessageUpsertBulk) UpdateCostUsd() *MessageUpsertBulk {
+	return u.Update(func(s *MessageUpsert) {
+		s.UpdateCostUsd()
 	})
 }
 

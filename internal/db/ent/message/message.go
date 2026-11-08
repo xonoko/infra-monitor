@@ -37,6 +37,14 @@ const (
 	FieldReplyToID = "reply_to_id"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldModel holds the string denoting the model field in the database.
+	FieldModel = "model"
+	// FieldPromptTokens holds the string denoting the prompt_tokens field in the database.
+	FieldPromptTokens = "prompt_tokens"
+	// FieldCompletionTokens holds the string denoting the completion_tokens field in the database.
+	FieldCompletionTokens = "completion_tokens"
+	// FieldCostUsd holds the string denoting the cost_usd field in the database.
+	FieldCostUsd = "cost_usd"
 	// EdgeIncident holds the string denoting the incident edge name in mutations.
 	EdgeIncident = "incident"
 	// EdgeAuthor holds the string denoting the author edge name in mutations.
@@ -73,6 +81,10 @@ var Columns = []string{
 	FieldActionIds,
 	FieldReplyToID,
 	FieldStatus,
+	FieldModel,
+	FieldPromptTokens,
+	FieldCompletionTokens,
+	FieldCostUsd,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -96,6 +108,14 @@ var (
 	DefaultChannelName string
 	// DefaultActionIds holds the default value on creation for the "action_ids" field.
 	DefaultActionIds []int
+	// DefaultModel holds the default value on creation for the "model" field.
+	DefaultModel string
+	// DefaultPromptTokens holds the default value on creation for the "prompt_tokens" field.
+	DefaultPromptTokens int
+	// DefaultCompletionTokens holds the default value on creation for the "completion_tokens" field.
+	DefaultCompletionTokens int
+	// DefaultCostUsd holds the default value on creation for the "cost_usd" field.
+	DefaultCostUsd float64
 )
 
 // Role defines the type for the "role" enum field.
@@ -205,6 +225,26 @@ func ByReplyToID(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByModel orders the results by the model field.
+func ByModel(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldModel, opts...).ToFunc()
+}
+
+// ByPromptTokens orders the results by the prompt_tokens field.
+func ByPromptTokens(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPromptTokens, opts...).ToFunc()
+}
+
+// ByCompletionTokens orders the results by the completion_tokens field.
+func ByCompletionTokens(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCompletionTokens, opts...).ToFunc()
+}
+
+// ByCostUsd orders the results by the cost_usd field.
+func ByCostUsd(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCostUsd, opts...).ToFunc()
 }
 
 // ByIncidentField orders the results by incident field.

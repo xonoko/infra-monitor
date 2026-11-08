@@ -99,6 +99,7 @@ type IDInput struct {
 type IncidentDetail struct {
 	Incident
 	LatestInvestigation *Investigation `json:"latest_investigation,omitempty"`
+	Cost                Cost           `json:"cost" doc:"Estimated AI token cost of this incident"`
 }
 
 type IncidentOutput struct{ Body Incident }
@@ -261,6 +262,9 @@ func (s *Server) registerIncidents() {
 				return nil, err
 			}
 			out := &IncidentDetailOutput{Body: IncidentDetail{Incident: base.Body}}
+			if c, err := svc.Cost(ctx, inc.ID, time.Time{}); err == nil {
+				out.Body.Cost = toCost(c)
+			}
 			if inv, err := svc.LatestInvestigation(ctx, inc.ID); err == nil && inv != nil {
 				i := toInvestigation(inv)
 				out.Body.LatestInvestigation = &i

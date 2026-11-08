@@ -42,6 +42,14 @@ type Message struct {
 	ReplyToID *int `json:"reply_to_id,omitempty"`
 	// Status holds the value of the "status" field.
 	Status message.Status `json:"status,omitempty"`
+	// Model holds the value of the "model" field.
+	Model string `json:"model,omitempty"`
+	// PromptTokens holds the value of the "prompt_tokens" field.
+	PromptTokens int `json:"prompt_tokens,omitempty"`
+	// CompletionTokens holds the value of the "completion_tokens" field.
+	CompletionTokens int `json:"completion_tokens,omitempty"`
+	// CostUsd holds the value of the "cost_usd" field.
+	CostUsd float64 `json:"cost_usd,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the MessageQuery when eager-loading is set.
 	Edges        MessageEdges `json:"edges"`
@@ -88,9 +96,11 @@ func (*Message) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case message.FieldActionIds:
 			values[i] = new([]byte)
-		case message.FieldID, message.FieldIncidentID, message.FieldAuthorID, message.FieldReplyToID:
+		case message.FieldCostUsd:
+			values[i] = new(sql.NullFloat64)
+		case message.FieldID, message.FieldIncidentID, message.FieldAuthorID, message.FieldReplyToID, message.FieldPromptTokens, message.FieldCompletionTokens:
 			values[i] = new(sql.NullInt64)
-		case message.FieldRole, message.FieldAuthorName, message.FieldChannel, message.FieldChannelName, message.FieldContent, message.FieldStatus:
+		case message.FieldRole, message.FieldAuthorName, message.FieldChannel, message.FieldChannelName, message.FieldContent, message.FieldStatus, message.FieldModel:
 			values[i] = new(sql.NullString)
 		case message.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -185,6 +195,30 @@ func (_m *Message) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.Status = message.Status(value.String)
 			}
+		case message.FieldModel:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field model", values[i])
+			} else if value.Valid {
+				_m.Model = value.String
+			}
+		case message.FieldPromptTokens:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field prompt_tokens", values[i])
+			} else if value.Valid {
+				_m.PromptTokens = int(value.Int64)
+			}
+		case message.FieldCompletionTokens:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field completion_tokens", values[i])
+			} else if value.Valid {
+				_m.CompletionTokens = int(value.Int64)
+			}
+		case message.FieldCostUsd:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field cost_usd", values[i])
+			} else if value.Valid {
+				_m.CostUsd = value.Float64
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -267,6 +301,18 @@ func (_m *Message) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))
+	builder.WriteString(", ")
+	builder.WriteString("model=")
+	builder.WriteString(_m.Model)
+	builder.WriteString(", ")
+	builder.WriteString("prompt_tokens=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PromptTokens))
+	builder.WriteString(", ")
+	builder.WriteString("completion_tokens=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CompletionTokens))
+	builder.WriteString(", ")
+	builder.WriteString("cost_usd=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CostUsd))
 	builder.WriteByte(')')
 	return builder.String()
 }

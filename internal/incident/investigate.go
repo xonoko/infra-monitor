@@ -272,7 +272,8 @@ func (s *Service) finishInvestigation(ctx context.Context, incID, invID int, res
 		u := tx.Investigation.UpdateOneID(invID).SetStatus(investigation.StatusSucceeded).SetFinishedAt(s.now()).
 			SetAnalysis(res.Analysis).SetSummary(res.Summary).SetRootCause(res.RootCause).
 			SetVerdict(investigation.Verdict(verdict)).SetConfidence(res.Confidence).
-			SetPromptTokens(res.Usage.PromptTokens).SetCompletionTokens(res.Usage.CompletionTokens)
+			SetPromptTokens(res.Usage.PromptTokens).SetCompletionTokens(res.Usage.CompletionTokens).
+			SetCostUsd(s.costUSD(firstNonEmpty(res.Model, s.agent.Model()), res.Usage))
 		if res.Model != "" {
 			u.SetModel(res.Model)
 		}

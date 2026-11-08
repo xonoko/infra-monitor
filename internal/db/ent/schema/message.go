@@ -24,6 +24,11 @@ func (Message) Fields() []ent.Field {
 		field.Ints("action_ids").Default([]int{}),
 		field.Int("reply_to_id").Optional().Nillable(),
 		field.Enum("status").Values("done", "pending", "failed").Default("done"),
+		// LLM usage of agent replies.
+		field.String("model").Default(""),
+		field.Int("prompt_tokens").Default(0),
+		field.Int("completion_tokens").Default(0),
+		field.Float("cost_usd").Default(0),
 	}
 }
 

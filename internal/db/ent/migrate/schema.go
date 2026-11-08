@@ -335,6 +335,7 @@ var (
 		{Name: "tool_calls", Type: field.TypeJSON, Nullable: true},
 		{Name: "prompt_tokens", Type: field.TypeInt, Default: 0},
 		{Name: "completion_tokens", Type: field.TypeInt, Default: 0},
+		{Name: "cost_usd", Type: field.TypeFloat64, Default: 0},
 		{Name: "error", Type: field.TypeString, Size: 2147483647, Default: ""},
 		{Name: "requested_by_id", Type: field.TypeInt, Nullable: true},
 		{Name: "started_at", Type: field.TypeTime, Nullable: true},
@@ -350,7 +351,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "investigations_incidents_investigations",
-				Columns:    []*schema.Column{InvestigationsColumns[20]},
+				Columns:    []*schema.Column{InvestigationsColumns[21]},
 				RefColumns: []*schema.Column{IncidentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -359,12 +360,12 @@ var (
 			{
 				Name:    "investigation_incident_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{InvestigationsColumns[20], InvestigationsColumns[1]},
+				Columns: []*schema.Column{InvestigationsColumns[21], InvestigationsColumns[1]},
 			},
 			{
 				Name:    "investigation_status_started_at",
 				Unique:  false,
-				Columns: []*schema.Column{InvestigationsColumns[3], InvestigationsColumns[17]},
+				Columns: []*schema.Column{InvestigationsColumns[3], InvestigationsColumns[18]},
 			},
 		},
 	}
@@ -446,6 +447,10 @@ var (
 		{Name: "action_ids", Type: field.TypeJSON},
 		{Name: "reply_to_id", Type: field.TypeInt, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"done", "pending", "failed"}, Default: "done"},
+		{Name: "model", Type: field.TypeString, Default: ""},
+		{Name: "prompt_tokens", Type: field.TypeInt, Default: 0},
+		{Name: "completion_tokens", Type: field.TypeInt, Default: 0},
+		{Name: "cost_usd", Type: field.TypeFloat64, Default: 0},
 		{Name: "incident_id", Type: field.TypeInt},
 		{Name: "author_id", Type: field.TypeInt, Nullable: true},
 	}
@@ -457,13 +462,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "messages_incidents_messages",
-				Columns:    []*schema.Column{MessagesColumns[10]},
+				Columns:    []*schema.Column{MessagesColumns[14]},
 				RefColumns: []*schema.Column{IncidentsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 			{
 				Symbol:     "messages_users_messages",
-				Columns:    []*schema.Column{MessagesColumns[11]},
+				Columns:    []*schema.Column{MessagesColumns[15]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -472,7 +477,7 @@ var (
 			{
 				Name:    "message_incident_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{MessagesColumns[10], MessagesColumns[1]},
+				Columns: []*schema.Column{MessagesColumns[14], MessagesColumns[1]},
 			},
 		},
 	}

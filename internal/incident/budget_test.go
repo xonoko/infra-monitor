@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/xonoko/infra-monitor/internal/agent"
 	"github.com/xonoko/infra-monitor/internal/config"
 	"github.com/xonoko/infra-monitor/internal/db/ent"
 	entincident "github.com/xonoko/infra-monitor/internal/db/ent/incident"
@@ -170,4 +171,31 @@ func TestAutoApproveNamespaceAnnotations(t *testing.T) {
 	dev, _ := e.svc.Actions(ctx, incs[1].ID)
 	require.Equal(t, "proposed", string(prod[0].Status), "namespace annotation disables automatic actions")
 	require.Equal(t, "succeeded", string(dev[0].Status), "global config applies when the namespace has no annotation")
+}
+
+func TestCostBreakdown(t *testing.T) {
+	e := newEnv(t, true, func(c *config.Config) {
+		c.Agent.PriceInputPerMTok, c.Agent.PriceOutputPerMTok = 1, 5
+		c.Actions.AutoApprove = []string{"agent.reinvestigate"}
+	})
+	ctx := context.Background()
+	e.agent.result.Usage = agent.Usage{PromptTokens: 1_000_000, CompletionTokens: 100_000}       // $1.5
+	e.agent.chat.Usage = agent.Usage{PromptTokens: 200_000, CompletionTokens: 0}                  // $0.2
+	e.agent.result.ProposedActions = []agent.ProposedAction{agentProposal("agent.reinvestigate")} // auto -> remediation investigation
+	e.ingest(alert("Cost", "shop", "firing", "c"))
+	e.drain()
+	inc := e.onlyIncident()
+	_, err := e.svc.PostMessage(ctx, operator(), inc.ID, "why?")
+	require.NoError(t, err)
+	e.drain()
+	c, err := e.svc.Cost(ctx, inc.ID, time.Time{})
+	require.NoError(t, err)
+	require.Equal(t, 1, c.Investigation.Calls)
+	require.InDelta(t, 1.5, c.Investigation.USD, 1e-9)
+	require.Equal(t, 1, c.Remediation.Calls, "the auto-approved reinvestigation counts as remediation")
+	require.InDelta(t, 1.5, c.Remediation.USD, 1e-9)
+	require.Equal(t, 1, c.Chat.Calls)
+	require.InDelta(t, 0.2, c.Chat.USD, 1e-9)
+	require.InDelta(t, 3.2, c.Total.USD, 1e-9)
+	require.Equal(t, 2_200_000, c.Total.PromptTokens)
 }

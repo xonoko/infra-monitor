@@ -29,6 +29,7 @@ func (Investigation) Fields() []ent.Field {
 		field.JSON("tool_calls", json.RawMessage{}).Optional(),
 		field.Int("prompt_tokens").Default(0),
 		field.Int("completion_tokens").Default(0),
+		field.Float("cost_usd").Default(0),
 		field.Text("error").Default(""),
 		field.Int("requested_by_id").Optional().Nillable(),
 		field.Time("started_at").Optional().Nillable(),

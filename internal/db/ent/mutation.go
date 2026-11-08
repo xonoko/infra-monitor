@@ -9374,6 +9374,8 @@ type InvestigationMutation struct {
 	addprompt_tokens     *int
 	completion_tokens    *int
 	addcompletion_tokens *int
+	cost_usd             *float64
+	addcost_usd          *float64
 	error                *string
 	requested_by_id      *int
 	addrequested_by_id   *int
@@ -10115,6 +10117,62 @@ func (m *InvestigationMutation) ResetCompletionTokens() {
 	m.addcompletion_tokens = nil
 }
 
+// SetCostUsd sets the "cost_usd" field.
+func (m *InvestigationMutation) SetCostUsd(f float64) {
+	m.cost_usd = &f
+	m.addcost_usd = nil
+}
+
+// CostUsd returns the value of the "cost_usd" field in the mutation.
+func (m *InvestigationMutation) CostUsd() (r float64, exists bool) {
+	v := m.cost_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostUsd returns the old "cost_usd" field's value of the Investigation entity.
+// If the Investigation object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *InvestigationMutation) OldCostUsd(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostUsd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostUsd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostUsd: %w", err)
+	}
+	return oldValue.CostUsd, nil
+}
+
+// AddCostUsd adds f to the "cost_usd" field.
+func (m *InvestigationMutation) AddCostUsd(f float64) {
+	if m.addcost_usd != nil {
+		*m.addcost_usd += f
+	} else {
+		m.addcost_usd = &f
+	}
+}
+
+// AddedCostUsd returns the value that was added to the "cost_usd" field in this mutation.
+func (m *InvestigationMutation) AddedCostUsd() (r float64, exists bool) {
+	v := m.addcost_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCostUsd resets all changes to the "cost_usd" field.
+func (m *InvestigationMutation) ResetCostUsd() {
+	m.cost_usd = nil
+	m.addcost_usd = nil
+}
+
 // SetError sets the "error" field.
 func (m *InvestigationMutation) SetError(s string) {
 	m.error = &s
@@ -10416,7 +10474,7 @@ func (m *InvestigationMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *InvestigationMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 21)
 	if m.created_at != nil {
 		fields = append(fields, investigation.FieldCreatedAt)
 	}
@@ -10461,6 +10519,9 @@ func (m *InvestigationMutation) Fields() []string {
 	}
 	if m.completion_tokens != nil {
 		fields = append(fields, investigation.FieldCompletionTokens)
+	}
+	if m.cost_usd != nil {
+		fields = append(fields, investigation.FieldCostUsd)
 	}
 	if m.error != nil {
 		fields = append(fields, investigation.FieldError)
@@ -10515,6 +10576,8 @@ func (m *InvestigationMutation) Field(name string) (ent.Value, bool) {
 		return m.PromptTokens()
 	case investigation.FieldCompletionTokens:
 		return m.CompletionTokens()
+	case investigation.FieldCostUsd:
+		return m.CostUsd()
 	case investigation.FieldError:
 		return m.Error()
 	case investigation.FieldRequestedByID:
@@ -10564,6 +10627,8 @@ func (m *InvestigationMutation) OldField(ctx context.Context, name string) (ent.
 		return m.OldPromptTokens(ctx)
 	case investigation.FieldCompletionTokens:
 		return m.OldCompletionTokens(ctx)
+	case investigation.FieldCostUsd:
+		return m.OldCostUsd(ctx)
 	case investigation.FieldError:
 		return m.OldError(ctx)
 	case investigation.FieldRequestedByID:
@@ -10688,6 +10753,13 @@ func (m *InvestigationMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCompletionTokens(v)
 		return nil
+	case investigation.FieldCostUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostUsd(v)
+		return nil
 	case investigation.FieldError:
 		v, ok := value.(string)
 		if !ok {
@@ -10740,6 +10812,9 @@ func (m *InvestigationMutation) AddedFields() []string {
 	if m.addcompletion_tokens != nil {
 		fields = append(fields, investigation.FieldCompletionTokens)
 	}
+	if m.addcost_usd != nil {
+		fields = append(fields, investigation.FieldCostUsd)
+	}
 	if m.addrequested_by_id != nil {
 		fields = append(fields, investigation.FieldRequestedByID)
 	}
@@ -10757,6 +10832,8 @@ func (m *InvestigationMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedPromptTokens()
 	case investigation.FieldCompletionTokens:
 		return m.AddedCompletionTokens()
+	case investigation.FieldCostUsd:
+		return m.AddedCostUsd()
 	case investigation.FieldRequestedByID:
 		return m.AddedRequestedByID()
 	}
@@ -10788,6 +10865,13 @@ func (m *InvestigationMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddCompletionTokens(v)
+		return nil
+	case investigation.FieldCostUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCostUsd(v)
 		return nil
 	case investigation.FieldRequestedByID:
 		v, ok := value.(int)
@@ -10894,6 +10978,9 @@ func (m *InvestigationMutation) ResetField(name string) error {
 		return nil
 	case investigation.FieldCompletionTokens:
 		m.ResetCompletionTokens()
+		return nil
+	case investigation.FieldCostUsd:
+		m.ResetCostUsd()
 		return nil
 	case investigation.FieldError:
 		m.ResetError()
@@ -12715,28 +12802,35 @@ func (m *LinkCodeMutation) ResetEdge(name string) error {
 // MessageMutation represents an operation that mutates the Message nodes in the graph.
 type MessageMutation struct {
 	config
-	op               Op
-	typ              string
-	id               *int
-	created_at       *time.Time
-	role             *message.Role
-	author_name      *string
-	channel          *string
-	channel_name     *string
-	content          *string
-	action_ids       *[]int
-	appendaction_ids []int
-	reply_to_id      *int
-	addreply_to_id   *int
-	status           *message.Status
-	clearedFields    map[string]struct{}
-	incident         *int
-	clearedincident  bool
-	author           *int
-	clearedauthor    bool
-	done             bool
-	oldValue         func(context.Context) (*Message, error)
-	predicates       []predicate.Message
+	op                   Op
+	typ                  string
+	id                   *int
+	created_at           *time.Time
+	role                 *message.Role
+	author_name          *string
+	channel              *string
+	channel_name         *string
+	content              *string
+	action_ids           *[]int
+	appendaction_ids     []int
+	reply_to_id          *int
+	addreply_to_id       *int
+	status               *message.Status
+	model                *string
+	prompt_tokens        *int
+	addprompt_tokens     *int
+	completion_tokens    *int
+	addcompletion_tokens *int
+	cost_usd             *float64
+	addcost_usd          *float64
+	clearedFields        map[string]struct{}
+	incident             *int
+	clearedincident      bool
+	author               *int
+	clearedauthor        bool
+	done                 bool
+	oldValue             func(context.Context) (*Message, error)
+	predicates           []predicate.Message
 }
 
 var _ ent.Mutation = (*MessageMutation)(nil)
@@ -13295,6 +13389,210 @@ func (m *MessageMutation) ResetStatus() {
 	m.status = nil
 }
 
+// SetModel sets the "model" field.
+func (m *MessageMutation) SetModel(s string) {
+	m.model = &s
+}
+
+// Model returns the value of the "model" field in the mutation.
+func (m *MessageMutation) Model() (r string, exists bool) {
+	v := m.model
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldModel returns the old "model" field's value of the Message entity.
+// If the Message object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MessageMutation) OldModel(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldModel is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldModel requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldModel: %w", err)
+	}
+	return oldValue.Model, nil
+}
+
+// ResetModel resets all changes to the "model" field.
+func (m *MessageMutation) ResetModel() {
+	m.model = nil
+}
+
+// SetPromptTokens sets the "prompt_tokens" field.
+func (m *MessageMutation) SetPromptTokens(i int) {
+	m.prompt_tokens = &i
+	m.addprompt_tokens = nil
+}
+
+// PromptTokens returns the value of the "prompt_tokens" field in the mutation.
+func (m *MessageMutation) PromptTokens() (r int, exists bool) {
+	v := m.prompt_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPromptTokens returns the old "prompt_tokens" field's value of the Message entity.
+// If the Message object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MessageMutation) OldPromptTokens(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPromptTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPromptTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPromptTokens: %w", err)
+	}
+	return oldValue.PromptTokens, nil
+}
+
+// AddPromptTokens adds i to the "prompt_tokens" field.
+func (m *MessageMutation) AddPromptTokens(i int) {
+	if m.addprompt_tokens != nil {
+		*m.addprompt_tokens += i
+	} else {
+		m.addprompt_tokens = &i
+	}
+}
+
+// AddedPromptTokens returns the value that was added to the "prompt_tokens" field in this mutation.
+func (m *MessageMutation) AddedPromptTokens() (r int, exists bool) {
+	v := m.addprompt_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPromptTokens resets all changes to the "prompt_tokens" field.
+func (m *MessageMutation) ResetPromptTokens() {
+	m.prompt_tokens = nil
+	m.addprompt_tokens = nil
+}
+
+// SetCompletionTokens sets the "completion_tokens" field.
+func (m *MessageMutation) SetCompletionTokens(i int) {
+	m.completion_tokens = &i
+	m.addcompletion_tokens = nil
+}
+
+// CompletionTokens returns the value of the "completion_tokens" field in the mutation.
+func (m *MessageMutation) CompletionTokens() (r int, exists bool) {
+	v := m.completion_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletionTokens returns the old "completion_tokens" field's value of the Message entity.
+// If the Message object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MessageMutation) OldCompletionTokens(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletionTokens is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletionTokens requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletionTokens: %w", err)
+	}
+	return oldValue.CompletionTokens, nil
+}
+
+// AddCompletionTokens adds i to the "completion_tokens" field.
+func (m *MessageMutation) AddCompletionTokens(i int) {
+	if m.addcompletion_tokens != nil {
+		*m.addcompletion_tokens += i
+	} else {
+		m.addcompletion_tokens = &i
+	}
+}
+
+// AddedCompletionTokens returns the value that was added to the "completion_tokens" field in this mutation.
+func (m *MessageMutation) AddedCompletionTokens() (r int, exists bool) {
+	v := m.addcompletion_tokens
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCompletionTokens resets all changes to the "completion_tokens" field.
+func (m *MessageMutation) ResetCompletionTokens() {
+	m.completion_tokens = nil
+	m.addcompletion_tokens = nil
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (m *MessageMutation) SetCostUsd(f float64) {
+	m.cost_usd = &f
+	m.addcost_usd = nil
+}
+
+// CostUsd returns the value of the "cost_usd" field in the mutation.
+func (m *MessageMutation) CostUsd() (r float64, exists bool) {
+	v := m.cost_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCostUsd returns the old "cost_usd" field's value of the Message entity.
+// If the Message object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MessageMutation) OldCostUsd(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCostUsd is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCostUsd requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCostUsd: %w", err)
+	}
+	return oldValue.CostUsd, nil
+}
+
+// AddCostUsd adds f to the "cost_usd" field.
+func (m *MessageMutation) AddCostUsd(f float64) {
+	if m.addcost_usd != nil {
+		*m.addcost_usd += f
+	} else {
+		m.addcost_usd = &f
+	}
+}
+
+// AddedCostUsd returns the value that was added to the "cost_usd" field in this mutation.
+func (m *MessageMutation) AddedCostUsd() (r float64, exists bool) {
+	v := m.addcost_usd
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCostUsd resets all changes to the "cost_usd" field.
+func (m *MessageMutation) ResetCostUsd() {
+	m.cost_usd = nil
+	m.addcost_usd = nil
+}
+
 // ClearIncident clears the "incident" edge to the Incident entity.
 func (m *MessageMutation) ClearIncident() {
 	m.clearedincident = true
@@ -13383,7 +13681,7 @@ func (m *MessageMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MessageMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 15)
 	if m.created_at != nil {
 		fields = append(fields, message.FieldCreatedAt)
 	}
@@ -13417,6 +13715,18 @@ func (m *MessageMutation) Fields() []string {
 	if m.status != nil {
 		fields = append(fields, message.FieldStatus)
 	}
+	if m.model != nil {
+		fields = append(fields, message.FieldModel)
+	}
+	if m.prompt_tokens != nil {
+		fields = append(fields, message.FieldPromptTokens)
+	}
+	if m.completion_tokens != nil {
+		fields = append(fields, message.FieldCompletionTokens)
+	}
+	if m.cost_usd != nil {
+		fields = append(fields, message.FieldCostUsd)
+	}
 	return fields
 }
 
@@ -13447,6 +13757,14 @@ func (m *MessageMutation) Field(name string) (ent.Value, bool) {
 		return m.ReplyToID()
 	case message.FieldStatus:
 		return m.Status()
+	case message.FieldModel:
+		return m.Model()
+	case message.FieldPromptTokens:
+		return m.PromptTokens()
+	case message.FieldCompletionTokens:
+		return m.CompletionTokens()
+	case message.FieldCostUsd:
+		return m.CostUsd()
 	}
 	return nil, false
 }
@@ -13478,6 +13796,14 @@ func (m *MessageMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldReplyToID(ctx)
 	case message.FieldStatus:
 		return m.OldStatus(ctx)
+	case message.FieldModel:
+		return m.OldModel(ctx)
+	case message.FieldPromptTokens:
+		return m.OldPromptTokens(ctx)
+	case message.FieldCompletionTokens:
+		return m.OldCompletionTokens(ctx)
+	case message.FieldCostUsd:
+		return m.OldCostUsd(ctx)
 	}
 	return nil, fmt.Errorf("unknown Message field %s", name)
 }
@@ -13564,6 +13890,34 @@ func (m *MessageMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetStatus(v)
 		return nil
+	case message.FieldModel:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetModel(v)
+		return nil
+	case message.FieldPromptTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPromptTokens(v)
+		return nil
+	case message.FieldCompletionTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletionTokens(v)
+		return nil
+	case message.FieldCostUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCostUsd(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Message field %s", name)
 }
@@ -13575,6 +13929,15 @@ func (m *MessageMutation) AddedFields() []string {
 	if m.addreply_to_id != nil {
 		fields = append(fields, message.FieldReplyToID)
 	}
+	if m.addprompt_tokens != nil {
+		fields = append(fields, message.FieldPromptTokens)
+	}
+	if m.addcompletion_tokens != nil {
+		fields = append(fields, message.FieldCompletionTokens)
+	}
+	if m.addcost_usd != nil {
+		fields = append(fields, message.FieldCostUsd)
+	}
 	return fields
 }
 
@@ -13585,6 +13948,12 @@ func (m *MessageMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case message.FieldReplyToID:
 		return m.AddedReplyToID()
+	case message.FieldPromptTokens:
+		return m.AddedPromptTokens()
+	case message.FieldCompletionTokens:
+		return m.AddedCompletionTokens()
+	case message.FieldCostUsd:
+		return m.AddedCostUsd()
 	}
 	return nil, false
 }
@@ -13600,6 +13969,27 @@ func (m *MessageMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddReplyToID(v)
+		return nil
+	case message.FieldPromptTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPromptTokens(v)
+		return nil
+	case message.FieldCompletionTokens:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCompletionTokens(v)
+		return nil
+	case message.FieldCostUsd:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCostUsd(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Message numeric field %s", name)
@@ -13675,6 +14065,18 @@ func (m *MessageMutation) ResetField(name string) error {
 		return nil
 	case message.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case message.FieldModel:
+		m.ResetModel()
+		return nil
+	case message.FieldPromptTokens:
+		m.ResetPromptTokens()
+		return nil
+	case message.FieldCompletionTokens:
+		m.ResetCompletionTokens()
+		return nil
+	case message.FieldCostUsd:
+		m.ResetCostUsd()
 		return nil
 	}
 	return fmt.Errorf("unknown Message field %s", name)

@@ -147,10 +147,73 @@ func (s *Service) recordUsage(ctx context.Context, kind, model string, u agent.U
 	attrs := metric.WithAttributes(attribute.String("kind", kind), attribute.String("model", model))
 	s.m.tokens.Add(ctx, int64(u.PromptTokens), metric.WithAttributes(attribute.String("type", "prompt"), attribute.String("model", model)))
 	s.m.tokens.Add(ctx, int64(u.CompletionTokens), metric.WithAttributes(attribute.String("type", "completion"), attribute.String("model", model)))
+	cost := s.costUSD(model, u)
+	s.m.cost.Add(ctx, cost, attrs)
+}
+
+// costUSD estimates the cost of one agent call from the configured per-model prices.
+func (s *Service) costUSD(model string, u agent.Usage) float64 {
 	in, out := s.cfg.Agent.PriceInputPerMTok, s.cfg.Agent.PriceOutputPerMTok
 	if p, ok := s.cfg.Agent.ModelPrices[model]; ok {
 		in, out = p.Input, p.Output
 	}
-	cost := float64(u.PromptTokens)/1e6*in + float64(u.CompletionTokens)/1e6*out
-	s.m.cost.Add(ctx, cost, attrs)
+	return float64(u.PromptTokens)/1e6*in + float64(u.CompletionTokens)/1e6*out
+}
+
+// CostLine is token usage and estimated cost for one category.
+type CostLine struct {
+	Calls            int
+	PromptTokens     int
+	CompletionTokens int
+	USD              float64
+}
+
+func (c *CostLine) add(o CostLine) {
+	c.Calls += o.Calls
+	c.PromptTokens += o.PromptTokens
+	c.CompletionTokens += o.CompletionTokens
+	c.USD += o.USD
+}
+
+// CostBreakdown is the AI cost of an incident: investigations (auto/manual/deep), remediation
+// (investigations triggered by actions) and chat replies.
+type CostBreakdown struct {
+	Investigation, Remediation, Chat, Total CostLine
+}
+
+// Cost aggregates the stored usage of an incident (or of everything when incidentID is 0) since `since`.
+func (s *Service) Cost(ctx context.Context, incidentID int, since time.Time) (CostBreakdown, error) {
+	var b CostBreakdown
+	q := `SELECT trigger, count(*), coalesce(sum(prompt_tokens),0), coalesce(sum(completion_tokens),0), coalesce(sum(cost_usd),0)
+		FROM investigations WHERE ($1 = 0 OR incident_id = $1) AND created_at >= $2 GROUP BY trigger`
+	rows, err := s.db.Pool.Query(ctx, q, incidentID, since)
+	if err != nil {
+		return b, err
+	}
+	for rows.Next() {
+		var trigger string
+		var l CostLine
+		if err := rows.Scan(&trigger, &l.Calls, &l.PromptTokens, &l.CompletionTokens, &l.USD); err != nil {
+			rows.Close()
+			return b, err
+		}
+		if trigger == string(investigation.TriggerAction) {
+			b.Remediation.add(l)
+		} else {
+			b.Investigation.add(l)
+		}
+	}
+	rows.Close()
+	var chat CostLine
+	err = s.db.Pool.QueryRow(ctx, `SELECT count(*), coalesce(sum(prompt_tokens),0), coalesce(sum(completion_tokens),0), coalesce(sum(cost_usd),0)
+		FROM messages WHERE ($1 = 0 OR incident_id = $1) AND role = 'agent' AND created_at >= $2`, incidentID, since).
+		Scan(&chat.Calls, &chat.PromptTokens, &chat.CompletionTokens, &chat.USD)
+	if err != nil {
+		return b, err
+	}
+	b.Chat = chat
+	b.Total.add(b.Investigation)
+	b.Total.add(b.Remediation)
+	b.Total.add(b.Chat)
+	return b, nil
 }

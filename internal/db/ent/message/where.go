@@ -95,6 +95,26 @@ func ReplyToID(v int) predicate.Message {
 	return predicate.Message(sql.FieldEQ(FieldReplyToID, v))
 }
 
+// Model applies equality check predicate on the "model" field. It's identical to ModelEQ.
+func Model(v string) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldModel, v))
+}
+
+// PromptTokens applies equality check predicate on the "prompt_tokens" field. It's identical to PromptTokensEQ.
+func PromptTokens(v int) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldPromptTokens, v))
+}
+
+// CompletionTokens applies equality check predicate on the "completion_tokens" field. It's identical to CompletionTokensEQ.
+func CompletionTokens(v int) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldCompletionTokens, v))
+}
+
+// CostUsd applies equality check predicate on the "cost_usd" field. It's identical to CostUsdEQ.
+func CostUsd(v float64) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldCostUsd, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Message {
 	return predicate.Message(sql.FieldEQ(FieldCreatedAt, v))
@@ -533,6 +553,191 @@ func StatusIn(vs ...Status) predicate.Message {
 // StatusNotIn applies the NotIn predicate on the "status" field.
 func StatusNotIn(vs ...Status) predicate.Message {
 	return predicate.Message(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// ModelEQ applies the EQ predicate on the "model" field.
+func ModelEQ(v string) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldModel, v))
+}
+
+// ModelNEQ applies the NEQ predicate on the "model" field.
+func ModelNEQ(v string) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldModel, v))
+}
+
+// ModelIn applies the In predicate on the "model" field.
+func ModelIn(vs ...string) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldModel, vs...))
+}
+
+// ModelNotIn applies the NotIn predicate on the "model" field.
+func ModelNotIn(vs ...string) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldModel, vs...))
+}
+
+// ModelGT applies the GT predicate on the "model" field.
+func ModelGT(v string) predicate.Message {
+	return predicate.Message(sql.FieldGT(FieldModel, v))
+}
+
+// ModelGTE applies the GTE predicate on the "model" field.
+func ModelGTE(v string) predicate.Message {
+	return predicate.Message(sql.FieldGTE(FieldModel, v))
+}
+
+// ModelLT applies the LT predicate on the "model" field.
+func ModelLT(v string) predicate.Message {
+	return predicate.Message(sql.FieldLT(FieldModel, v))
+}
+
+// ModelLTE applies the LTE predicate on the "model" field.
+func ModelLTE(v string) predicate.Message {
+	return predicate.Message(sql.FieldLTE(FieldModel, v))
+}
+
+// ModelContains applies the Contains predicate on the "model" field.
+func ModelContains(v string) predicate.Message {
+	return predicate.Message(sql.FieldContains(FieldModel, v))
+}
+
+// ModelHasPrefix applies the HasPrefix predicate on the "model" field.
+func ModelHasPrefix(v string) predicate.Message {
+	return predicate.Message(sql.FieldHasPrefix(FieldModel, v))
+}
+
+// ModelHasSuffix applies the HasSuffix predicate on the "model" field.
+func ModelHasSuffix(v string) predicate.Message {
+	return predicate.Message(sql.FieldHasSuffix(FieldModel, v))
+}
+
+// ModelEqualFold applies the EqualFold predicate on the "model" field.
+func ModelEqualFold(v string) predicate.Message {
+	return predicate.Message(sql.FieldEqualFold(FieldModel, v))
+}
+
+// ModelContainsFold applies the ContainsFold predicate on the "model" field.
+func ModelContainsFold(v string) predicate.Message {
+	return predicate.Message(sql.FieldContainsFold(FieldModel, v))
+}
+
+// PromptTokensEQ applies the EQ predicate on the "prompt_tokens" field.
+func PromptTokensEQ(v int) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldPromptTokens, v))
+}
+
+// PromptTokensNEQ applies the NEQ predicate on the "prompt_tokens" field.
+func PromptTokensNEQ(v int) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldPromptTokens, v))
+}
+
+// PromptTokensIn applies the In predicate on the "prompt_tokens" field.
+func PromptTokensIn(vs ...int) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldPromptTokens, vs...))
+}
+
+// PromptTokensNotIn applies the NotIn predicate on the "prompt_tokens" field.
+func PromptTokensNotIn(vs ...int) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldPromptTokens, vs...))
+}
+
+// PromptTokensGT applies the GT predicate on the "prompt_tokens" field.
+func PromptTokensGT(v int) predicate.Message {
+	return predicate.Message(sql.FieldGT(FieldPromptTokens, v))
+}
+
+// PromptTokensGTE applies the GTE predicate on the "prompt_tokens" field.
+func PromptTokensGTE(v int) predicate.Message {
+	return predicate.Message(sql.FieldGTE(FieldPromptTokens, v))
+}
+
+// PromptTokensLT applies the LT predicate on the "prompt_tokens" field.
+func PromptTokensLT(v int) predicate.Message {
+	return predicate.Message(sql.FieldLT(FieldPromptTokens, v))
+}
+
+// PromptTokensLTE applies the LTE predicate on the "prompt_tokens" field.
+func PromptTokensLTE(v int) predicate.Message {
+	return predicate.Message(sql.FieldLTE(FieldPromptTokens, v))
+}
+
+// CompletionTokensEQ applies the EQ predicate on the "completion_tokens" field.
+func CompletionTokensEQ(v int) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldCompletionTokens, v))
+}
+
+// CompletionTokensNEQ applies the NEQ predicate on the "completion_tokens" field.
+func CompletionTokensNEQ(v int) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldCompletionTokens, v))
+}
+
+// CompletionTokensIn applies the In predicate on the "completion_tokens" field.
+func CompletionTokensIn(vs ...int) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldCompletionTokens, vs...))
+}
+
+// CompletionTokensNotIn applies the NotIn predicate on the "completion_tokens" field.
+func CompletionTokensNotIn(vs ...int) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldCompletionTokens, vs...))
+}
+
+// CompletionTokensGT applies the GT predicate on the "completion_tokens" field.
+func CompletionTokensGT(v int) predicate.Message {
+	return predicate.Message(sql.FieldGT(FieldCompletionTokens, v))
+}
+
+// CompletionTokensGTE applies the GTE predicate on the "completion_tokens" field.
+func CompletionTokensGTE(v int) predicate.Message {
+	return predicate.Message(sql.FieldGTE(FieldCompletionTokens, v))
+}
+
+// CompletionTokensLT applies the LT predicate on the "completion_tokens" field.
+func CompletionTokensLT(v int) predicate.Message {
+	return predicate.Message(sql.FieldLT(FieldCompletionTokens, v))
+}
+
+// CompletionTokensLTE applies the LTE predicate on the "completion_tokens" field.
+func CompletionTokensLTE(v int) predicate.Message {
+	return predicate.Message(sql.FieldLTE(FieldCompletionTokens, v))
+}
+
+// CostUsdEQ applies the EQ predicate on the "cost_usd" field.
+func CostUsdEQ(v float64) predicate.Message {
+	return predicate.Message(sql.FieldEQ(FieldCostUsd, v))
+}
+
+// CostUsdNEQ applies the NEQ predicate on the "cost_usd" field.
+func CostUsdNEQ(v float64) predicate.Message {
+	return predicate.Message(sql.FieldNEQ(FieldCostUsd, v))
+}
+
+// CostUsdIn applies the In predicate on the "cost_usd" field.
+func CostUsdIn(vs ...float64) predicate.Message {
+	return predicate.Message(sql.FieldIn(FieldCostUsd, vs...))
+}
+
+// CostUsdNotIn applies the NotIn predicate on the "cost_usd" field.
+func CostUsdNotIn(vs ...float64) predicate.Message {
+	return predicate.Message(sql.FieldNotIn(FieldCostUsd, vs...))
+}
+
+// CostUsdGT applies the GT predicate on the "cost_usd" field.
+func CostUsdGT(v float64) predicate.Message {
+	return predicate.Message(sql.FieldGT(FieldCostUsd, v))
+}
+
+// CostUsdGTE applies the GTE predicate on the "cost_usd" field.
+func CostUsdGTE(v float64) predicate.Message {
+	return predicate.Message(sql.FieldGTE(FieldCostUsd, v))
+}
+
+// CostUsdLT applies the LT predicate on the "cost_usd" field.
+func CostUsdLT(v float64) predicate.Message {
+	return predicate.Message(sql.FieldLT(FieldCostUsd, v))
+}
+
+// CostUsdLTE applies the LTE predicate on the "cost_usd" field.
+func CostUsdLTE(v float64) predicate.Message {
+	return predicate.Message(sql.FieldLTE(FieldCostUsd, v))
 }
 
 // HasIncident applies the HasEdge predicate on the "incident" edge.

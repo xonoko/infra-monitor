@@ -116,6 +116,7 @@ type Investigation struct {
 	Error            string          `json:"error"`
 	PromptTokens     int             `json:"prompt_tokens"`
 	CompletionTokens int             `json:"completion_tokens"`
+	CostUSD          float64         `json:"cost_usd"`
 	CreatedAt        time.Time       `json:"created_at"`
 	StartedAt        *time.Time      `json:"started_at,omitempty"`
 	FinishedAt       *time.Time      `json:"finished_at,omitempty"`
@@ -129,21 +130,25 @@ func toInvestigation(i *ent.Investigation) Investigation {
 	}
 	return Investigation{ID: i.ID, Status: string(i.Status), Trigger: string(i.Trigger), Agent: i.Agent, Model: i.Model,
 		Analysis: i.Analysis, Summary: i.Summary, RootCause: i.RootCause, Verdict: string(i.Verdict), Confidence: i.Confidence,
-		ToolCalls: tc, Error: i.Error, PromptTokens: i.PromptTokens, CompletionTokens: i.CompletionTokens,
+		ToolCalls: tc, Error: i.Error, PromptTokens: i.PromptTokens, CompletionTokens: i.CompletionTokens, CostUSD: i.CostUsd,
 		CreatedAt: i.CreatedAt, StartedAt: i.StartedAt, FinishedAt: i.FinishedAt, TraceID: i.TraceID}
 }
 
 type Message struct {
-	ID          int       `json:"id"`
-	IncidentID  int       `json:"incident_id"`
-	Role        string    `json:"role" enum:"user,agent,system"`
-	AuthorName  string    `json:"author_name"`
-	Channel     string    `json:"channel"`
-	ChannelName string    `json:"channel_name"`
-	Content     string    `json:"content"`
-	Status      string    `json:"status" enum:"done,pending,failed"`
-	ActionIDs   []int     `json:"action_ids"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID               int       `json:"id"`
+	IncidentID       int       `json:"incident_id"`
+	Role             string    `json:"role" enum:"user,agent,system"`
+	AuthorName       string    `json:"author_name"`
+	Channel          string    `json:"channel"`
+	ChannelName      string    `json:"channel_name"`
+	Content          string    `json:"content"`
+	Status           string    `json:"status" enum:"done,pending,failed"`
+	ActionIDs        []int     `json:"action_ids"`
+	Model            string    `json:"model,omitempty"`
+	PromptTokens     int       `json:"prompt_tokens,omitempty"`
+	CompletionTokens int       `json:"completion_tokens,omitempty"`
+	CostUSD          float64   `json:"cost_usd,omitempty"`
+	CreatedAt        time.Time `json:"created_at"`
 }
 
 func toMessage(m *ent.Message) Message {
@@ -152,7 +157,8 @@ func toMessage(m *ent.Message) Message {
 		ids = []int{}
 	}
 	return Message{ID: m.ID, IncidentID: m.IncidentID, Role: string(m.Role), AuthorName: m.AuthorName, Channel: m.Channel,
-		ChannelName: m.ChannelName, Content: m.Content, Status: string(m.Status), ActionIDs: ids, CreatedAt: m.CreatedAt}
+		ChannelName: m.ChannelName, Content: m.Content, Status: string(m.Status), ActionIDs: ids, CreatedAt: m.CreatedAt,
+		Model: m.Model, PromptTokens: m.PromptTokens, CompletionTokens: m.CompletionTokens, CostUSD: m.CostUsd}
 }
 
 type Action struct {
@@ -266,4 +272,27 @@ type APIToken struct {
 func toToken(t *ent.APIToken) APIToken {
 	return APIToken{ID: t.ID, Name: t.Name, Prefix: t.Prefix, Role: string(t.Role), UserID: t.UserID,
 		LastUsedAt: t.LastUsedAt, ExpiresAt: t.ExpiresAt, RevokedAt: t.RevokedAt, CreatedAt: t.CreatedAt}
+}
+
+// CostLine is the token usage and estimated cost of one category.
+type CostLine struct {
+	Calls            int     `json:"calls"`
+	PromptTokens     int     `json:"prompt_tokens"`
+	CompletionTokens int     `json:"completion_tokens"`
+	USD              float64 `json:"usd"`
+}
+
+// Cost is the AI cost of an incident (or of the last 24h on /status).
+type Cost struct {
+	Investigation CostLine `json:"investigation" doc:"Automatic, manual and deep investigations"`
+	Remediation   CostLine `json:"remediation" doc:"Investigations triggered by actions (verification after a remediation)"`
+	Chat          CostLine `json:"chat" doc:"Agent chat replies"`
+	Total         CostLine `json:"total"`
+}
+
+func toCost(b incident.CostBreakdown) Cost {
+	l := func(c incident.CostLine) CostLine {
+		return CostLine{Calls: c.Calls, PromptTokens: c.PromptTokens, CompletionTokens: c.CompletionTokens, USD: c.USD}
+	}
+	return Cost{Investigation: l(b.Investigation), Remediation: l(b.Remediation), Chat: l(b.Chat), Total: l(b.Total)}
 }

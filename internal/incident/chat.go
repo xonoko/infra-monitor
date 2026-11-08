@@ -119,7 +119,9 @@ func (s *Service) runChatReply(ctx context.Context, p chatPayload) error {
 			return err
 		}
 		m, err := tx.Message.Create().SetIncidentID(inc.ID).SetRole(message.RoleAgent).SetAuthorName(actor.Name).
-			SetChannel(domain.OriginSystem).SetContent(firstNonEmpty(res.Reply, "(empty reply)")).SetReplyToID(userMsg.ID).Save(ctx)
+			SetChannel(domain.OriginSystem).SetContent(firstNonEmpty(res.Reply, "(empty reply)")).SetReplyToID(userMsg.ID).
+			SetModel(res.Model).SetPromptTokens(res.Usage.PromptTokens).SetCompletionTokens(res.Usage.CompletionTokens).
+			SetCostUsd(s.costUSD(res.Model, res.Usage)).Save(ctx)
 		if err != nil {
 			return err
 		}

@@ -302,12 +302,16 @@ func init() {
 	investigationDescCompletionTokens := investigationFields[12].Descriptor()
 	// investigation.DefaultCompletionTokens holds the default value on creation for the completion_tokens field.
 	investigation.DefaultCompletionTokens = investigationDescCompletionTokens.Default.(int)
+	// investigationDescCostUsd is the schema descriptor for cost_usd field.
+	investigationDescCostUsd := investigationFields[13].Descriptor()
+	// investigation.DefaultCostUsd holds the default value on creation for the cost_usd field.
+	investigation.DefaultCostUsd = investigationDescCostUsd.Default.(float64)
 	// investigationDescError is the schema descriptor for error field.
-	investigationDescError := investigationFields[13].Descriptor()
+	investigationDescError := investigationFields[14].Descriptor()
 	// investigation.DefaultError holds the default value on creation for the error field.
 	investigation.DefaultError = investigationDescError.Default.(string)
 	// investigationDescTraceID is the schema descriptor for trace_id field.
-	investigationDescTraceID := investigationFields[17].Descriptor()
+	investigationDescTraceID := investigationFields[18].Descriptor()
 	// investigation.DefaultTraceID holds the default value on creation for the trace_id field.
 	investigation.DefaultTraceID = investigationDescTraceID.Default.(string)
 	jobMixin := schema.Job{}.Mixin()
@@ -383,6 +387,22 @@ func init() {
 	messageDescActionIds := messageFields[7].Descriptor()
 	// message.DefaultActionIds holds the default value on creation for the action_ids field.
 	message.DefaultActionIds = messageDescActionIds.Default.([]int)
+	// messageDescModel is the schema descriptor for model field.
+	messageDescModel := messageFields[10].Descriptor()
+	// message.DefaultModel holds the default value on creation for the model field.
+	message.DefaultModel = messageDescModel.Default.(string)
+	// messageDescPromptTokens is the schema descriptor for prompt_tokens field.
+	messageDescPromptTokens := messageFields[11].Descriptor()
+	// message.DefaultPromptTokens holds the default value on creation for the prompt_tokens field.
+	message.DefaultPromptTokens = messageDescPromptTokens.Default.(int)
+	// messageDescCompletionTokens is the schema descriptor for completion_tokens field.
+	messageDescCompletionTokens := messageFields[12].Descriptor()
+	// message.DefaultCompletionTokens holds the default value on creation for the completion_tokens field.
+	message.DefaultCompletionTokens = messageDescCompletionTokens.Default.(int)
+	// messageDescCostUsd is the schema descriptor for cost_usd field.
+	messageDescCostUsd := messageFields[13].Descriptor()
+	// message.DefaultCostUsd holds the default value on creation for the cost_usd field.
+	message.DefaultCostUsd = messageDescCostUsd.Default.(float64)
 	muteMixin := schema.Mute{}.Mixin()
 	muteMixinFields0 := muteMixin[0].Fields()
 	_ = muteMixinFields0

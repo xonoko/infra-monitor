@@ -245,6 +245,27 @@ func (_u *InvestigationUpdate) AddCompletionTokens(v int) *InvestigationUpdate {
 	return _u
 }
 
+// SetCostUsd sets the "cost_usd" field.
+func (_u *InvestigationUpdate) SetCostUsd(v float64) *InvestigationUpdate {
+	_u.mutation.ResetCostUsd()
+	_u.mutation.SetCostUsd(v)
+	return _u
+}
+
+// SetNillableCostUsd sets the "cost_usd" field if the given value is not nil.
+func (_u *InvestigationUpdate) SetNillableCostUsd(v *float64) *InvestigationUpdate {
+	if v != nil {
+		_u.SetCostUsd(*v)
+	}
+	return _u
+}
+
+// AddCostUsd adds value to the "cost_usd" field.
+func (_u *InvestigationUpdate) AddCostUsd(v float64) *InvestigationUpdate {
+	_u.mutation.AddCostUsd(v)
+	return _u
+}
+
 // SetError sets the "error" field.
 func (_u *InvestigationUpdate) SetError(v string) *InvestigationUpdate {
 	_u.mutation.SetError(v)
@@ -488,6 +509,12 @@ func (_u *InvestigationUpdate) sqlSave(ctx context.Context) (_node int, err erro
 	}
 	if value, ok := _u.mutation.AddedCompletionTokens(); ok {
 		_spec.AddField(investigation.FieldCompletionTokens, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.CostUsd(); ok {
+		_spec.SetField(investigation.FieldCostUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCostUsd(); ok {
+		_spec.AddField(investigation.FieldCostUsd, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.Error(); ok {
 		_spec.SetField(investigation.FieldError, field.TypeString, value)
@@ -780,6 +807,27 @@ func (_u *InvestigationUpdateOne) AddCompletionTokens(v int) *InvestigationUpdat
 	return _u
 }
 
+// SetCostUsd sets the "cost_usd" field.
+func (_u *InvestigationUpdateOne) SetCostUsd(v float64) *InvestigationUpdateOne {
+	_u.mutation.ResetCostUsd()
+	_u.mutation.SetCostUsd(v)
+	return _u
+}
+
+// SetNillableCostUsd sets the "cost_usd" field if the given value is not nil.
+func (_u *InvestigationUpdateOne) SetNillableCostUsd(v *float64) *InvestigationUpdateOne {
+	if v != nil {
+		_u.SetCostUsd(*v)
+	}
+	return _u
+}
+
+// AddCostUsd adds value to the "cost_usd" field.
+func (_u *InvestigationUpdateOne) AddCostUsd(v float64) *InvestigationUpdateOne {
+	_u.mutation.AddCostUsd(v)
+	return _u
+}
+
 // SetError sets the "error" field.
 func (_u *InvestigationUpdateOne) SetError(v string) *InvestigationUpdateOne {
 	_u.mutation.SetError(v)
@@ -1053,6 +1101,12 @@ func (_u *InvestigationUpdateOne) sqlSave(ctx context.Context) (_node *Investiga
 	}
 	if value, ok := _u.mutation.AddedCompletionTokens(); ok {
 		_spec.AddField(investigation.FieldCompletionTokens, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.CostUsd(); ok {
+		_spec.SetField(investigation.FieldCostUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedCostUsd(); ok {
+		_spec.AddField(investigation.FieldCostUsd, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.Error(); ok {
 		_spec.SetField(investigation.FieldError, field.TypeString, value)

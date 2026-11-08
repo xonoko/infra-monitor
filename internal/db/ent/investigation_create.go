@@ -218,6 +218,20 @@ func (_c *InvestigationCreate) SetNillableCompletionTokens(v *int) *Investigatio
 	return _c
 }
 
+// SetCostUsd sets the "cost_usd" field.
+func (_c *InvestigationCreate) SetCostUsd(v float64) *InvestigationCreate {
+	_c.mutation.SetCostUsd(v)
+	return _c
+}
+
+// SetNillableCostUsd sets the "cost_usd" field if the given value is not nil.
+func (_c *InvestigationCreate) SetNillableCostUsd(v *float64) *InvestigationCreate {
+	if v != nil {
+		_c.SetCostUsd(*v)
+	}
+	return _c
+}
+
 // SetError sets the "error" field.
 func (_c *InvestigationCreate) SetError(v string) *InvestigationCreate {
 	_c.mutation.SetError(v)
@@ -380,6 +394,10 @@ func (_c *InvestigationCreate) defaults() {
 		v := investigation.DefaultCompletionTokens
 		_c.mutation.SetCompletionTokens(v)
 	}
+	if _, ok := _c.mutation.CostUsd(); !ok {
+		v := investigation.DefaultCostUsd
+		_c.mutation.SetCostUsd(v)
+	}
 	if _, ok := _c.mutation.Error(); !ok {
 		v := investigation.DefaultError
 		_c.mutation.SetError(v)
@@ -448,6 +466,9 @@ func (_c *InvestigationCreate) check() error {
 	}
 	if _, ok := _c.mutation.CompletionTokens(); !ok {
 		return &ValidationError{Name: "completion_tokens", err: errors.New(`ent: missing required field "Investigation.completion_tokens"`)}
+	}
+	if _, ok := _c.mutation.CostUsd(); !ok {
+		return &ValidationError{Name: "cost_usd", err: errors.New(`ent: missing required field "Investigation.cost_usd"`)}
 	}
 	if _, ok := _c.mutation.Error(); !ok {
 		return &ValidationError{Name: "error", err: errors.New(`ent: missing required field "Investigation.error"`)}
@@ -540,6 +561,10 @@ func (_c *InvestigationCreate) createSpec() (*Investigation, *sqlgraph.CreateSpe
 	if value, ok := _c.mutation.CompletionTokens(); ok {
 		_spec.SetField(investigation.FieldCompletionTokens, field.TypeInt, value)
 		_node.CompletionTokens = value
+	}
+	if value, ok := _c.mutation.CostUsd(); ok {
+		_spec.SetField(investigation.FieldCostUsd, field.TypeFloat64, value)
+		_node.CostUsd = value
 	}
 	if value, ok := _c.mutation.Error(); ok {
 		_spec.SetField(investigation.FieldError, field.TypeString, value)
@@ -819,6 +844,24 @@ func (u *InvestigationUpsert) UpdateCompletionTokens() *InvestigationUpsert {
 // AddCompletionTokens adds v to the "completion_tokens" field.
 func (u *InvestigationUpsert) AddCompletionTokens(v int) *InvestigationUpsert {
 	u.Add(investigation.FieldCompletionTokens, v)
+	return u
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (u *InvestigationUpsert) SetCostUsd(v float64) *InvestigationUpsert {
+	u.Set(investigation.FieldCostUsd, v)
+	return u
+}
+
+// UpdateCostUsd sets the "cost_usd" field to the value that was provided on create.
+func (u *InvestigationUpsert) UpdateCostUsd() *InvestigationUpsert {
+	u.SetExcluded(investigation.FieldCostUsd)
+	return u
+}
+
+// AddCostUsd adds v to the "cost_usd" field.
+func (u *InvestigationUpsert) AddCostUsd(v float64) *InvestigationUpsert {
+	u.Add(investigation.FieldCostUsd, v)
 	return u
 }
 
@@ -1172,6 +1215,27 @@ func (u *InvestigationUpsertOne) AddCompletionTokens(v int) *InvestigationUpsert
 func (u *InvestigationUpsertOne) UpdateCompletionTokens() *InvestigationUpsertOne {
 	return u.Update(func(s *InvestigationUpsert) {
 		s.UpdateCompletionTokens()
+	})
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (u *InvestigationUpsertOne) SetCostUsd(v float64) *InvestigationUpsertOne {
+	return u.Update(func(s *InvestigationUpsert) {
+		s.SetCostUsd(v)
+	})
+}
+
+// AddCostUsd adds v to the "cost_usd" field.
+func (u *InvestigationUpsertOne) AddCostUsd(v float64) *InvestigationUpsertOne {
+	return u.Update(func(s *InvestigationUpsert) {
+		s.AddCostUsd(v)
+	})
+}
+
+// UpdateCostUsd sets the "cost_usd" field to the value that was provided on create.
+func (u *InvestigationUpsertOne) UpdateCostUsd() *InvestigationUpsertOne {
+	return u.Update(func(s *InvestigationUpsert) {
+		s.UpdateCostUsd()
 	})
 }
 
@@ -1705,6 +1769,27 @@ func (u *InvestigationUpsertBulk) AddCompletionTokens(v int) *InvestigationUpser
 func (u *InvestigationUpsertBulk) UpdateCompletionTokens() *InvestigationUpsertBulk {
 	return u.Update(func(s *InvestigationUpsert) {
 		s.UpdateCompletionTokens()
+	})
+}
+
+// SetCostUsd sets the "cost_usd" field.
+func (u *InvestigationUpsertBulk) SetCostUsd(v float64) *InvestigationUpsertBulk {
+	return u.Update(func(s *InvestigationUpsert) {
+		s.SetCostUsd(v)
+	})
+}
+
+// AddCostUsd adds v to the "cost_usd" field.
+func (u *InvestigationUpsertBulk) AddCostUsd(v float64) *InvestigationUpsertBulk {
+	return u.Update(func(s *InvestigationUpsert) {
+		s.AddCostUsd(v)
+	})
+}
+
+// UpdateCostUsd sets the "cost_usd" field to the value that was provided on create.
+func (u *InvestigationUpsertBulk) UpdateCostUsd() *InvestigationUpsertBulk {
+	return u.Update(func(s *InvestigationUpsert) {
+		s.UpdateCostUsd()
 	})
 }
 

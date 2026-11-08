@@ -49,6 +49,8 @@ type Investigation struct {
 	PromptTokens int `json:"prompt_tokens,omitempty"`
 	// CompletionTokens holds the value of the "completion_tokens" field.
 	CompletionTokens int `json:"completion_tokens,omitempty"`
+	// CostUsd holds the value of the "cost_usd" field.
+	CostUsd float64 `json:"cost_usd,omitempty"`
 	// Error holds the value of the "error" field.
 	Error string `json:"error,omitempty"`
 	// RequestedByID holds the value of the "requested_by_id" field.
@@ -92,7 +94,7 @@ func (*Investigation) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case investigation.FieldToolCalls:
 			values[i] = new([]byte)
-		case investigation.FieldConfidence:
+		case investigation.FieldConfidence, investigation.FieldCostUsd:
 			values[i] = new(sql.NullFloat64)
 		case investigation.FieldID, investigation.FieldIncidentID, investigation.FieldPromptTokens, investigation.FieldCompletionTokens, investigation.FieldRequestedByID:
 			values[i] = new(sql.NullInt64)
@@ -213,6 +215,12 @@ func (_m *Investigation) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CompletionTokens = int(value.Int64)
 			}
+		case investigation.FieldCostUsd:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field cost_usd", values[i])
+			} else if value.Valid {
+				_m.CostUsd = value.Float64
+			}
 		case investigation.FieldError:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field error", values[i])
@@ -331,6 +339,9 @@ func (_m *Investigation) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("completion_tokens=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CompletionTokens))
+	builder.WriteString(", ")
+	builder.WriteString("cost_usd=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CostUsd))
 	builder.WriteString(", ")
 	builder.WriteString("error=")
 	builder.WriteString(_m.Error)

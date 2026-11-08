@@ -110,6 +110,11 @@ func CompletionTokens(v int) predicate.Investigation {
 	return predicate.Investigation(sql.FieldEQ(FieldCompletionTokens, v))
 }
 
+// CostUsd applies equality check predicate on the "cost_usd" field. It's identical to CostUsdEQ.
+func CostUsd(v float64) predicate.Investigation {
+	return predicate.Investigation(sql.FieldEQ(FieldCostUsd, v))
+}
+
 // Error applies equality check predicate on the "error" field. It's identical to ErrorEQ.
 func Error(v string) predicate.Investigation {
 	return predicate.Investigation(sql.FieldEQ(FieldError, v))
@@ -748,6 +753,46 @@ func CompletionTokensLT(v int) predicate.Investigation {
 // CompletionTokensLTE applies the LTE predicate on the "completion_tokens" field.
 func CompletionTokensLTE(v int) predicate.Investigation {
 	return predicate.Investigation(sql.FieldLTE(FieldCompletionTokens, v))
+}
+
+// CostUsdEQ applies the EQ predicate on the "cost_usd" field.
+func CostUsdEQ(v float64) predicate.Investigation {
+	return predicate.Investigation(sql.FieldEQ(FieldCostUsd, v))
+}
+
+// CostUsdNEQ applies the NEQ predicate on the "cost_usd" field.
+func CostUsdNEQ(v float64) predicate.Investigation {
+	return predicate.Investigation(sql.FieldNEQ(FieldCostUsd, v))
+}
+
+// CostUsdIn applies the In predicate on the "cost_usd" field.
+func CostUsdIn(vs ...float64) predicate.Investigation {
+	return predicate.Investigation(sql.FieldIn(FieldCostUsd, vs...))
+}
+
+// CostUsdNotIn applies the NotIn predicate on the "cost_usd" field.
+func CostUsdNotIn(vs ...float64) predicate.Investigation {
+	return predicate.Investigation(sql.FieldNotIn(FieldCostUsd, vs...))
+}
+
+// CostUsdGT applies the GT predicate on the "cost_usd" field.
+func CostUsdGT(v float64) predicate.Investigation {
+	return predicate.Investigation(sql.FieldGT(FieldCostUsd, v))
+}
+
+// CostUsdGTE applies the GTE predicate on the "cost_usd" field.
+func CostUsdGTE(v float64) predicate.Investigation {
+	return predicate.Investigation(sql.FieldGTE(FieldCostUsd, v))
+}
+
+// CostUsdLT applies the LT predicate on the "cost_usd" field.
+func CostUsdLT(v float64) predicate.Investigation {
+	return predicate.Investigation(sql.FieldLT(FieldCostUsd, v))
+}
+
+// CostUsdLTE applies the LTE predicate on the "cost_usd" field.
+func CostUsdLTE(v float64) predicate.Investigation {
+	return predicate.Investigation(sql.FieldLTE(FieldCostUsd, v))
 }
 
 // ErrorEQ applies the EQ predicate on the "error" field.

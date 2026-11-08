@@ -45,6 +45,8 @@ const (
 	FieldPromptTokens = "prompt_tokens"
 	// FieldCompletionTokens holds the string denoting the completion_tokens field in the database.
 	FieldCompletionTokens = "completion_tokens"
+	// FieldCostUsd holds the string denoting the cost_usd field in the database.
+	FieldCostUsd = "cost_usd"
 	// FieldError holds the string denoting the error field in the database.
 	FieldError = "error"
 	// FieldRequestedByID holds the string denoting the requested_by_id field in the database.
@@ -86,6 +88,7 @@ var Columns = []string{
 	FieldToolCalls,
 	FieldPromptTokens,
 	FieldCompletionTokens,
+	FieldCostUsd,
 	FieldError,
 	FieldRequestedByID,
 	FieldStartedAt,
@@ -126,6 +129,8 @@ var (
 	DefaultPromptTokens int
 	// DefaultCompletionTokens holds the default value on creation for the "completion_tokens" field.
 	DefaultCompletionTokens int
+	// DefaultCostUsd holds the default value on creation for the "cost_usd" field.
+	DefaultCostUsd float64
 	// DefaultError holds the default value on creation for the "error" field.
 	DefaultError string
 	// DefaultTraceID holds the default value on creation for the "trace_id" field.
@@ -291,6 +296,11 @@ func ByPromptTokens(opts ...sql.OrderTermOption) OrderOption {
 // ByCompletionTokens orders the results by the completion_tokens field.
 func ByCompletionTokens(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCompletionTokens, opts...).ToFunc()
+}
+
+// ByCostUsd orders the results by the cost_usd field.
+func ByCostUsd(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCostUsd, opts...).ToFunc()
 }
 
 // ByError orders the results by the error field.

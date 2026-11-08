@@ -504,6 +504,7 @@ type AgentStatus struct {
 	BudgetPausedUntil  *time.Time `json:"budget_paused_until,omitempty"`
 	StormThreshold     int        `json:"storm_threshold"`
 	StormWindowSeconds int64      `json:"storm_window_seconds"`
+	CostLast24h        *Cost      `json:"cost_last_24h,omitempty"`
 	Enabled            bool       `json:"enabled"`
 	MaxConcurrent      int        `json:"max_concurrent"`
 	MaxPerHour         int        `json:"max_per_hour"`
@@ -583,6 +584,10 @@ func (s *Server) registerStatus() {
 			b.Agent.DeepModel, b.Agent.MaxPerDay = ag.DeepModel, ag.MaxPerDay
 			if ag.Storm.Enabled {
 				b.Agent.StormThreshold, b.Agent.StormWindowSeconds = ag.Storm.Threshold, int64(ag.Storm.Window.Seconds())
+			}
+			if c, err := s.deps.Incidents.Cost(ctx, 0, time.Now().Add(-24*time.Hour)); err == nil {
+				cc := toCost(c)
+				b.Agent.CostLast24h = &cc
 			}
 			if u, err := s.deps.Incidents.Usage(ctx); err == nil {
 				b.Agent.CallsLastHour, b.Agent.CallsToday, b.Agent.BudgetPausedUntil = u.CallsLastHour, u.CallsToday, u.PausedUntil
