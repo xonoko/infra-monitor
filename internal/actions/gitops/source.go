@@ -263,5 +263,5 @@ func (e *Executor) sameRepo(repoURL string) bool {
 	if host != "github.com" && !strings.Contains(e.cfg.APIURL, host) {
 		return false
 	}
-	return rest == strings.ToLower(e.cfg.Repo)
+	return strings.EqualFold(rest, e.cfg.Repo)
 }
