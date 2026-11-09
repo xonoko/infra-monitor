@@ -141,7 +141,10 @@ Legend: `[ ]` todo, `[x]` done.
 - [x] Verified in prod: Argo-managed flag, Telegram approvals (#16, #17), final review cancel (#16), target-changed re-proposal (#15)
 - [x] Unified chat + timeline incident view (verified by Lucas)
 - [ ] gitops.change in prod: waiting for Lucas to create the GitHub App (ESO GithubAccessToken generator prepared on the infra side)
-- [ ] CNPGDeadlocks rule fix (infra-argocd, requested)
+- [x] CNPGDeadlocks rule fixed (rate-based), incident #1 resolved by itself
+- [x] Recurrence: same alert within 24h reopens the incident and reuses the analysis (verified in prod, #17)
+- [x] AI caps count only calls that reached the model
+- [ ] LiteLLM admin UI behind Authentik only (infra session, in progress)
 
 ## Follow-ups (not blocking the MVP)
 - [ ] Switch the UI's hand-written API types to the generated OpenAPI schema (`make web-client`)
