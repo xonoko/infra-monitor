@@ -140,11 +140,16 @@ Legend: `[ ]` todo, `[x]` done.
 - [x] AI token cost per incident (investigation / remediation / chat / total) and 24h on /status, in the UI
 - [x] Verified in prod: Argo-managed flag, Telegram approvals (#16, #17), final review cancel (#16), target-changed re-proposal (#15)
 - [x] Unified chat + timeline incident view (verified by Lucas)
-- [ ] gitops.change in prod: waiting for Lucas to create the GitHub App (ESO GithubAccessToken generator prepared on the infra side)
+- [x] gitops.change enabled in prod: GitHub App token via ESO (infra-argocd only), path prefix gitops/, always needs approval
+- [x] Live k8s.* proposals on Argo-managed objects are sent back to the agent for a gitops.change
+- [x] The agent gets the Argo CD source of the incident namespace (Application, chart values, helm valueFiles with content), verified locally on real data
+- [ ] Prod: `rbac.argocdNamespace: argocd` in values-infra-monitor.yaml (needs Lucas's approval in the infra session)
+- [ ] End-to-end: demo OOM (64Mi) -> gitops.change to 512Mi approved from Telegram -> commit -> Argo sync -> resolved
+- [x] OOM and crash-loop alert rules fire within ~1-2 min on new pods (infra-argocd 851b1cf)
 - [x] CNPGDeadlocks rule fixed (rate-based), incident #1 resolved by itself
 - [x] Recurrence: same alert within 24h reopens the incident and reuses the analysis (verified in prod, #17)
 - [x] AI caps count only calls that reached the model
-- [ ] LiteLLM admin UI behind Authentik only (infra session, in progress)
+- [x] LiteLLM admin UI behind Authentik only (infra session)
 
 ## Follow-ups (not blocking the MVP)
 - [ ] Switch the UI's hand-written API types to the generated OpenAPI schema (`make web-client`)
