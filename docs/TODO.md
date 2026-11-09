@@ -157,7 +157,8 @@ Legend: `[ ]` todo, `[x]` done.
 - [x] Merged alerts that fire again go to the incident they were merged into
 - [x] Transient LLM errors (connection, 5xx) retried twice before failing open
 - [x] Reopen reuses the analysis only if it succeeded (else investigates again)
-- [ ] Verify AI grouping in prod with the demo
+- [x] Reopened incidents get the grouping check too; a reopen after a fix ran investigates again (the analysis is stale)
+- [x] Verified in prod: demo re-broken (64Mi), ReplicasMismatch (#8) merged into the crash-loop incident (#18) by Haiku ($0.0017), same root cause
 
 ## Follow-ups (not blocking the MVP)
 - [ ] Switch the UI's hand-written API types to the generated OpenAPI schema (`make web-client`)
