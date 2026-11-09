@@ -138,6 +138,9 @@ const (
 	EventNotificationSent       = "notification_sent"
 	EventAssigned               = "assigned"
 	EventAgentThinking          = "agent_thinking"
+	// EventIncidentMerged: on the older incident, an alert grouped into it (payload from_incident, alert, reason);
+	// on the merged one, where it went (payload into_incident, reason).
+	EventIncidentMerged = "incident_merged"
 )
 
 // Severity ranks: critical > warning > info > none/unknown.

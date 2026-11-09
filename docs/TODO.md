@@ -152,6 +152,13 @@ Legend: `[ ]` todo, `[x]` done.
 - [x] AI caps count only calls that reached the model
 - [x] LiteLLM admin UI behind Authentik only (infra session)
 
+## AI grouping and reliability (added 2026-11-09)
+- [x] AI grouping: a new alert in a namespace with open incidents is checked by the cheap model (no tools); same problem -> merged into the older incident (one card), else separate; fail open
+- [x] Merged alerts that fire again go to the incident they were merged into
+- [x] Transient LLM errors (connection, 5xx) retried twice before failing open
+- [x] Reopen reuses the analysis only if it succeeded (else investigates again)
+- [ ] Verify AI grouping in prod with the demo
+
 ## Follow-ups (not blocking the MVP)
 - [ ] Switch the UI's hand-written API types to the generated OpenAPI schema (`make web-client`)
 - [ ] Slack adapter (design in docs/channels/slack.md)

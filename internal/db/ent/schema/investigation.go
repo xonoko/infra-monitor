@@ -18,7 +18,7 @@ func (Investigation) Fields() []ent.Field {
 	return []ent.Field{
 		field.Int("incident_id"),
 		field.Enum("status").Values("pending", "running", "succeeded", "failed", "timed_out").Default("pending"),
-		field.Enum("trigger").Values("auto", "manual", "action").Default("auto"),
+		field.Enum("trigger").Values("auto", "manual", "action", "correlation").Default("auto"),
 		field.String("agent").Default(""),
 		field.String("model").Default(""),
 		field.Text("analysis").Default(""),

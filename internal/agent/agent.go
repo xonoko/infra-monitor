@@ -143,6 +143,35 @@ func IsTransient(err error) bool {
 	return false
 }
 
+// CorrelationCandidate is an open incident a new alert may belong to.
+type CorrelationCandidate struct {
+	IncidentID int
+	Title      string
+	OpenedAt   time.Time
+	Summary    string // the incident's analysis summary ("" if not investigated yet)
+	RootCause  string
+	Signals    []SignalSummary
+}
+
+// CorrelationRequest asks whether a new alert is the same problem as one of the candidates.
+type CorrelationRequest struct {
+	Alert      IncidentContext
+	Candidates []CorrelationCandidate
+}
+
+// CorrelationResult: SameAs is the candidate incident ID, 0 for a different problem.
+type CorrelationResult struct {
+	SameAs int
+	Reason string
+	Model  string
+	Usage  Usage
+}
+
+// Correlator is implemented by agents that can group related alerts (one cheap call, no tools).
+type Correlator interface {
+	Correlate(ctx context.Context, req CorrelationRequest) (*CorrelationResult, error)
+}
+
 // ActionCheck is the agent's verdict on whether an approved action is still needed right before it runs.
 type ActionCheck struct {
 	StillNeeded bool

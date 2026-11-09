@@ -417,6 +417,12 @@ func (d *Dispatcher) deliver(ctx context.Context, ch channel.Channel, inc *ent.I
 			return nil
 		}
 		return d.postProposal(ctx, ch, t, a, &evID)
+	case domain.EventIncidentMerged:
+		if from := intVal(p, "from_incident"); from > 0 {
+			return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry,
+				Body: fmt.Sprintf("🔗 Grouped here: %s (#%d), same problem: %s", str(p, "alert"), from, str(p, "reason"))}, &evID)
+		}
+		return nil
 	case domain.EventActionChecked:
 		if held, _ := p["held"].(bool); held {
 			if err := d.updateProposal(ctx, ch, t, intVal(p, "action_id"), nil); err != nil {

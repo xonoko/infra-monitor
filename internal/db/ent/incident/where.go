@@ -120,6 +120,11 @@ func StormID(v int) predicate.Incident {
 	return predicate.Incident(sql.FieldEQ(FieldStormID, v))
 }
 
+// MergedIntoID applies equality check predicate on the "merged_into_id" field. It's identical to MergedIntoIDEQ.
+func MergedIntoID(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldEQ(FieldMergedIntoID, v))
+}
+
 // AssigneeID applies equality check predicate on the "assignee_id" field. It's identical to AssigneeIDEQ.
 func AssigneeID(v int) predicate.Incident {
 	return predicate.Incident(sql.FieldEQ(FieldAssigneeID, v))
@@ -868,6 +873,56 @@ func StormIDIsNil() predicate.Incident {
 // StormIDNotNil applies the NotNil predicate on the "storm_id" field.
 func StormIDNotNil() predicate.Incident {
 	return predicate.Incident(sql.FieldNotNull(FieldStormID))
+}
+
+// MergedIntoIDEQ applies the EQ predicate on the "merged_into_id" field.
+func MergedIntoIDEQ(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldEQ(FieldMergedIntoID, v))
+}
+
+// MergedIntoIDNEQ applies the NEQ predicate on the "merged_into_id" field.
+func MergedIntoIDNEQ(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldNEQ(FieldMergedIntoID, v))
+}
+
+// MergedIntoIDIn applies the In predicate on the "merged_into_id" field.
+func MergedIntoIDIn(vs ...int) predicate.Incident {
+	return predicate.Incident(sql.FieldIn(FieldMergedIntoID, vs...))
+}
+
+// MergedIntoIDNotIn applies the NotIn predicate on the "merged_into_id" field.
+func MergedIntoIDNotIn(vs ...int) predicate.Incident {
+	return predicate.Incident(sql.FieldNotIn(FieldMergedIntoID, vs...))
+}
+
+// MergedIntoIDGT applies the GT predicate on the "merged_into_id" field.
+func MergedIntoIDGT(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldGT(FieldMergedIntoID, v))
+}
+
+// MergedIntoIDGTE applies the GTE predicate on the "merged_into_id" field.
+func MergedIntoIDGTE(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldGTE(FieldMergedIntoID, v))
+}
+
+// MergedIntoIDLT applies the LT predicate on the "merged_into_id" field.
+func MergedIntoIDLT(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldLT(FieldMergedIntoID, v))
+}
+
+// MergedIntoIDLTE applies the LTE predicate on the "merged_into_id" field.
+func MergedIntoIDLTE(v int) predicate.Incident {
+	return predicate.Incident(sql.FieldLTE(FieldMergedIntoID, v))
+}
+
+// MergedIntoIDIsNil applies the IsNil predicate on the "merged_into_id" field.
+func MergedIntoIDIsNil() predicate.Incident {
+	return predicate.Incident(sql.FieldIsNull(FieldMergedIntoID))
+}
+
+// MergedIntoIDNotNil applies the NotNil predicate on the "merged_into_id" field.
+func MergedIntoIDNotNil() predicate.Incident {
+	return predicate.Incident(sql.FieldNotNull(FieldMergedIntoID))
 }
 
 // AssigneeIDEQ applies the EQ predicate on the "assignee_id" field.

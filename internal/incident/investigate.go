@@ -70,7 +70,8 @@ func (s *Service) BuildContext(ctx context.Context, inc *ent.Incident) (agent.In
 			Annotations: sg.Annotations, StartsAt: sg.StartsAt, GeneratorURL: sg.GeneratorURL,
 		})
 	}
-	if last, err := s.ent.Investigation.Query().Where(investigation.IncidentID(inc.ID), investigation.StatusEQ(investigation.StatusSucceeded)).
+	if last, err := s.ent.Investigation.Query().Where(investigation.IncidentID(inc.ID), investigation.StatusEQ(investigation.StatusSucceeded),
+		investigation.TriggerNEQ(investigation.TriggerCorrelation)).
 		Order(ent.Desc(investigation.FieldID)).First(ctx); err == nil {
 		ic.PreviousAnalysis = last.Summary
 	}
@@ -131,6 +132,14 @@ func (s *Service) runInvestigation(ctx context.Context, p incidentPayload) error
 		}
 		if storm {
 			return s.joinStorm(ctx, inc.ID, recent)
+		}
+	}
+	// Same problem as an older open incident in the namespace? Merge instead of investigating again.
+	if auto {
+		if merged, err := s.tryMerge(ctx, inc); err != nil {
+			return err
+		} else if merged {
+			return nil
 		}
 	}
 	// Hard caps and budget pause apply to every trigger (manual included).

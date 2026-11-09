@@ -240,27 +240,27 @@ func init() {
 	// incident.DefaultInternal holds the default value on creation for the internal field.
 	incident.DefaultInternal = incidentDescInternal.Default.(bool)
 	// incidentDescOpenedAt is the schema descriptor for opened_at field.
-	incidentDescOpenedAt := incidentFields[15].Descriptor()
+	incidentDescOpenedAt := incidentFields[16].Descriptor()
 	// incident.DefaultOpenedAt holds the default value on creation for the opened_at field.
 	incident.DefaultOpenedAt = incidentDescOpenedAt.Default.(func() time.Time)
 	// incidentDescLastSignalAt is the schema descriptor for last_signal_at field.
-	incidentDescLastSignalAt := incidentFields[19].Descriptor()
+	incidentDescLastSignalAt := incidentFields[20].Descriptor()
 	// incident.DefaultLastSignalAt holds the default value on creation for the last_signal_at field.
 	incident.DefaultLastSignalAt = incidentDescLastSignalAt.Default.(func() time.Time)
 	// incidentDescReopenCount is the schema descriptor for reopen_count field.
-	incidentDescReopenCount := incidentFields[20].Descriptor()
+	incidentDescReopenCount := incidentFields[21].Descriptor()
 	// incident.DefaultReopenCount holds the default value on creation for the reopen_count field.
 	incident.DefaultReopenCount = incidentDescReopenCount.Default.(int)
 	// incidentDescNotifyChannels is the schema descriptor for notify_channels field.
-	incidentDescNotifyChannels := incidentFields[21].Descriptor()
+	incidentDescNotifyChannels := incidentFields[22].Descriptor()
 	// incident.DefaultNotifyChannels holds the default value on creation for the notify_channels field.
 	incident.DefaultNotifyChannels = incidentDescNotifyChannels.Default.([]string)
 	// incidentDescInvestigationNote is the schema descriptor for investigation_note field.
-	incidentDescInvestigationNote := incidentFields[25].Descriptor()
+	incidentDescInvestigationNote := incidentFields[26].Descriptor()
 	// incident.DefaultInvestigationNote holds the default value on creation for the investigation_note field.
 	incident.DefaultInvestigationNote = incidentDescInvestigationNote.Default.(string)
 	// incidentDescTraceID is the schema descriptor for trace_id field.
-	incidentDescTraceID := incidentFields[27].Descriptor()
+	incidentDescTraceID := incidentFields[28].Descriptor()
 	// incident.DefaultTraceID holds the default value on creation for the trace_id field.
 	incident.DefaultTraceID = incidentDescTraceID.Default.(string)
 	investigationMixin := schema.Investigation{}.Mixin()

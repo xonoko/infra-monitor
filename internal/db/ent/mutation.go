@@ -6905,6 +6905,8 @@ type IncidentMutation struct {
 	internal                 *bool
 	storm_id                 *int
 	addstorm_id              *int
+	merged_into_id           *int
+	addmerged_into_id        *int
 	opened_at                *time.Time
 	acknowledged_at          *time.Time
 	resolved_at              *time.Time
@@ -7687,6 +7689,76 @@ func (m *IncidentMutation) ResetStormID() {
 	m.storm_id = nil
 	m.addstorm_id = nil
 	delete(m.clearedFields, incident.FieldStormID)
+}
+
+// SetMergedIntoID sets the "merged_into_id" field.
+func (m *IncidentMutation) SetMergedIntoID(i int) {
+	m.merged_into_id = &i
+	m.addmerged_into_id = nil
+}
+
+// MergedIntoID returns the value of the "merged_into_id" field in the mutation.
+func (m *IncidentMutation) MergedIntoID() (r int, exists bool) {
+	v := m.merged_into_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMergedIntoID returns the old "merged_into_id" field's value of the Incident entity.
+// If the Incident object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IncidentMutation) OldMergedIntoID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMergedIntoID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMergedIntoID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMergedIntoID: %w", err)
+	}
+	return oldValue.MergedIntoID, nil
+}
+
+// AddMergedIntoID adds i to the "merged_into_id" field.
+func (m *IncidentMutation) AddMergedIntoID(i int) {
+	if m.addmerged_into_id != nil {
+		*m.addmerged_into_id += i
+	} else {
+		m.addmerged_into_id = &i
+	}
+}
+
+// AddedMergedIntoID returns the value that was added to the "merged_into_id" field in this mutation.
+func (m *IncidentMutation) AddedMergedIntoID() (r int, exists bool) {
+	v := m.addmerged_into_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearMergedIntoID clears the value of the "merged_into_id" field.
+func (m *IncidentMutation) ClearMergedIntoID() {
+	m.merged_into_id = nil
+	m.addmerged_into_id = nil
+	m.clearedFields[incident.FieldMergedIntoID] = struct{}{}
+}
+
+// MergedIntoIDCleared returns if the "merged_into_id" field was cleared in this mutation.
+func (m *IncidentMutation) MergedIntoIDCleared() bool {
+	_, ok := m.clearedFields[incident.FieldMergedIntoID]
+	return ok
+}
+
+// ResetMergedIntoID resets all changes to the "merged_into_id" field.
+func (m *IncidentMutation) ResetMergedIntoID() {
+	m.merged_into_id = nil
+	m.addmerged_into_id = nil
+	delete(m.clearedFields, incident.FieldMergedIntoID)
 }
 
 // SetAssigneeID sets the "assignee_id" field.
@@ -8720,7 +8792,7 @@ func (m *IncidentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *IncidentMutation) Fields() []string {
-	fields := make([]string, 0, 30)
+	fields := make([]string, 0, 31)
 	if m.created_at != nil {
 		fields = append(fields, incident.FieldCreatedAt)
 	}
@@ -8768,6 +8840,9 @@ func (m *IncidentMutation) Fields() []string {
 	}
 	if m.storm_id != nil {
 		fields = append(fields, incident.FieldStormID)
+	}
+	if m.merged_into_id != nil {
+		fields = append(fields, incident.FieldMergedIntoID)
 	}
 	if m.assignee != nil {
 		fields = append(fields, incident.FieldAssigneeID)
@@ -8851,6 +8926,8 @@ func (m *IncidentMutation) Field(name string) (ent.Value, bool) {
 		return m.Internal()
 	case incident.FieldStormID:
 		return m.StormID()
+	case incident.FieldMergedIntoID:
+		return m.MergedIntoID()
 	case incident.FieldAssigneeID:
 		return m.AssigneeID()
 	case incident.FieldOpenedAt:
@@ -8920,6 +8997,8 @@ func (m *IncidentMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldInternal(ctx)
 	case incident.FieldStormID:
 		return m.OldStormID(ctx)
+	case incident.FieldMergedIntoID:
+		return m.OldMergedIntoID(ctx)
 	case incident.FieldAssigneeID:
 		return m.OldAssigneeID(ctx)
 	case incident.FieldOpenedAt:
@@ -9069,6 +9148,13 @@ func (m *IncidentMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetStormID(v)
 		return nil
+	case incident.FieldMergedIntoID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMergedIntoID(v)
+		return nil
 	case incident.FieldAssigneeID:
 		v, ok := value.(int)
 		if !ok {
@@ -9181,6 +9267,9 @@ func (m *IncidentMutation) AddedFields() []string {
 	if m.addstorm_id != nil {
 		fields = append(fields, incident.FieldStormID)
 	}
+	if m.addmerged_into_id != nil {
+		fields = append(fields, incident.FieldMergedIntoID)
+	}
 	if m.addreopen_count != nil {
 		fields = append(fields, incident.FieldReopenCount)
 	}
@@ -9196,6 +9285,8 @@ func (m *IncidentMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedMuteID()
 	case incident.FieldStormID:
 		return m.AddedStormID()
+	case incident.FieldMergedIntoID:
+		return m.AddedMergedIntoID()
 	case incident.FieldReopenCount:
 		return m.AddedReopenCount()
 	}
@@ -9221,6 +9312,13 @@ func (m *IncidentMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddStormID(v)
 		return nil
+	case incident.FieldMergedIntoID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMergedIntoID(v)
+		return nil
 	case incident.FieldReopenCount:
 		v, ok := value.(int)
 		if !ok {
@@ -9241,6 +9339,9 @@ func (m *IncidentMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(incident.FieldStormID) {
 		fields = append(fields, incident.FieldStormID)
+	}
+	if m.FieldCleared(incident.FieldMergedIntoID) {
+		fields = append(fields, incident.FieldMergedIntoID)
 	}
 	if m.FieldCleared(incident.FieldAssigneeID) {
 		fields = append(fields, incident.FieldAssigneeID)
@@ -9282,6 +9383,9 @@ func (m *IncidentMutation) ClearField(name string) error {
 		return nil
 	case incident.FieldStormID:
 		m.ClearStormID()
+		return nil
+	case incident.FieldMergedIntoID:
+		m.ClearMergedIntoID()
 		return nil
 	case incident.FieldAssigneeID:
 		m.ClearAssigneeID()
@@ -9359,6 +9463,9 @@ func (m *IncidentMutation) ResetField(name string) error {
 		return nil
 	case incident.FieldStormID:
 		m.ResetStormID()
+		return nil
+	case incident.FieldMergedIntoID:
+		m.ResetMergedIntoID()
 		return nil
 	case incident.FieldAssigneeID:
 		m.ResetAssigneeID()

@@ -65,13 +65,18 @@ incident was routed to. Jobs run after commit, so the fan-out never sees uncommi
    (`correlation.group_by`), else reopen one resolved within `reopen_window`, else create one. Active mutes apply.
 4. **Debounce**: `investigate_incident` runs after `correlation.debounce`; `notify_failopen` runs after
    debounce + `agent.notify_timeout`.
-5. **Investigate**: limits are enforced globally through the database (max concurrent, max per hour,
+5. **AI grouping**: when the debounced investigation of a new incident starts, if other incidents are open in the same cluster and namespace,
+   the default model gets one cheap call without tools: is this alert the same problem as one of them (at most 5, older
+   only)? If yes, its signals move to the older incident ("Grouped here" on the timeline and in Telegram), and it is
+   closed as merged (`merged_into_id`), never investigated or notified on its own. Its later re-fires go to that
+   incident. Any error, cap or doubt keeps it separate. The call counts toward the caps and is costed as investigation.
+6. **Investigate**: limits are enforced globally through the database (max concurrent, max per hour,
    cooldown on reopen). The agent's analysis, verdict and proposals are stored; proposals are validated against the
    action registry (unknown types are dropped and logged on the timeline).
-6. **Route**: rules from `routing` (or the default) decide the channels from labels, verdict and severity. Muted
+7. **Route**: rules from `routing` (or the default) decide the channels from labels, verdict and severity. Muted
    incidents and incidents resolved before any notification stay in the UI. If the investigation fails or takes too
    long, `notify_failopen` routes anyway and cards show "AI investigation unavailable".
-7. **Resolve**: when every signal is resolved, `resolve_incident` runs after `resolve_grace` and resolves unless
+8. **Resolve**: when every signal is resolved, `resolve_incident` runs after `resolve_grace` and resolves unless
    something re-fired. Pending proposals expire.
 
 ### Cost controls

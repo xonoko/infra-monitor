@@ -174,9 +174,10 @@ const DefaultTrigger = TriggerAuto
 
 // Trigger values.
 const (
-	TriggerAuto   Trigger = "auto"
-	TriggerManual Trigger = "manual"
-	TriggerAction Trigger = "action"
+	TriggerAuto        Trigger = "auto"
+	TriggerManual      Trigger = "manual"
+	TriggerAction      Trigger = "action"
+	TriggerCorrelation Trigger = "correlation"
 )
 
 func (t Trigger) String() string {
@@ -186,7 +187,7 @@ func (t Trigger) String() string {
 // TriggerValidator is a validator for the "trigger" field enum values. It is called by the builders before save.
 func TriggerValidator(t Trigger) error {
 	switch t {
-	case TriggerAuto, TriggerManual, TriggerAction:
+	case TriggerAuto, TriggerManual, TriggerAction, TriggerCorrelation:
 		return nil
 	default:
 		return fmt.Errorf("investigation: invalid enum value for trigger field: %q", t)

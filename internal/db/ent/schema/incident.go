@@ -33,6 +33,8 @@ func (Incident) Fields() []ent.Field {
 		field.Bool("internal").Default(false),
 		// StormID links an incident to the "alert storm" incident that groups it.
 		field.Int("storm_id").Optional().Nillable(),
+		// MergedIntoID: the AI found this alert is the same problem as an older incident; its signals moved there.
+		field.Int("merged_into_id").Optional().Nillable(),
 		field.Int("assignee_id").Optional().Nillable(),
 		field.Time("opened_at").Default(time.Now),
 		field.Time("acknowledged_at").Optional().Nillable(),

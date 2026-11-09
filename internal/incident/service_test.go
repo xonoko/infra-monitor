@@ -52,6 +52,19 @@ type fakeAgent struct {
 	stillNeeded bool
 	checkErr    error
 	failTimes   int // with err: fail only this many Investigate calls (0 = always)
+	// correlate answers grouping checks (nil: the check fails, incidents stay separate).
+	correlate    func(agent.CorrelationRequest) (*agent.CorrelationResult, error)
+	correlations []agent.CorrelationRequest
+}
+
+func (f *fakeAgent) Correlate(_ context.Context, req agent.CorrelationRequest) (*agent.CorrelationResult, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.correlations = append(f.correlations, req)
+	if f.correlate == nil {
+		return nil, errors.New("correlation not configured")
+	}
+	return f.correlate(req)
 }
 
 func (f *fakeAgent) Name() string  { return "fake" }

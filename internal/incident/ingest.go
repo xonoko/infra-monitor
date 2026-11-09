@@ -300,6 +300,25 @@ func (s *Service) processFiring(ctx context.Context, tx *ent.Tx, sig *ent.Signal
 	if err != nil && !ent.IsNotFound(err) {
 		return err
 	}
+	if inc != nil && inc.MergedIntoID != nil {
+		// Its alerts were grouped into an older incident: they go back there.
+		if inc, err = s.mergedTarget(ctx, tx, inc); err != nil {
+			return err
+		}
+		if inc.Status == incident.StatusOpen || inc.Status == incident.StatusAcknowledged {
+			if inc, err = tx.Incident.UpdateOne(inc).SetLastSignalAt(now).SetSeverity(domain.MaxSeverity(inc.Severity, sig.Severity)).Save(ctx); err != nil {
+				return err
+			}
+			if err := tx.Signal.UpdateOne(sig).SetIncidentID(inc.ID).Exec(ctx); err != nil {
+				return err
+			}
+			_, err = s.addEvent(ctx, tx, inc, domain.EventSignalFiring, domain.System, signalPayload(sig))
+			return err
+		}
+		if inc.Status != incident.StatusResolved || inc.ResolvedAt == nil || !inc.ResolvedAt.After(reopenAfter) {
+			inc = nil // too old: a new incident
+		}
+	}
 	if inc != nil {
 		if inc, err = tx.Incident.UpdateOne(inc).
 			SetStatus(incident.StatusOpen).ClearResolvedAt().SetLastSignalAt(now).AddReopenCount(1).

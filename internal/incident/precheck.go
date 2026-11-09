@@ -128,7 +128,7 @@ func (s *Service) reviewBrief(ctx context.Context, inc *ent.Incident, a *ent.Act
 	var b strings.Builder
 	b.WriteString("== First analysis ==\n")
 	if inv, err := s.ent.Investigation.Query().Where(investigation.IncidentID(inc.ID), investigation.StatusEQ(investigation.StatusSucceeded),
-		investigation.TriggerNEQ(investigation.TriggerAction)).Order(ent.Desc(investigation.FieldID)).First(ctx); err == nil {
+		investigation.TriggerIn(investigation.TriggerAuto, investigation.TriggerManual)).Order(ent.Desc(investigation.FieldID)).First(ctx); err == nil {
 		fmt.Fprintf(&b, "Model: %s, verdict %s (confidence %.0f%%), at %s\nSummary: %s\nRoot cause: %s\nAnalysis:\n%s\n",
 			inv.Model, inv.Verdict, inv.Confidence*100, inv.CreatedAt.UTC().Format(time.RFC3339), inv.Summary, inv.RootCause, truncate(inv.Analysis, 4000))
 	} else {

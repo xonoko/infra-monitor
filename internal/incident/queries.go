@@ -226,7 +226,8 @@ func (s *Service) Investigations(ctx context.Context, id int) ([]*ent.Investigat
 }
 
 func (s *Service) LatestInvestigation(ctx context.Context, id int) (*ent.Investigation, error) {
-	inv, err := s.ent.Investigation.Query().Where(investigation.IncidentID(id)).Order(ent.Desc(investigation.FieldID)).First(ctx)
+	inv, err := s.ent.Investigation.Query().Where(investigation.IncidentID(id), investigation.TriggerNEQ(investigation.TriggerCorrelation)).
+		Order(ent.Desc(investigation.FieldID)).First(ctx)
 	if ent.IsNotFound(err) {
 		return nil, nil
 	}

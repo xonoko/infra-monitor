@@ -51,6 +51,8 @@ type Incident struct {
 	Internal bool `json:"internal,omitempty"`
 	// StormID holds the value of the "storm_id" field.
 	StormID *int `json:"storm_id,omitempty"`
+	// MergedIntoID holds the value of the "merged_into_id" field.
+	MergedIntoID *int `json:"merged_into_id,omitempty"`
 	// AssigneeID holds the value of the "assignee_id" field.
 	AssigneeID *int `json:"assignee_id,omitempty"`
 	// OpenedAt holds the value of the "opened_at" field.
@@ -180,7 +182,7 @@ func (*Incident) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case incident.FieldMuted, incident.FieldInternal:
 			values[i] = new(sql.NullBool)
-		case incident.FieldID, incident.FieldMuteID, incident.FieldStormID, incident.FieldAssigneeID, incident.FieldReopenCount:
+		case incident.FieldID, incident.FieldMuteID, incident.FieldStormID, incident.FieldMergedIntoID, incident.FieldAssigneeID, incident.FieldReopenCount:
 			values[i] = new(sql.NullInt64)
 		case incident.FieldTitle, incident.FieldStatus, incident.FieldSeverity, incident.FieldGroupingKey, incident.FieldSource, incident.FieldCluster, incident.FieldNamespace, incident.FieldVerdict, incident.FieldSummary, incident.FieldInvestigationState, incident.FieldInvestigationNote, incident.FieldTraceID:
 			values[i] = new(sql.NullString)
@@ -306,6 +308,13 @@ func (_m *Incident) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.StormID = new(int)
 				*_m.StormID = int(value.Int64)
+			}
+		case incident.FieldMergedIntoID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field merged_into_id", values[i])
+			} else if value.Valid {
+				_m.MergedIntoID = new(int)
+				*_m.MergedIntoID = int(value.Int64)
 			}
 		case incident.FieldAssigneeID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -521,6 +530,11 @@ func (_m *Incident) String() string {
 	builder.WriteString(", ")
 	if v := _m.StormID; v != nil {
 		builder.WriteString("storm_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.MergedIntoID; v != nil {
+		builder.WriteString("merged_into_id=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
 	}
 	builder.WriteString(", ")

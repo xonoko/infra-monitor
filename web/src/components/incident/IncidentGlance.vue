@@ -63,7 +63,11 @@ const signalHint = (s: Signal) => s.labels.pod || s.labels.instance || s.labels.
       <Icon name="incidents" :size="14" />
       <span>Part of alert storm <button class="link mono" @click="openIncident(incident.storm_id!)">#{{ incident.storm_id }}</button>. Investigated once at the storm level.</span>
     </div>
-    <div v-if="incident.investigation_note" class="callout">
+    <div v-if="incident.merged_into_id" class="callout callout--storm">
+      <Icon name="incidents" :size="14" />
+      <span>Same problem as <button class="link mono" @click="openIncident(incident.merged_into_id!)">#{{ incident.merged_into_id }}</button>: its alerts were grouped there.</span>
+    </div>
+    <div v-else-if="incident.investigation_note" class="callout">
       <Icon name="info" :size="14" />
       <span><b>AI:</b> {{ incident.investigation_note }}</span>
     </div>

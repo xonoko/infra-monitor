@@ -258,6 +258,33 @@ func (_u *IncidentUpdate) ClearStormID() *IncidentUpdate {
 	return _u
 }
 
+// SetMergedIntoID sets the "merged_into_id" field.
+func (_u *IncidentUpdate) SetMergedIntoID(v int) *IncidentUpdate {
+	_u.mutation.ResetMergedIntoID()
+	_u.mutation.SetMergedIntoID(v)
+	return _u
+}
+
+// SetNillableMergedIntoID sets the "merged_into_id" field if the given value is not nil.
+func (_u *IncidentUpdate) SetNillableMergedIntoID(v *int) *IncidentUpdate {
+	if v != nil {
+		_u.SetMergedIntoID(*v)
+	}
+	return _u
+}
+
+// AddMergedIntoID adds value to the "merged_into_id" field.
+func (_u *IncidentUpdate) AddMergedIntoID(v int) *IncidentUpdate {
+	_u.mutation.AddMergedIntoID(v)
+	return _u
+}
+
+// ClearMergedIntoID clears the value of the "merged_into_id" field.
+func (_u *IncidentUpdate) ClearMergedIntoID() *IncidentUpdate {
+	_u.mutation.ClearMergedIntoID()
+	return _u
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (_u *IncidentUpdate) SetAssigneeID(v int) *IncidentUpdate {
 	_u.mutation.SetAssigneeID(v)
@@ -861,6 +888,15 @@ func (_u *IncidentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.StormIDCleared() {
 		_spec.ClearField(incident.FieldStormID, field.TypeInt)
+	}
+	if value, ok := _u.mutation.MergedIntoID(); ok {
+		_spec.SetField(incident.FieldMergedIntoID, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedMergedIntoID(); ok {
+		_spec.AddField(incident.FieldMergedIntoID, field.TypeInt, value)
+	}
+	if _u.mutation.MergedIntoIDCleared() {
+		_spec.ClearField(incident.FieldMergedIntoID, field.TypeInt)
 	}
 	if value, ok := _u.mutation.OpenedAt(); ok {
 		_spec.SetField(incident.FieldOpenedAt, field.TypeTime, value)
@@ -1470,6 +1506,33 @@ func (_u *IncidentUpdateOne) AddStormID(v int) *IncidentUpdateOne {
 // ClearStormID clears the value of the "storm_id" field.
 func (_u *IncidentUpdateOne) ClearStormID() *IncidentUpdateOne {
 	_u.mutation.ClearStormID()
+	return _u
+}
+
+// SetMergedIntoID sets the "merged_into_id" field.
+func (_u *IncidentUpdateOne) SetMergedIntoID(v int) *IncidentUpdateOne {
+	_u.mutation.ResetMergedIntoID()
+	_u.mutation.SetMergedIntoID(v)
+	return _u
+}
+
+// SetNillableMergedIntoID sets the "merged_into_id" field if the given value is not nil.
+func (_u *IncidentUpdateOne) SetNillableMergedIntoID(v *int) *IncidentUpdateOne {
+	if v != nil {
+		_u.SetMergedIntoID(*v)
+	}
+	return _u
+}
+
+// AddMergedIntoID adds value to the "merged_into_id" field.
+func (_u *IncidentUpdateOne) AddMergedIntoID(v int) *IncidentUpdateOne {
+	_u.mutation.AddMergedIntoID(v)
+	return _u
+}
+
+// ClearMergedIntoID clears the value of the "merged_into_id" field.
+func (_u *IncidentUpdateOne) ClearMergedIntoID() *IncidentUpdateOne {
+	_u.mutation.ClearMergedIntoID()
 	return _u
 }
 
@@ -2106,6 +2169,15 @@ func (_u *IncidentUpdateOne) sqlSave(ctx context.Context) (_node *Incident, err 
 	}
 	if _u.mutation.StormIDCleared() {
 		_spec.ClearField(incident.FieldStormID, field.TypeInt)
+	}
+	if value, ok := _u.mutation.MergedIntoID(); ok {
+		_spec.SetField(incident.FieldMergedIntoID, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedMergedIntoID(); ok {
+		_spec.AddField(incident.FieldMergedIntoID, field.TypeInt, value)
+	}
+	if _u.mutation.MergedIntoIDCleared() {
+		_spec.ClearField(incident.FieldMergedIntoID, field.TypeInt)
 	}
 	if value, ok := _u.mutation.OpenedAt(); ok {
 		_spec.SetField(incident.FieldOpenedAt, field.TypeTime, value)

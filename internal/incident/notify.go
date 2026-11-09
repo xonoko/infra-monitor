@@ -102,6 +102,9 @@ func (s *Service) decideNotification(ctx context.Context, tx *ent.Tx, inc *ent.I
 	if inc.StormID != nil {
 		return inc, nil // grouped: the storm incident is notified instead
 	}
+	if inc.MergedIntoID != nil {
+		return inc, nil // same problem as an older incident: that one is notified
+	}
 	if inc.Muted {
 		return inc, nil
 	}

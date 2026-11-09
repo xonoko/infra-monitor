@@ -41,6 +41,7 @@ type Incident struct {
 	InvestigationState string            `json:"investigation_state" enum:"none,pending,running,done,failed,skipped"`
 	InvestigationNote  string            `json:"investigation_note" doc:"Why the investigation was skipped or failed (budget, cap, storm, severity...)"`
 	StormID            *int              `json:"storm_id,omitempty" doc:"Alert storm incident grouping this one"`
+	MergedIntoID       *int              `json:"merged_into_id,omitempty" doc:"Older incident this one was merged into (same problem, decided by the agent)"`
 	IsStorm            bool              `json:"is_storm"`
 	NotifyChannels     []string          `json:"notify_channels"`
 	Assignee           *UserRef          `json:"assignee,omitempty"`
@@ -59,7 +60,7 @@ func toIncident(svc *incident.Service, inc *ent.Incident, c incident.Counts) Inc
 		Internal: inc.Internal, Labels: inc.Labels, OpenedAt: inc.OpenedAt, AcknowledgedAt: inc.AcknowledgedAt,
 		ResolvedAt: inc.ResolvedAt, LastSignalAt: inc.LastSignalAt, DurationSeconds: int64(end.Sub(inc.OpenedAt).Seconds()),
 		SignalCount: c.Signals, FiringCount: c.Firing, PendingActions: c.PendingActions, ReopenCount: inc.ReopenCount,
-		InvestigationState: string(inc.InvestigationState), InvestigationNote: inc.InvestigationNote, StormID: inc.StormID, IsStorm: incident.IsStorm(inc),
+		InvestigationState: string(inc.InvestigationState), InvestigationNote: inc.InvestigationNote, StormID: inc.StormID, MergedIntoID: inc.MergedIntoID, IsStorm: incident.IsStorm(inc),
 		NotifyChannels: inc.NotifyChannels, TraceID: inc.TraceID,
 		URL: svc.IncidentURL(inc.ID),
 	}

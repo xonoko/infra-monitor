@@ -230,6 +230,20 @@ func (_c *IncidentCreate) SetNillableStormID(v *int) *IncidentCreate {
 	return _c
 }
 
+// SetMergedIntoID sets the "merged_into_id" field.
+func (_c *IncidentCreate) SetMergedIntoID(v int) *IncidentCreate {
+	_c.mutation.SetMergedIntoID(v)
+	return _c
+}
+
+// SetNillableMergedIntoID sets the "merged_into_id" field if the given value is not nil.
+func (_c *IncidentCreate) SetNillableMergedIntoID(v *int) *IncidentCreate {
+	if v != nil {
+		_c.SetMergedIntoID(*v)
+	}
+	return _c
+}
+
 // SetAssigneeID sets the "assignee_id" field.
 func (_c *IncidentCreate) SetAssigneeID(v int) *IncidentCreate {
 	_c.mutation.SetAssigneeID(v)
@@ -789,6 +803,10 @@ func (_c *IncidentCreate) createSpec() (*Incident, *sqlgraph.CreateSpec) {
 		_spec.SetField(incident.FieldStormID, field.TypeInt, value)
 		_node.StormID = &value
 	}
+	if value, ok := _c.mutation.MergedIntoID(); ok {
+		_spec.SetField(incident.FieldMergedIntoID, field.TypeInt, value)
+		_node.MergedIntoID = &value
+	}
 	if value, ok := _c.mutation.OpenedAt(); ok {
 		_spec.SetField(incident.FieldOpenedAt, field.TypeTime, value)
 		_node.OpenedAt = value
@@ -1207,6 +1225,30 @@ func (u *IncidentUpsert) AddStormID(v int) *IncidentUpsert {
 // ClearStormID clears the value of the "storm_id" field.
 func (u *IncidentUpsert) ClearStormID() *IncidentUpsert {
 	u.SetNull(incident.FieldStormID)
+	return u
+}
+
+// SetMergedIntoID sets the "merged_into_id" field.
+func (u *IncidentUpsert) SetMergedIntoID(v int) *IncidentUpsert {
+	u.Set(incident.FieldMergedIntoID, v)
+	return u
+}
+
+// UpdateMergedIntoID sets the "merged_into_id" field to the value that was provided on create.
+func (u *IncidentUpsert) UpdateMergedIntoID() *IncidentUpsert {
+	u.SetExcluded(incident.FieldMergedIntoID)
+	return u
+}
+
+// AddMergedIntoID adds v to the "merged_into_id" field.
+func (u *IncidentUpsert) AddMergedIntoID(v int) *IncidentUpsert {
+	u.Add(incident.FieldMergedIntoID, v)
+	return u
+}
+
+// ClearMergedIntoID clears the value of the "merged_into_id" field.
+func (u *IncidentUpsert) ClearMergedIntoID() *IncidentUpsert {
+	u.SetNull(incident.FieldMergedIntoID)
 	return u
 }
 
@@ -1706,6 +1748,34 @@ func (u *IncidentUpsertOne) UpdateStormID() *IncidentUpsertOne {
 func (u *IncidentUpsertOne) ClearStormID() *IncidentUpsertOne {
 	return u.Update(func(s *IncidentUpsert) {
 		s.ClearStormID()
+	})
+}
+
+// SetMergedIntoID sets the "merged_into_id" field.
+func (u *IncidentUpsertOne) SetMergedIntoID(v int) *IncidentUpsertOne {
+	return u.Update(func(s *IncidentUpsert) {
+		s.SetMergedIntoID(v)
+	})
+}
+
+// AddMergedIntoID adds v to the "merged_into_id" field.
+func (u *IncidentUpsertOne) AddMergedIntoID(v int) *IncidentUpsertOne {
+	return u.Update(func(s *IncidentUpsert) {
+		s.AddMergedIntoID(v)
+	})
+}
+
+// UpdateMergedIntoID sets the "merged_into_id" field to the value that was provided on create.
+func (u *IncidentUpsertOne) UpdateMergedIntoID() *IncidentUpsertOne {
+	return u.Update(func(s *IncidentUpsert) {
+		s.UpdateMergedIntoID()
+	})
+}
+
+// ClearMergedIntoID clears the value of the "merged_into_id" field.
+func (u *IncidentUpsertOne) ClearMergedIntoID() *IncidentUpsertOne {
+	return u.Update(func(s *IncidentUpsert) {
+		s.ClearMergedIntoID()
 	})
 }
 
@@ -2407,6 +2477,34 @@ func (u *IncidentUpsertBulk) UpdateStormID() *IncidentUpsertBulk {
 func (u *IncidentUpsertBulk) ClearStormID() *IncidentUpsertBulk {
 	return u.Update(func(s *IncidentUpsert) {
 		s.ClearStormID()
+	})
+}
+
+// SetMergedIntoID sets the "merged_into_id" field.
+func (u *IncidentUpsertBulk) SetMergedIntoID(v int) *IncidentUpsertBulk {
+	return u.Update(func(s *IncidentUpsert) {
+		s.SetMergedIntoID(v)
+	})
+}
+
+// AddMergedIntoID adds v to the "merged_into_id" field.
+func (u *IncidentUpsertBulk) AddMergedIntoID(v int) *IncidentUpsertBulk {
+	return u.Update(func(s *IncidentUpsert) {
+		s.AddMergedIntoID(v)
+	})
+}
+
+// UpdateMergedIntoID sets the "merged_into_id" field to the value that was provided on create.
+func (u *IncidentUpsertBulk) UpdateMergedIntoID() *IncidentUpsertBulk {
+	return u.Update(func(s *IncidentUpsert) {
+		s.UpdateMergedIntoID()
+	})
+}
+
+// ClearMergedIntoID clears the value of the "merged_into_id" field.
+func (u *IncidentUpsertBulk) ClearMergedIntoID() *IncidentUpsertBulk {
+	return u.Update(func(s *IncidentUpsert) {
+		s.ClearMergedIntoID()
 	})
 }
 

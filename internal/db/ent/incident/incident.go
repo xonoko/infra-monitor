@@ -47,6 +47,8 @@ const (
 	FieldInternal = "internal"
 	// FieldStormID holds the string denoting the storm_id field in the database.
 	FieldStormID = "storm_id"
+	// FieldMergedIntoID holds the string denoting the merged_into_id field in the database.
+	FieldMergedIntoID = "merged_into_id"
 	// FieldAssigneeID holds the string denoting the assignee_id field in the database.
 	FieldAssigneeID = "assignee_id"
 	// FieldOpenedAt holds the string denoting the opened_at field in the database.
@@ -161,6 +163,7 @@ var Columns = []string{
 	FieldMuteID,
 	FieldInternal,
 	FieldStormID,
+	FieldMergedIntoID,
 	FieldAssigneeID,
 	FieldOpenedAt,
 	FieldAcknowledgedAt,
@@ -390,6 +393,11 @@ func ByInternal(opts ...sql.OrderTermOption) OrderOption {
 // ByStormID orders the results by the storm_id field.
 func ByStormID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStormID, opts...).ToFunc()
+}
+
+// ByMergedIntoID orders the results by the merged_into_id field.
+func ByMergedIntoID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMergedIntoID, opts...).ToFunc()
 }
 
 // ByAssigneeID orders the results by the assignee_id field.

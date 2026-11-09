@@ -52,6 +52,10 @@ export function describeEvent(e: TimelineEvent): Described {
       return { icon: 'send', tone: 'neutral', text: `Notification sent${p.channel ? ` to ${s(p.channel)}` : ''}`, group: g(s(p.channel)) }
     case 'assigned':
       return { icon: 'user', tone: 'user', text: `Assigned to ${s(p.assignee) || s(p.name) || '—'}`, group: `${e.id}` }
+    case 'incident_merged':
+      return p.from_incident
+        ? { icon: 'incidents', tone: 'agent', text: `Grouped here: ${s(p.alert) || `#${s(p.from_incident)}`} (#${s(p.from_incident)}), same problem`, body: s(p.reason), group: `${e.id}` }
+        : { icon: 'incidents', tone: 'agent', text: `Same problem as #${s(p.into_incident)}: merged there`, body: s(p.reason), group: `${e.id}` }
     case 'storm_member':
       return { icon: 'incidents', tone: 'warn', text: `Grouped #${s(p.incident_id)}${p.title ? ` ${s(p.title)}` : ''}`, group: g('') }
     case 'action_approved':

@@ -276,6 +276,7 @@ var (
 		{Name: "mute_id", Type: field.TypeInt, Nullable: true},
 		{Name: "internal", Type: field.TypeBool, Default: false},
 		{Name: "storm_id", Type: field.TypeInt, Nullable: true},
+		{Name: "merged_into_id", Type: field.TypeInt, Nullable: true},
 		{Name: "opened_at", Type: field.TypeTime},
 		{Name: "acknowledged_at", Type: field.TypeTime, Nullable: true},
 		{Name: "resolved_at", Type: field.TypeTime, Nullable: true},
@@ -299,7 +300,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "incidents_users_assigned_incidents",
-				Columns:    []*schema.Column{IncidentsColumns[30]},
+				Columns:    []*schema.Column{IncidentsColumns[31]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -313,12 +314,12 @@ var (
 			{
 				Name:    "incident_status_last_signal_at",
 				Unique:  false,
-				Columns: []*schema.Column{IncidentsColumns[4], IncidentsColumns[21]},
+				Columns: []*schema.Column{IncidentsColumns[4], IncidentsColumns[22]},
 			},
 			{
 				Name:    "incident_opened_at",
 				Unique:  false,
-				Columns: []*schema.Column{IncidentsColumns[17]},
+				Columns: []*schema.Column{IncidentsColumns[18]},
 			},
 		},
 	}
@@ -328,7 +329,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "running", "succeeded", "failed", "timed_out"}, Default: "pending"},
-		{Name: "trigger", Type: field.TypeEnum, Enums: []string{"auto", "manual", "action"}, Default: "auto"},
+		{Name: "trigger", Type: field.TypeEnum, Enums: []string{"auto", "manual", "action", "correlation"}, Default: "auto"},
 		{Name: "agent", Type: field.TypeString, Default: ""},
 		{Name: "model", Type: field.TypeString, Default: ""},
 		{Name: "analysis", Type: field.TypeString, Size: 2147483647, Default: ""},

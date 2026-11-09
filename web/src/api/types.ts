@@ -35,6 +35,7 @@ export interface Incident {
   investigation_state: InvestigationState
   investigation_note?: string
   storm_id?: ID | null
+  merged_into_id?: ID | null
   is_storm?: boolean
   notify_channels: string[]
   assignee?: { id: ID; name: string } | null
