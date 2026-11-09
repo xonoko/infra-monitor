@@ -43,6 +43,8 @@ type IncidentContext struct {
 	OpenedAt         time.Time         `json:"opened_at"`
 	PreviousAnalysis string            `json:"previous_analysis,omitempty"`
 	ActionTypes      []ActionType      `json:"-"`
+	// GitOps describes the Argo CD source of the namespace (repo files and their content), if any.
+	GitOps string `json:"gitops,omitempty"`
 	// Description adds free-form context (e.g. the list of incidents grouped by an alert storm).
 	Description string `json:"description,omitempty"`
 	// Model overrides the configured model for this call (e.g. a deeper model on explicit request).

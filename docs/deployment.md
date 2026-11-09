@@ -282,7 +282,15 @@ is re-checked; if it changed, the action is refused and re-proposed.
 | --- | --- |
 | `github-token` | `actions.gitops.token_file: /etc/infra-monitor/secrets/github-token` |
 
+For Argo CD-managed namespaces, infra-monitor reads the Applications deploying there and gives the agent the
+repo files they render from (chart `values.yaml`, helm `valueFiles`, with their current content), so it can propose
+the exact `gitops.change`. Live `k8s.*` proposals on Argo-managed objects are sent back to the agent for a GitOps
+change. This needs `rbac.argocdNamespace` (read access to `applications.argoproj.io`) and
+`actions.gitops.argocd_namespace` (default `argocd`).
+
 ```yaml
+rbac:
+  argocdNamespace: argocd
 approvedActions:
   enabled: true
   clusterRead: true

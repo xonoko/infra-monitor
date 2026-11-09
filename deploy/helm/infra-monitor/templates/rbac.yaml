@@ -62,4 +62,34 @@ subjects:
     namespace: {{ $.Release.Namespace }}
 {{- end }}
 {{- end }}
+{{- with .Values.rbac.argocdNamespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "infra-monitor.fullname" $ }}-argocd-read
+  namespace: {{ . }}
+  labels:
+    {{- include "infra-monitor.labels" $ | nindent 4 }}
+rules:
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "infra-monitor.fullname" $ }}-argocd-read
+  namespace: {{ . }}
+  labels:
+    {{- include "infra-monitor.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "infra-monitor.fullname" $ }}-argocd-read
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "infra-monitor.serviceAccountName" $ }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}
 {{- end }}

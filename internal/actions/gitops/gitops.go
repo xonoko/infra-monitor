@@ -116,17 +116,18 @@ func parseParams(m map[string]any) (params, error) {
 // aiWords: commits never mention AI (Lucas's rule).
 var aiWords = regexp.MustCompile(`(?i)(\b(ai|a\.i\.|llm|llms|agent|agents|claude|anthropic|openai|gpt|chatgpt)\b|co-?authored)`)
 
-func (e *Executor) validate(p params) error {
-	if p.Path == "" {
+// allowedPath checks that p is a clean relative path under the allowed prefixes.
+func (e *Executor) allowedPath(p string) error {
+	if p == "" {
 		return errors.New("path is required")
 	}
-	clean := path.Clean(p.Path)
-	if strings.HasPrefix(p.Path, "/") || clean != p.Path || clean == "." || strings.HasPrefix(clean, "../") || clean == ".." || strings.Contains(p.Path, "\\") {
-		return fmt.Errorf("path %q must be a clean relative path inside the repository", p.Path)
+	clean := path.Clean(p)
+	if strings.HasPrefix(p, "/") || clean != p || clean == "." || strings.HasPrefix(clean, "../") || clean == ".." || strings.Contains(p, "\\") {
+		return fmt.Errorf("path %q must be a clean relative path inside the repository", p)
 	}
 	for _, seg := range strings.Split(clean, "/") {
 		if seg == ".." || seg == ".git" {
-			return fmt.Errorf("path %q is not allowed", p.Path)
+			return fmt.Errorf("path %q is not allowed", p)
 		}
 	}
 	if len(e.cfg.PathPrefixes) > 0 {
@@ -139,8 +140,15 @@ func (e *Executor) validate(p params) error {
 			}
 		}
 		if !ok {
-			return fmt.Errorf("path %q is outside the allowed prefixes %v", p.Path, e.cfg.PathPrefixes)
+			return fmt.Errorf("path %q is outside the allowed prefixes %v", p, e.cfg.PathPrefixes)
 		}
+	}
+	return nil
+}
+
+func (e *Executor) validate(p params) error {
+	if err := e.allowedPath(p.Path); err != nil {
+		return err
 	}
 	msg := p.Message
 	if strings.ContainsAny(msg, "\r\n") {

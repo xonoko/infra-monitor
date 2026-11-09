@@ -96,6 +96,7 @@ func (s *Service) BuildContext(ctx context.Context, inc *ent.Incident) (agent.In
 	for _, t := range s.registry.Types() {
 		ic.ActionTypes = append(ic.ActionTypes, agent.ActionType{Type: t.Type, Description: t.Description, Risk: t.Risk, ParamsSchema: t.Schema})
 	}
+	ic.GitOps = s.gitopsContext(ctx, inc)
 	return ic, nil
 }
 
@@ -364,4 +365,23 @@ func (s *Service) proposeFromAgentOpts(ctx context.Context, tx *ent.Tx, inc *ent
 		}
 	}
 	return ids, nil
+}
+
+// gitopsContext tells the agent which GitOps repo files configure the incident's namespace, when
+// gitops.change is available. Best effort: an error only means the agent works without it.
+func (s *Service) gitopsContext(ctx context.Context, inc *ent.Incident) string {
+	if s.gitopsSources == nil || inc.Namespace == "" {
+		return ""
+	}
+	if _, ok := s.registry.Get("gitops.change"); !ok {
+		return ""
+	}
+	cctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	text, err := s.gitopsSources.Context(cctx, inc.Cluster, inc.Namespace)
+	if err != nil {
+		s.log.WarnContext(ctx, "gitops source lookup failed", "incident_id", inc.ID, "namespace", inc.Namespace, "error", err)
+		return ""
+	}
+	return text
 }

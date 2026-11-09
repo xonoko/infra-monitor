@@ -143,6 +143,9 @@ func incidentContext(ic agent.IncidentContext) string {
 	if ic.PreviousAnalysis != "" {
 		fmt.Fprintf(&b, "\nPrevious analysis:\n%s\n", truncate(ic.PreviousAnalysis, 4000))
 	}
+	if ic.GitOps != "" {
+		fmt.Fprintf(&b, "\nGitOps source (gathered by infra-monitor, current content of the repo files):\n%s\n", truncate(ic.GitOps, 26000))
+	}
 	return b.String()
 }
 

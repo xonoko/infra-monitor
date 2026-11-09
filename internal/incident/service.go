@@ -53,7 +53,14 @@ type Deps struct {
 	Silencers map[string]Silencer
 	// NamespaceAnnotations overrides the auto-approve policy per namespace (optional).
 	NamespaceAnnotations NamespaceAnnotations
-	Now                  func() time.Time
+	// GitOpsSources describes which GitOps repo files configure a namespace (optional).
+	GitOpsSources GitOpsSources
+	Now           func() time.Time
+}
+
+// GitOpsSources is implemented by gitops.Sources.
+type GitOpsSources interface {
+	Context(ctx context.Context, cluster, ns string) (string, error)
 }
 
 type Service struct {
@@ -65,6 +72,7 @@ type Service struct {
 	agent         agent.Agent
 	silencers     map[string]Silencer
 	nsAnnotations NamespaceAnnotations
+	gitopsSources GitOpsSources
 	now           func() time.Time
 
 	heartbeatMatchers []domain.Matcher
@@ -97,7 +105,7 @@ func New(d Deps) (*Service, error) {
 	s := &Service{
 		cfg: d.Config, db: d.DB, ent: d.DB.Ent, log: d.Log, registry: d.Registry, agent: d.Agent,
 		silencers: d.Silencers, now: d.Now,
-		nsAnnotations: d.NamespaceAnnotations,
+		nsAnnotations: d.NamespaceAnnotations, gitopsSources: d.GitOpsSources,
 	}
 	if s.registry == nil {
 		s.registry = actions.NewRegistry(nil, nil)

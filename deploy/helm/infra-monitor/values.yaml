@@ -26,6 +26,9 @@ rbac:
   namespaces: []
   # -- Override the generated rules.
   rules: []
+  # -- Namespace of the Argo CD Applications (e.g. argocd). When set, infra-monitor may read them there
+  # (get/list) to tell the agent which GitOps files configure an incident's namespace (actions.gitops).
+  argocdNamespace: ""
 
 podAnnotations: {}
 podLabels: {}

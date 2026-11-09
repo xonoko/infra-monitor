@@ -229,6 +229,10 @@ type GitOpsConfig struct {
 	APIURL       string   `mapstructure:"api_url"` // default https://api.github.com
 	AuthorName   string   `mapstructure:"author_name"`
 	AuthorEmail  string   `mapstructure:"author_email"`
+	// ArgoCDNamespace is where the Argo CD Applications live; infra-monitor reads them (in ArgoCDCluster,
+	// "" = in-cluster) to tell the agent which files in the repo configure an incident's namespace.
+	ArgoCDNamespace string `mapstructure:"argocd_namespace"`
+	ArgoCDCluster   string `mapstructure:"argocd_cluster"`
 }
 
 // StormConfig: when more than Threshold incidents open within Window, they are grouped into one
@@ -407,6 +411,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("actions.gitops.api_url", "https://api.github.com")
 	v.SetDefault("actions.gitops.author_name", "infra-monitor")
 	v.SetDefault("actions.gitops.author_email", "infra-monitor.noreply.github.com")
+	v.SetDefault("actions.gitops.argocd_namespace", "argocd")
+	v.SetDefault("actions.gitops.argocd_cluster", "")
 	v.SetDefault("actions.namespace_deny", []string{"kube-system"})
 	v.SetDefault("actions.namespace_allow", []string{})
 	v.SetDefault("actions.in_cluster", true)

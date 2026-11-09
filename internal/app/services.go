@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"k8s.io/client-go/dynamic"
+
 	"github.com/xonoko/infra-monitor/internal/actions"
 	"github.com/xonoko/infra-monitor/internal/actions/amsilence"
 	"github.com/xonoko/infra-monitor/internal/actions/generic"
@@ -65,6 +67,7 @@ func (a *App) buildServices(ctx context.Context) error {
 			reg.Enable(e.Type())
 		}
 	}
+	var gitopsSources incident.GitOpsSources
 	if cfg.Actions.GitOps.Enabled {
 		g, err := gitops.New(cfg.Actions.GitOps)
 		if err != nil {
@@ -74,6 +77,7 @@ func (a *App) buildServices(ctx context.Context) error {
 			return err
 		}
 		reg.Enable(g.Type())
+		gitopsSources = gitops.NewSources(g, func(cluster string) (dynamic.Interface, error) { return k8sClients.Dynamic(cluster, "") })
 	}
 	if err := reg.Register(amsilence.New(func(name string) (*alertmanager.Client, bool) {
 		c, ok := a.svc.amClients[name]
@@ -97,7 +101,7 @@ func (a *App) buildServices(ctx context.Context) error {
 	}
 
 	a.svc.incidents, err = incident.New(incident.Deps{Config: cfg, DB: a.DB, Log: a.Log, Registry: reg, Agent: ag, Silencers: silencers,
-		NamespaceAnnotations: k8s.NewNamespaceAnnotations(k8sClients)})
+		NamespaceAnnotations: k8s.NewNamespaceAnnotations(k8sClients), GitOpsSources: gitopsSources})
 	if err != nil {
 		return err
 	}
