@@ -128,6 +128,21 @@ Legend: `[ ]` todo, `[x]` done.
 - [x] Haiku by default, Sonnet only on explicit "dig deeper" (UI menu, `/reinvestigate deep`)
 - [x] Metrics: skipped by reason, tokens, cost estimate; usage on /status
 
+## Precise approval of any change (added 2026-11-08)
+- [x] Generic actions: k8s.patch / k8s.apply / k8s.delete / kubectl.exec, enabled in prod (restricted approved SA, Kyverno guard)
+- [x] Prepared proposals: exact target, full payload, server dry-run, effect, rollback, risk, core-infra and Argo flags
+- [x] Approval bound to payload hash; target re-checked at approval and execution (desired-state fingerprint); re-proposed if changed
+- [x] Never auto-approved; identity guard (no service accounts, secrets, RBAC); redaction of secrets everywhere
+- [x] Every proposal posted to Telegram with Approve/Reject (+ attachment when long); compact, highlighted payload
+- [x] Final review by Sonnet before every action (auto included): reviews the first analysis + proposal + fresh dry-run, no re-investigation; fail closed (approve again to retry)
+- [x] Agent proposals failing the dry-run are never shown; the agent gets one correction attempt
+- [x] Models: Haiku first analysis; Sonnet for dig deeper, chat and the final review
+- [x] AI token cost per incident (investigation / remediation / chat / total) and 24h on /status, in the UI
+- [x] Verified in prod: Argo-managed flag, Telegram approvals (#16, #17), final review cancel (#16), target-changed re-proposal (#15)
+- [x] Unified chat + timeline incident view (verified by Lucas)
+- [ ] gitops.change in prod: waiting for Lucas to create the GitHub App (ESO GithubAccessToken generator prepared on the infra side)
+- [ ] CNPGDeadlocks rule fix (infra-argocd, requested)
+
 ## Follow-ups (not blocking the MVP)
 - [ ] Switch the UI's hand-written API types to the generated OpenAPI schema (`make web-client`)
 - [ ] Slack adapter (design in docs/channels/slack.md)
