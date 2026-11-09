@@ -205,3 +205,36 @@ func TestInvalidAgentProposalIsCorrected(t *testing.T) {
 	require.True(t, incident.PreparedOf(acts[0]).DryRunOK)
 	require.Contains(t, e.agent.lastReq.Message, "server dry-run failed", "the agent got the exact error")
 }
+
+// argoPatch is a fake k8s.patch on an Argo-managed object.
+type argoPatch struct{ patchExec }
+
+func (*argoPatch) Type() string { return "k8s.patch" }
+func (e *argoPatch) Prepare(ctx context.Context, p map[string]any, t actions.Target) (*actions.Prepared, error) {
+	pr, _ := e.patchExec.Prepare(ctx, p, t)
+	pr.ArgoManaged = "manager-demo-incident"
+	return pr, nil
+}
+
+type fakeGitops struct{ patchExec }
+
+func (*fakeGitops) Type() string { return "gitops.change" }
+func (*fakeGitops) Schema() json.RawMessage {
+	return json.RawMessage(`{"type":"object","properties":{"name":{"type":"string"},"patch":{"type":"object"}}}`)
+}
+
+func TestArgoManagedLivePatchRedirectedToGitOps(t *testing.T) {
+	e := newEnv(t, true)
+	require.NoError(t, e.svc.Registry().Register(&argoPatch{patchExec{rv: "1"}}))
+	require.NoError(t, e.svc.Registry().Register(&fakeGitops{patchExec{rv: "1"}}))
+	e.agent.result.ProposedActions = []agent.ProposedAction{{Type: "k8s.patch", Params: map[string]any{"name": "demo-api", "patch": map[string]any{}}}}
+	e.agent.chat = &agent.ChatResult{ProposedActions: []agent.ProposedAction{{Type: "gitops.change", Params: map[string]any{"name": "values-demo-incident.yaml", "patch": map[string]any{}}}}}
+	ctx := context.Background()
+	e.ingest(alert("OOM", "demo", "firing", "o"))
+	e.drain()
+	acts, err := e.svc.Actions(ctx, e.onlyIncident().ID)
+	require.NoError(t, err)
+	require.Len(t, acts, 1, "the live patch never reached a human")
+	require.Equal(t, "gitops.change", acts[0].Type)
+	require.Contains(t, e.agent.lastReq.Message, "managed by Argo CD")
+}

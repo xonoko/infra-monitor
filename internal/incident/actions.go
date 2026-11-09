@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -86,6 +87,12 @@ func (s *Service) createAction(ctx context.Context, tx *ent.Tx, inc *ent.Inciden
 	}
 	if prep != nil && !prep.DryRunOK && in.DropIfDryRunFails {
 		return nil, fmt.Errorf("%w: server dry-run failed: %s", ErrInvalid, truncate(redact.Text(prep.DryRun), 1500))
+	}
+	// With GitOps available, a live change to an Argo-managed object would be reverted: send it back to the agent.
+	if prep != nil && prep.ArgoManaged != "" && in.DropIfDryRunFails && strings.HasPrefix(in.Type, "k8s.") {
+		if _, ok := s.registry.Get("gitops.change"); ok {
+			return nil, fmt.Errorf("%w: %s is managed by Argo CD app %q (selfHeal reverts live changes): propose gitops.change on the file in the GitOps repo that sets this value instead (find it from the Argo CD Application source: repo path and helm valueFiles)", ErrInvalid, prep.Target, prep.ArgoManaged)
+		}
 	}
 	payloadHash := ""
 	summary := exec.Summary(in.Params, t)
