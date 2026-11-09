@@ -25,11 +25,11 @@ const maxMergeCandidates = 5
 // and never investigated or notified on its own. Fail open: any doubt or error keeps it separate.
 func (s *Service) tryMerge(ctx context.Context, inc *ent.Incident) (bool, error) {
 	corr, ok := s.agent.(agent.Correlator)
-	if !ok || inc.Namespace == "" || inc.Internal || inc.ReopenCount > 0 || inc.MergedIntoID != nil || IsStorm(inc) {
+	if !ok || inc.Namespace == "" || inc.Internal || inc.MergedIntoID != nil || inc.StormID != nil || IsStorm(inc) {
 		return false, nil
 	}
 	cands, err := s.ent.Incident.Query().Where(
-		incident.Cluster(inc.Cluster), incident.Namespace(inc.Namespace), incident.IDLT(inc.ID),
+		incident.Cluster(inc.Cluster), incident.Namespace(inc.Namespace), incident.IDNEQ(inc.ID),
 		incident.StatusIn(incident.StatusOpen, incident.StatusAcknowledged),
 		incident.Internal(false), incident.StormIDIsNil(), incident.MergedIntoIDIsNil(),
 	).Order(ent.Desc(incident.FieldID)).Limit(maxMergeCandidates + 5).All(ctx)
@@ -113,18 +113,41 @@ func (s *Service) tryMerge(ctx context.Context, inc *ent.Incident) (bool, error)
 	return merged, err
 }
 
+// groupCheck runs for a reopened incident that reuses its analysis: merge it into another open incident of the
+// same problem, else notify as usual.
+func (s *Service) groupCheck(ctx context.Context, id int) error {
+	inc, err := s.ent.Incident.Get(ctx, id)
+	if err != nil {
+		return notFoundPermanent(err)
+	}
+	if inc.Status == incident.StatusOpen || inc.Status == incident.StatusAcknowledged {
+		if merged, err := s.tryMerge(ctx, inc); err != nil {
+			return err
+		} else if merged {
+			return nil
+		}
+	}
+	return s.failOpen(ctx, id)
+}
+
 // merge moves the signals of incident src into the older incident dst and closes src as merged.
 func (s *Service) merge(ctx context.Context, srcID, dstID int, reason string) (bool, error) {
 	var merged bool
 	err := s.tx(ctx, func(tx *ent.Tx) error {
-		dst, err := s.lockIncident(ctx, tx, dstID) // older first: consistent lock order
-		if err != nil {
-			return err
+		// Lock in ID order (two incidents checked at once can't deadlock); whichever merges first wins.
+		var src, dst *ent.Incident
+		for _, id := range []int{min(srcID, dstID), max(srcID, dstID)} {
+			i, err := s.lockIncident(ctx, tx, id)
+			if err != nil {
+				return err
+			}
+			if id == srcID {
+				src = i
+			} else {
+				dst = i
+			}
 		}
-		src, err := s.lockIncident(ctx, tx, srcID)
-		if err != nil {
-			return err
-		}
+		var err error
 		active := func(i *ent.Incident) bool {
 			return i.Status == incident.StatusOpen || i.Status == incident.StatusAcknowledged
 		}

@@ -12,6 +12,7 @@ const (
 	JobProcessSignal   = "process_signal"
 	JobInvestigate     = "investigate_incident"
 	JobFailOpen        = "notify_failopen"
+	JobGroupCheck      = "group_check"
 	JobResolveIncident = "resolve_incident"
 	JobChatReply       = "agent_chat_reply"
 	JobExecuteAction   = "execute_action"
@@ -69,6 +70,14 @@ func (s *Service) RegisterJobs(q *queue.Queue) {
 		}
 		return s.runInvestigation(ctx, p)
 	}, queue.HandlerOpts{Concurrency: max(1, s.cfg.Agent.MaxConcurrent), Timeout: agentTimeout})
+
+	q.Register(JobGroupCheck, func(ctx context.Context, j *queue.Job) error {
+		var p incidentPayload
+		if err := j.Decode(&p); err != nil {
+			return queue.Permanent(err)
+		}
+		return s.groupCheck(ctx, p.IncidentID)
+	}, queue.HandlerOpts{Concurrency: 2, Timeout: 2 * time.Minute})
 
 	q.Register(JobFailOpen, func(ctx context.Context, j *queue.Job) error {
 		var p incidentPayload

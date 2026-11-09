@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/xonoko/infra-monitor/internal/agent"
+	"github.com/xonoko/infra-monitor/internal/config"
 	"github.com/xonoko/infra-monitor/internal/db/ent"
 	entincident "github.com/xonoko/infra-monitor/internal/db/ent/incident"
 	"github.com/xonoko/infra-monitor/internal/db/ent/signal"
@@ -137,4 +138,63 @@ func TestMergedAlertFiresAgainIntoTarget(t *testing.T) {
 	require.Equal(t, entincident.StatusOpen, incs[0].Status)
 	require.Equal(t, 1, incs[0].ReopenCount)
 	require.Equal(t, 1, e.agent.calls, "reopened with its analysis reused")
+}
+
+func TestReopenedIncidentsAreGrouped(t *testing.T) {
+	e := newEnv(t, true, func(c *config.Config) { c.Correlation.ReopenWindow = 24 * time.Hour })
+	e.agent.result.ProposedActions = nil
+	// Day 1: two separate incidents (grouping unavailable), both investigated, both resolved.
+	e.ingest(alert("OOM", "demo", "firing", "oom"))
+	e.drain()
+	e.ingest(alert("Mismatch", "demo", "firing", "mm"))
+	e.drain()
+	e.ingest(alert("OOM", "demo", "resolved", "oom"), alert("Mismatch", "demo", "resolved", "mm"))
+	e.drain()
+	e.clock.Add(2 * time.Minute)
+	e.drain()
+	incs := e.incidents()
+	require.Len(t, incs, 2)
+	require.Equal(t, 2, e.agent.calls)
+
+	// It comes back: OOM reopens first, then Mismatch reopens and is grouped into it (reused analyses, no new call).
+	e.agent.correlate = func(req agent.CorrelationRequest) (*agent.CorrelationResult, error) {
+		return &agent.CorrelationResult{SameAs: incs[0].ID, Reason: "same OOM"}, nil
+	}
+	e.ingest(alert("OOM", "demo", "firing", "oom"))
+	e.drain()
+	e.ingest(alert("Mismatch", "demo", "firing", "mm"))
+	e.drain()
+	incs = e.incidents()
+	require.Equal(t, entincident.StatusOpen, incs[0].Status)
+	require.NotNil(t, incs[1].MergedIntoID)
+	require.Equal(t, incs[0].ID, *incs[1].MergedIntoID)
+	require.Equal(t, 2, e.agent.calls, "analyses reused")
+}
+
+func TestReopenAfterAFixInvestigatesAgain(t *testing.T) {
+	e := newEnv(t, true, func(c *config.Config) { c.Correlation.ReopenWindow = 24 * time.Hour })
+	e.ingest(alert("OOM", "demo", "firing", "oom"))
+	e.drain()
+	inc := e.onlyIncident()
+	acts, err := e.svc.Actions(context.Background(), inc.ID)
+	require.NoError(t, err)
+	var echo int
+	for _, a := range acts {
+		if a.Type == "test.echo" {
+			echo = a.ID
+		}
+	}
+	require.NotZero(t, echo)
+	e.clock.Add(time.Minute)
+	_, err = e.svc.Approve(context.Background(), operator(), echo)
+	require.NoError(t, err)
+	e.drain()
+	e.ingest(alert("OOM", "demo", "resolved", "oom"))
+	e.drain()
+	e.clock.Add(2 * time.Minute)
+	e.drain()
+
+	e.ingest(alert("OOM", "demo", "firing", "oom"))
+	e.drain()
+	require.Equal(t, 2, e.agent.calls, "the fix ran and it came back: investigated again")
 }

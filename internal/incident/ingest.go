@@ -14,6 +14,7 @@ import (
 
 	"github.com/xonoko/infra-monitor/internal/config"
 	"github.com/xonoko/infra-monitor/internal/db/ent"
+	"github.com/xonoko/infra-monitor/internal/db/ent/action"
 	"github.com/xonoko/infra-monitor/internal/db/ent/heartbeat"
 	"github.com/xonoko/infra-monitor/internal/db/ent/incident"
 	"github.com/xonoko/infra-monitor/internal/db/ent/signal"
@@ -382,9 +383,17 @@ func (s *Service) afterOpen(ctx context.Context, tx *ent.Tx, inc *ent.Incident, 
 	}
 	if !created && inc.LastInvestigatedAt != nil && inc.InvestigationState == incident.InvestigationStateDone {
 		// Recurrence (reopened within correlation.reopen_window): reuse the existing analysis, no new AI call.
-		// Only a usable one: if the latest investigation failed or was skipped, investigate again.
-		// A human can still ask for a new one (Reinvestigate / dig deeper).
-		return enqueue(ctx, tx, JobFailOpen, incidentPayload{IncidentID: inc.ID}, queue.Opts{Delay: debounce, UniqueKey: fmt.Sprintf("failopen:%d", inc.ID)})
+		// Only a usable one: not if the latest investigation failed or was skipped, and not if a fix ran since
+		// (the problem came back despite it: the analysis is stale). A human can still ask for a new one.
+		fixed, err := tx.Action.Query().Where(action.IncidentID(inc.ID), action.StatusEQ(action.StatusSucceeded),
+			action.TypeNEQ(ReinvestigateType), action.FinishedAtGT(*inc.LastInvestigatedAt)).Exist(ctx)
+		if err != nil {
+			return err
+		}
+		if !fixed {
+			// Same problem as another open incident in the namespace? The group check merges it, or notifies.
+			return enqueue(ctx, tx, JobGroupCheck, incidentPayload{IncidentID: inc.ID}, queue.Opts{Delay: debounce, UniqueKey: fmt.Sprintf("groupcheck:%d", inc.ID)})
+		}
 	}
 	if err := tx.Incident.UpdateOne(inc).SetInvestigationState(incident.InvestigationStatePending).Exec(ctx); err != nil {
 		return err

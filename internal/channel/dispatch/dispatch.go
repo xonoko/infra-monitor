@@ -422,6 +422,10 @@ func (d *Dispatcher) deliver(ctx context.Context, ch channel.Channel, inc *ent.I
 			return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry,
 				Body: fmt.Sprintf("🔗 Grouped here: %s (#%d), same problem: %s", str(p, "alert"), from, str(p, "reason"))}, &evID)
 		}
+		if into := intVal(p, "into_incident"); into > 0 {
+			return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry,
+				Body: fmt.Sprintf("🔗 Same problem as #%d: follow it there. %s", into, str(p, "reason")), URL: d.svc.IncidentURL(into)}, &evID)
+		}
 		return nil
 	case domain.EventActionChecked:
 		if held, _ := p["held"].(bool); held {

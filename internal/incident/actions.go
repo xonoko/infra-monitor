@@ -445,7 +445,10 @@ func (s *Service) finishAction(ctx context.Context, id int, out string, rerr err
 // ReinvestigateExecutor is the "agent.reinvestigate" action.
 type ReinvestigateExecutor struct{ Svc *Service }
 
-func (ReinvestigateExecutor) Type() string { return "agent.reinvestigate" }
+// ReinvestigateType is the type of ReinvestigateExecutor.
+const ReinvestigateType = "agent.reinvestigate"
+
+func (ReinvestigateExecutor) Type() string { return ReinvestigateType }
 func (ReinvestigateExecutor) Description() string {
 	return "Run a new AI investigation on this incident (e.g. after a remediation, to check the result)."
 }
