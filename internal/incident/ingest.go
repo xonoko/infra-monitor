@@ -330,7 +330,12 @@ func (s *Service) processFiring(ctx context.Context, tx *ent.Tx, sig *ent.Signal
 			return err
 		}
 		s.m.incidents.Add(ctx, 1, metric.WithAttributes(attribute.String("severity", inc.Severity), attribute.String("kind", "reopened")))
-		if _, err := s.addEvent(ctx, tx, inc, domain.EventIncidentReopened, domain.System, map[string]any{"from": "resolved", "to": "open", "reopen_count": inc.ReopenCount}); err != nil {
+		analysis, err := s.reopenAnalysis(ctx, tx, inc)
+		if err != nil {
+			return err
+		}
+		if _, err := s.addEvent(ctx, tx, inc, domain.EventIncidentReopened, domain.System, map[string]any{"from": "resolved", "to": "open",
+			"reopen_count": inc.ReopenCount, "analysis": analysis}); err != nil {
 			return err
 		}
 		if _, err := s.addEvent(ctx, tx, inc, domain.EventSignalFiring, domain.System, signalPayload(sig)); err != nil {
@@ -381,16 +386,12 @@ func (s *Service) afterOpen(ctx context.Context, tx *ent.Tx, inc *ent.Incident, 
 	if s.agent == nil || inc.Internal {
 		return enqueue(ctx, tx, JobFailOpen, incidentPayload{IncidentID: inc.ID}, queue.Opts{Delay: debounce, UniqueKey: fmt.Sprintf("failopen:%d", inc.ID)})
 	}
-	if !created && inc.LastInvestigatedAt != nil && inc.InvestigationState == incident.InvestigationStateDone {
-		// Recurrence (reopened within correlation.reopen_window): reuse the existing analysis, no new AI call.
-		// Only a usable one: not if the latest investigation failed or was skipped, and not if a fix ran since
-		// (the problem came back despite it: the analysis is stale). A human can still ask for a new one.
-		fixed, err := tx.Action.Query().Where(action.IncidentID(inc.ID), action.StatusEQ(action.StatusSucceeded),
-			action.TypeNEQ(ReinvestigateType), action.FinishedAtGT(*inc.LastInvestigatedAt)).Exist(ctx)
+	if !created {
+		analysis, err := s.reopenAnalysis(ctx, tx, inc)
 		if err != nil {
 			return err
 		}
-		if !fixed {
+		if analysis == AnalysisReused {
 			// Same problem as another open incident in the namespace? The group check merges it, or notifies.
 			return enqueue(ctx, tx, JobGroupCheck, incidentPayload{IncidentID: inc.ID}, queue.Opts{Delay: debounce, UniqueKey: fmt.Sprintf("groupcheck:%d", inc.ID)})
 		}
@@ -473,3 +474,28 @@ func truncate(s string, n int) string {
 func heartbeatKey(source string) string { return source }
 
 var _ = heartbeat.FieldKey
+
+// What happens to the analysis of a reopened incident (timeline payload "analysis" of incident_reopened).
+const (
+	AnalysisReused    = "reused"     // usable analysis, no new AI call
+	AnalysisFixFailed = "fix_failed" // a fix ran after the analysis and the problem came back: investigate again
+	AnalysisNew       = "new"        // no usable analysis (failed, skipped or none): investigate
+)
+
+// reopenAnalysis decides whether a reopened incident (correlation.reopen_window) reuses its analysis.
+// Only a usable one: not if the latest investigation failed or was skipped, and not if a fix ran since
+// (the problem came back despite it: the analysis is stale). A human can still ask for a new one.
+func (s *Service) reopenAnalysis(ctx context.Context, tx *ent.Tx, inc *ent.Incident) (string, error) {
+	if inc.LastInvestigatedAt == nil || inc.InvestigationState != incident.InvestigationStateDone {
+		return AnalysisNew, nil
+	}
+	fixed, err := tx.Action.Query().Where(action.IncidentID(inc.ID), action.StatusEQ(action.StatusSucceeded),
+		action.TypeNEQ(ReinvestigateType), action.FinishedAtGT(*inc.LastInvestigatedAt)).Exist(ctx)
+	if err != nil {
+		return "", err
+	}
+	if fixed {
+		return AnalysisFixFailed, nil
+	}
+	return AnalysisReused, nil
+}

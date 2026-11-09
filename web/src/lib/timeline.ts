@@ -22,7 +22,14 @@ export function describeEvent(e: TimelineEvent): Described {
     case 'incident_opened':
       return { icon: 'incidents', tone: 'critical', text: 'Incident opened', group: g('') }
     case 'incident_reopened':
-      return { icon: 'refresh', tone: 'critical', text: 'Incident reopened (fired again within the reopen window)', group: g('') }
+      return {
+        icon: 'refresh',
+        tone: 'critical',
+        text: `Incident reopened (fired again within the reopen window)${
+          p.analysis === 'reused' ? ' · previous analysis reused' : p.analysis === 'fix_failed' ? " · the fix didn't hold, investigating again" : p.analysis === 'new' ? ' · investigating' : ''
+        }`,
+        group: g(''),
+      }
     case 'signal_firing':
       return { icon: 'bell', tone: 'critical', text: `Signal firing${p.name ? `: ${s(p.name)}` : ''}`, group: g(s(p.name)) }
     case 'signal_resolved':

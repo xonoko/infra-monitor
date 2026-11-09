@@ -314,3 +314,17 @@ func sentences(s string, n int) string {
 	}
 	return cut + "…"
 }
+
+// reopenedLine says what happens on a recurrence: analysis reused, or a new investigation and why.
+func reopenedLine(p map[string]any) string {
+	line := fmt.Sprintf("🔁 Firing again · recurrence #%d", intVal(p, "reopen_count"))
+	switch str(p, "analysis") {
+	case incsvc.AnalysisReused:
+		return line + " · previous analysis reused"
+	case incsvc.AnalysisFixFailed:
+		return line + " · the fix didn't hold, investigating again"
+	case incsvc.AnalysisNew:
+		return line + " · investigating"
+	}
+	return line
+}

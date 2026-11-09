@@ -13,6 +13,7 @@ import (
 	"github.com/xonoko/infra-monitor/internal/db/ent"
 	entincident "github.com/xonoko/infra-monitor/internal/db/ent/incident"
 	"github.com/xonoko/infra-monitor/internal/db/ent/signal"
+	"github.com/xonoko/infra-monitor/internal/db/ent/timelineevent"
 )
 
 func (e *env) incidents() []*ent.Incident {
@@ -197,4 +198,8 @@ func TestReopenAfterAFixInvestigatesAgain(t *testing.T) {
 	e.ingest(alert("OOM", "demo", "firing", "oom"))
 	e.drain()
 	require.Equal(t, 2, e.agent.calls, "the fix ran and it came back: investigated again")
+	evs, err := e.db.Ent.TimelineEvent.Query().Where(timelineevent.IncidentID(inc.ID), timelineevent.TypeEQ("incident_reopened")).All(context.Background())
+	require.NoError(t, err)
+	require.Len(t, evs, 1)
+	require.Equal(t, "fix_failed", evs[0].Payload["analysis"])
 }
