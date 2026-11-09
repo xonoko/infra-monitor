@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { api, errorMessage } from '@/api/client'
 import { qk } from '@/api/keys'
-import type { HeartbeatStatus, LeaseStatus } from '@/api/types'
+import type { HeartbeatStatus } from '@/api/types'
 import Skeleton from '@/components/ui/Skeleton.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import Icon from '@/components/ui/Icon.vue'
@@ -16,7 +16,7 @@ const now = useNow()
 const st = useQuery({ queryKey: qk.status, queryFn: api.status, refetchInterval: 15_000 })
 const s = computed(() => st.data.value)
 
-const leases = computed<LeaseStatus[]>(() => (s.value?.leases ?? []).map((l) => (typeof l === 'string' ? { name: l, held: true } : l)))
+const leases = computed(() => (s.value?.leases ?? []).map((l) => ({ name: l, held: true })))
 const hbTone = (h: HeartbeatStatus) => (h.state === 'ok' ? 'ok' : h.state === 'silent' ? 'bad' : 'unknown')
 const sourceTone = (src: { last_received_at?: string | null; last_error?: string; last_error_at?: string | null }) => {
   if (src.last_error && (!src.last_received_at || (src.last_error_at && src.last_error_at > src.last_received_at))) return 'bad'
@@ -95,7 +95,6 @@ const capList = (c?: Record<string, unknown>) =>
                 <span class="mono">{{ c.name }}</span> <span class="tag mono">{{ c.type }}</span>
                 <span v-if="c.mode" class="tag mono">{{ c.mode }}</span>
                 <span v-if="c.leader" class="tag tag--accent mono" title="This replica runs the receiver">receiver here</span>
-                <span v-else-if="c.leader_replica" class="tag mono" :title="`Receiver runs on ${c.leader_replica}`">receiver: {{ c.leader_replica }}</span>
               </div>
               <div v-if="capList(c.capabilities).length" class="row__sub">{{ capList(c.capabilities).join(' · ') }}</div>
               <div v-if="c.last_error" class="row__err mono">{{ c.last_error }}</div>
@@ -113,7 +112,7 @@ const capList = (c?: Record<string, unknown>) =>
           </dd>
           <template v-if="s.agent?.type"><dt>type</dt><dd>{{ s.agent.type }}</dd></template>
           <template v-if="s.agent?.model"><dt>model</dt><dd>{{ s.agent.model }}</dd></template>
-          <template v-if="s.agent?.url_host || s.agent?.url"><dt>endpoint</dt><dd>{{ s.agent.url_host || s.agent.url }}</dd></template>
+          <template v-if="s.agent?.url_host"><dt>endpoint</dt><dd>{{ s.agent.url_host }}</dd></template>
           <template v-if="s.agent?.max_concurrent"><dt>concurrency</dt><dd>{{ s.agent.max_concurrent }}</dd></template>
           <template v-if="s.agent?.max_per_hour"><dt>calls / hour</dt><dd>{{ s.agent.calls_last_hour ?? 0 }} / {{ s.agent.max_per_hour }}</dd></template>
           <template v-if="s.agent?.max_per_day"><dt>calls / 24h</dt><dd>{{ s.agent.calls_today ?? 0 }} / {{ s.agent.max_per_day }}</dd></template>
@@ -131,7 +130,7 @@ const capList = (c?: Record<string, unknown>) =>
         <template v-if="leases.length">
           <h3 class="box__sub section-title">Leases on this replica</h3>
           <ul class="leases mono">
-            <li v-for="l in leases" :key="l.name"><span class="dot" :class="l.held ? 'dot--ok' : 'dot--unknown'" /> {{ l.name }}<span v-if="l.holder" class="faint"> · {{ l.holder }}</span></li>
+            <li v-for="l in leases" :key="l.name"><span class="dot" :class="l.held ? 'dot--ok' : 'dot--unknown'" /> {{ l.name }}</li>
           </ul>
         </template>
       </section>

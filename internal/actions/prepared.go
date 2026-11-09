@@ -24,7 +24,7 @@ type Prepared struct {
 	// Payload is the full payload: patch / manifest (YAML) / argv / unified diff. Never a paraphrase.
 	Payload string `json:"payload"`
 	// PayloadFormat: yaml | json | diff | text (rendering hint).
-	PayloadFormat string `json:"payload_format"`
+	PayloadFormat string `json:"payload_format" enum:"yaml,json,diff,text"`
 	// DryRun is the server-side dry-run outcome (e.g. a diff of the live object vs the dry-run result),
 	// or the rendered diff against the current file for git. Empty when not possible (exec).
 	DryRun string `json:"dry_run"`
@@ -35,7 +35,7 @@ type Prepared struct {
 	// Rollback describes how to undo it; RollbackAction is a proposal (type + params) that undoes it, if any.
 	Rollback       string          `json:"rollback"`
 	RollbackAction *RollbackAction `json:"rollback_action,omitempty"`
-	Risk           string          `json:"risk"` // low | medium | high
+	Risk           string          `json:"risk" enum:"low,medium,high"`
 	// Precondition pins the target state: resourceVersion, file blob SHA, pod UID...
 	Precondition string `json:"precondition"`
 	// CoreInfrastructure: kube-system or a namespace annotated auto-approve=none.

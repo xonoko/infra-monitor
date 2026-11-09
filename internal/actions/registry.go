@@ -18,7 +18,7 @@ var ErrUnknownType = errors.New("unknown or disabled action type")
 type Info struct {
 	Type        string          `json:"type"`
 	Description string          `json:"description"`
-	Risk        string          `json:"risk"`
+	Risk        string          `json:"risk" enum:"low,medium,high"`
 	Schema      json.RawMessage `json:"params_schema"`
 	AutoApprove bool            `json:"auto_approve"`
 }

@@ -61,6 +61,7 @@ func New(cfg *config.Config, log *slog.Logger, deps Deps) *Server {
 		"bearer":  {Type: "http", Scheme: "bearer", Description: "API token (`infra-monitor token create`)"},
 		"session": {Type: "apiKey", In: "cookie", Name: sessionCookie, Description: "Browser session; unsafe methods also need the X-CSRF-Token header"},
 	}
+	hc.Transformers = append(hc.Transformers, emptySlices)
 	api := humachi.New(r, hc)
 
 	s := &Server{cfg: cfg, log: log, deps: deps, router: r, api: api}

@@ -55,7 +55,7 @@ const filters = computed(() => ({ ...parseSearch(search.value), ...resolveRange(
 const list = useInfiniteQuery({
   queryKey: computed(() => qk.incidents(filters.value)),
   queryFn: ({ pageParam }) => api.incidents(filters.value, pageParam),
-  initialPageParam: undefined as string | undefined,
+  initialPageParam: undefined as number | undefined,
   getNextPageParam: (last) => last.next_cursor || undefined,
   placeholderData: keepPreviousData,
 })

@@ -141,7 +141,7 @@ export const api = {
   unlinkIdentity: (channelType: string) => del<void>(`/me/identities/${encodeURIComponent(channelType)}`),
 
   // incidents
-  incidents: (f: IncidentFilters, cursor?: string, limit = 50) =>
+  incidents: (f: IncidentFilters, cursor?: number, limit = 50) =>
     get<IncidentPage>('/incidents', { ...filterQuery(f), cursor, limit }),
   histogram: (f: IncidentFilters, buckets = 60) => get<Histogram>('/incidents/histogram', { ...filterQuery(f), buckets }),
   incident: (id: number) => get<IncidentDetail>(`/incidents/${id}`),

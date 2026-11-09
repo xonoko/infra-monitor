@@ -164,6 +164,6 @@ Legend: `[ ]` todo, `[x]` done.
 - [x] Daily AI cap raised to 150 (infra-argocd e1b7dd0, Lucas's choice)
 
 ## Follow-ups (not blocking the MVP)
-- [ ] Switch the UI's hand-written API types to the generated OpenAPI schema (`make web-client`)
+- [x] UI API types generated from the OpenAPI schema (`make web-client`), CI fails when stale; API lists never null
 - [ ] Slack adapter (design in docs/channels/slack.md)
 - [ ] More sources (Grafana, Loki, k8s events, generic webhook)

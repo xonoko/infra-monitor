@@ -107,13 +107,13 @@ func toSignal(s *ent.Signal) Signal {
 type Investigation struct {
 	ID               int             `json:"id"`
 	Status           string          `json:"status" enum:"pending,running,succeeded,failed,timed_out"`
-	Trigger          string          `json:"trigger" enum:"auto,manual,action"`
+	Trigger          string          `json:"trigger" enum:"auto,manual,action,correlation"`
 	Agent            string          `json:"agent"`
 	Model            string          `json:"model"`
 	Analysis         string          `json:"analysis"`
 	Summary          string          `json:"summary"`
 	RootCause        string          `json:"root_cause"`
-	Verdict          string          `json:"verdict"`
+	Verdict          string          `json:"verdict" enum:"actionable,noise,unknown"`
 	Confidence       float64         `json:"confidence"`
 	ToolCalls        json.RawMessage `json:"tool_calls"`
 	Error            string          `json:"error"`

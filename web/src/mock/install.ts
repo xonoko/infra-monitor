@@ -2,7 +2,7 @@
 // backed by in-memory fixtures. Loaded through a dynamic import guarded by
 // import.meta.env.DEV, so it never reaches production bundles.
 import * as fx from './fixtures'
-import type { Action, HistogramBucket, Incident, TimelineEvent } from '@/api/types'
+import type { Action, APIToken, HistogramBucket, Incident, Mute, TimelineEvent, User } from '@/api/types'
 import { sevKey } from '@/lib/format'
 
 type Handler = (m: RegExpMatchArray, url: URL, body: any) => unknown
@@ -108,7 +108,7 @@ function costFor(ids: number[], since = 0) {
 }
 const detail = (i: Incident) => ({
   ...i,
-  latest_investigation: fx.investigations[i.id]?.[0] ?? null,
+  latest_investigation: fx.investigations[i.id]?.[0],
   duration_seconds: (Date.now() - new Date(i.opened_at).getTime()) / 1000,
   cost: costFor([i.id]),
 })
@@ -170,7 +170,7 @@ route('GET', '/incidents', (_m, url) => {
   const limit = Number(url.searchParams.get('limit') ?? 50)
   const start = Number(url.searchParams.get('cursor') ?? 0)
   const items = all.slice(start, start + limit).map((i) => ({ ...i, duration_seconds: (Date.now() - new Date(i.opened_at).getTime()) / 1000 }))
-  return { items, total: all.length, next_cursor: start + limit < all.length ? String(start + limit) : null }
+  return { items, total: all.length, next_cursor: start + limit < all.length ? start + limit : undefined }
 })
 route('GET', '/incidents/histogram', (_m, url) => {
   const n = Number(url.searchParams.get('buckets') ?? 60)
@@ -286,7 +286,7 @@ function setStatus(id: number, to: Incident['status'], reason?: string) {
     i.resolved_at = t
     i.firing_count = 0
   }
-  if (to === 'open') i.resolved_at = null
+  if (to === 'open') i.resolved_at = undefined
   addEvent(id, 'incident_status_changed', { ...userActor(), payload: { from, to, reason } })
   return detail(i)
 }
@@ -322,13 +322,14 @@ route('POST', '/incidents/(\\d+)/mute', (m, _u, b) => {
   const id = Number(m[1])
   const i = find(id)
   const ms = parseDur(b?.duration ?? '1h')
-  const mute = {
+  const mute: Mute = {
     id: fx.nextId(),
     matchers: ['alertname', 'cluster', 'namespace'].filter((k) => i.labels[k]).map((k) => ({ name: k, op: '=' as const, value: i.labels[k] })),
     starts_at: new Date().toISOString(),
     ends_at: new Date(Date.now() + ms).toISOString(),
     reason: b?.reason ?? '',
     created_by_name: fx.me.display_name,
+    created_at: new Date().toISOString(),
     active: true,
     incident_id: id,
     alertmanager_silence_id: '',
@@ -356,6 +357,7 @@ route('POST', '/incidents/(\\d+)/actions', (m, _u, b) => {
     output: '',
     error: '',
     created_at: new Date().toISOString(),
+    requires_approval: true,
   }
   // Generic actions are prepared by the server; the mock prepares rollbacks from the original proposal.
   const of = /rollback of #(\d+)/.exec(a.rationale)
@@ -375,7 +377,7 @@ route('POST', '/incidents/(\\d+)/actions', (m, _u, b) => {
         .join('\n'),
       effect: `reverts #${orig.id}: ${orig.prepared.effect}`,
       rollback: `re-apply #${orig.id}`,
-      rollback_action: null,
+      rollback_action: undefined,
       warnings: orig.prepared.warnings,
     }
   }
@@ -471,15 +473,15 @@ route('GET', '/mutes', (_m, url) => {
   return { items: url.searchParams.get('active') === 'true' ? fx.mutes.filter((x) => x.active) : fx.mutes }
 })
 route('POST', '/mutes', (_m, _u, b) => {
-  const mute = {
+  const mute: Mute = {
     id: fx.nextId(),
     matchers: b.matchers,
     starts_at: new Date().toISOString(),
     ends_at: new Date(Date.now() + parseDur(b.duration ?? '2h')).toISOString(),
     reason: b.reason ?? '',
     created_by_name: fx.me.display_name,
+    created_at: new Date().toISOString(),
     active: true,
-    incident_id: null,
     alertmanager_silence_id: b.mirror_to_alertmanager ? crypto.randomUUID() : '',
   }
   fx.mutes.unshift(mute)
@@ -506,7 +508,7 @@ route('GET', '/status', () => ({
 route('GET', '/users', () => ({ items: fx.users }))
 route('POST', '/users', (_m, _u, b) => {
   if (fx.users.some((u) => u.email === b.email)) throw new HttpError(409, 'a user with this email already exists')
-  const u = { id: fx.nextId(), email: b.email, display_name: b.display_name ?? '', role: b.role, disabled: false, auth: b.password ? ['local' as const] : [], last_login_at: null, created_at: new Date().toISOString() }
+  const u: User = { id: fx.nextId(), email: b.email, display_name: b.display_name ?? '', role: b.role, disabled: false, auth: b.password ? ['local'] : [], created_at: new Date().toISOString() }
   fx.users.push(u)
   return u
 })
@@ -519,15 +521,13 @@ route('PATCH', '/users/(\\d+)', (m, _u, b) => {
 route('GET', '/tokens', () => ({ items: fx.tokens }))
 route('POST', '/tokens', (_m, _u, b) => {
   const token = `imt_${crypto.randomUUID().replace(/-/g, '')}`
-  const t = {
+  const t: APIToken = {
     id: fx.nextId(),
     name: b.name,
     prefix: token.slice(0, 8),
     role: b.role,
     user_id: 1,
-    last_used_at: null,
-    expires_at: b.expires_in ? new Date(Date.now() + parseDur(b.expires_in)).toISOString() : null,
-    revoked_at: null,
+    expires_at: b.expires_in ? new Date(Date.now() + parseDur(b.expires_in)).toISOString() : undefined,
     created_at: new Date().toISOString(),
   }
   fx.tokens.unshift(t)
