@@ -143,8 +143,9 @@ Legend: `[ ]` todo, `[x]` done.
 - [x] gitops.change enabled in prod: GitHub App token via ESO (infra-argocd only), path prefix gitops/, always needs approval
 - [x] Live k8s.* proposals on Argo-managed objects are sent back to the agent for a gitops.change
 - [x] The agent gets the Argo CD source of the incident namespace (Application, chart values, helm valueFiles with content), verified locally on real data
-- [ ] Prod: `rbac.argocdNamespace: argocd` in values-infra-monitor.yaml (needs Lucas's approval in the infra session)
-- [ ] End-to-end: demo OOM (64Mi) -> gitops.change to 512Mi approved from Telegram -> commit -> Argo sync -> resolved
+- [x] Fallback without Argo CD read access: values files named after the namespace in the repo (values-<ns>.yaml, <ns>/values.yaml)
+- [ ] Prod (optional, more precise): `rbac.argocdNamespace: argocd` in values-infra-monitor.yaml (needs Lucas's approval in the infra session)
+- [x] End-to-end verified in prod (#9, action #29): demo OOM at 64Mi -> agent proposed gitops.change to 512Mi -> approved from Telegram -> Sonnet review ok -> commit aa8c09a -> Argo sync -> demo-api Running
 - [x] OOM and crash-loop alert rules fire within ~1-2 min on new pods (infra-argocd 851b1cf)
 - [x] CNPGDeadlocks rule fixed (rate-based), incident #1 resolved by itself
 - [x] Recurrence: same alert within 24h reopens the incident and reuses the analysis (verified in prod, #17)
