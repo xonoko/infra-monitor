@@ -100,6 +100,9 @@ func (s *Service) BuildContext(ctx context.Context, inc *ent.Incident) (agent.In
 	return ic, nil
 }
 
+// investigateRetryWaits are the pauses before retrying an investigation after a transient agent error.
+var investigateRetryWaits = []time.Duration{10 * time.Second, 30 * time.Second}
+
 func (s *Service) runInvestigation(ctx context.Context, p incidentPayload) error {
 	if s.agent == nil {
 		return nil
@@ -198,6 +201,21 @@ func (s *Service) runInvestigation(ctx context.Context, p incidentPayload) error
 		s.Typing(ctx, inc.ID)
 	}
 	res, aerr := s.agent.Investigate(actx, ic, s.progressFunc(ctx, inc.ID))
+	// Transient gateway/provider errors (e.g. LiteLLM "Connection error"): retry a couple of times before failing open.
+	for _, wait := range investigateRetryWaits {
+		if !agent.IsTransient(aerr) || actx.Err() != nil {
+			break
+		}
+		s.log.WarnContext(ctx, "investigation hit a transient agent error, retrying", "incident_id", inc.ID, "error", aerr, "retry_in", wait)
+		select {
+		case <-actx.Done():
+		case <-time.After(wait):
+		}
+		if actx.Err() != nil {
+			break
+		}
+		res, aerr = s.agent.Investigate(actx, ic, s.progressFunc(ctx, inc.ID))
+	}
 	telemetry.RecordError(span, aerr)
 	span.End()
 	s.publishProgress(ctx, Progress{IncidentID: inc.ID, Kind: "done"})

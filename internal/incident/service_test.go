@@ -51,6 +51,7 @@ type fakeAgent struct {
 	checks      []string
 	stillNeeded bool
 	checkErr    error
+	failTimes   int // with err: fail only this many Investigate calls (0 = always)
 }
 
 func (f *fakeAgent) Name() string  { return "fake" }
@@ -60,7 +61,7 @@ func (f *fakeAgent) Investigate(_ context.Context, ic agent.IncidentContext, p f
 	defer f.mu.Unlock()
 	f.calls++
 	p(agent.Progress{Kind: "tool_call", Tool: "kubectl_get"})
-	if f.err != nil {
+	if f.err != nil && (f.failTimes == 0 || f.calls <= f.failTimes) {
 		return nil, f.err
 	}
 	r := *f.result
@@ -121,6 +122,7 @@ func testConfig() *config.Config {
 }
 
 func newEnv(t *testing.T, withAgent bool, mutate ...func(*config.Config)) *env {
+	incident.SetInvestigateRetryWaits(time.Millisecond, time.Millisecond)
 	t.Helper()
 	d := pgtest.New(t)
 	cfg := testConfig()

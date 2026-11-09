@@ -223,5 +223,37 @@ func TestFailedCallsDontCountTowardCaps(t *testing.T) {
 	e.agent.err = nil
 	e.ingest(alert("B", "y", "firing", "2"))
 	e.drain()
-	require.Equal(t, 2, e.agent.calls, "the failed call (no tokens) didn't use the hourly cap")
+	require.Equal(t, 4, e.agent.calls, "the failed calls (no tokens, retried twice as transient) didn't use the hourly cap")
+}
+
+func TestRecurrenceAfterFailedInvestigationInvestigatesAgain(t *testing.T) {
+	e := newEnv(t, true, func(c *config.Config) { c.Correlation.ReopenWindow = 24 * time.Hour })
+	e.agent.result.ProposedActions = nil
+	e.agent.err = errors.New("holmes: invalid response")
+	e.ingest(alert("KubernetesDeploymentReplicasMismatch", "demo", "firing", "rm"))
+	e.drain()
+	require.Equal(t, "failed", string(e.onlyIncident().InvestigationState))
+	require.Equal(t, 1, e.agent.calls, "not transient: no retry")
+	e.ingest(alert("KubernetesDeploymentReplicasMismatch", "demo", "resolved", "rm"))
+	e.drain()
+	e.clock.Add(time.Hour)
+
+	e.agent.err = nil
+	e.ingest(alert("KubernetesDeploymentReplicasMismatch", "demo", "firing", "rm"))
+	e.drain()
+	inc := e.onlyIncident()
+	require.Equal(t, 1, inc.ReopenCount)
+	require.Equal(t, 2, e.agent.calls, "no usable analysis to reuse: investigated again")
+	require.Equal(t, "done", string(inc.InvestigationState))
+}
+
+func TestTransientAgentErrorIsRetried(t *testing.T) {
+	e := newEnv(t, true)
+	e.agent.result.ProposedActions = nil
+	e.agent.failTimes = 1
+	e.agent.err = errors.New("holmes: stream error 1: litellm.InternalServerError: InternalServerError: OpenAIException - Connection error.")
+	e.ingest(alert("A", "x", "firing", "1"))
+	e.drain()
+	require.Equal(t, 2, e.agent.calls)
+	require.Equal(t, "done", string(e.onlyIncident().InvestigationState))
 }

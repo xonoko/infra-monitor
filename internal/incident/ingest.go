@@ -361,8 +361,9 @@ func (s *Service) afterOpen(ctx context.Context, tx *ent.Tx, inc *ent.Incident, 
 	if s.agent == nil || inc.Internal {
 		return enqueue(ctx, tx, JobFailOpen, incidentPayload{IncidentID: inc.ID}, queue.Opts{Delay: debounce, UniqueKey: fmt.Sprintf("failopen:%d", inc.ID)})
 	}
-	if !created && inc.LastInvestigatedAt != nil {
+	if !created && inc.LastInvestigatedAt != nil && inc.InvestigationState == incident.InvestigationStateDone {
 		// Recurrence (reopened within correlation.reopen_window): reuse the existing analysis, no new AI call.
+		// Only a usable one: if the latest investigation failed or was skipped, investigate again.
 		// A human can still ask for a new one (Reinvestigate / dig deeper).
 		return enqueue(ctx, tx, JobFailOpen, incidentPayload{IncidentID: inc.ID}, queue.Opts{Delay: debounce, UniqueKey: fmt.Sprintf("failopen:%d", inc.ID)})
 	}

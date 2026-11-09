@@ -126,6 +126,23 @@ func IsBudgetExceeded(err error) bool {
 	return false
 }
 
+// IsTransient reports errors worth retrying soon: the LLM gateway or provider was briefly unreachable
+// or overloaded (connection errors, 5xx). Budget/rate-limit errors are never transient (they pause the agent).
+func IsTransient(err error) bool {
+	if err == nil || IsBudgetExceeded(err) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false
+	}
+	s := strings.ToLower(err.Error())
+	for _, k := range []string{"connection error", "connection refused", "connection reset", "internalservererror", "internal server error",
+		"serviceunavailable", "service unavailable", "overloaded", "bad gateway", "gateway timeout", "http 500", "http 502", "http 503",
+		"http 504", "http 529", "unexpected eof", "no such host", "i/o timeout"} {
+		if strings.Contains(s, k) {
+			return true
+		}
+	}
+	return false
+}
+
 // ActionCheck is the agent's verdict on whether an approved action is still needed right before it runs.
 type ActionCheck struct {
 	StillNeeded bool
