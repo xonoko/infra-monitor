@@ -159,6 +159,9 @@ Legend: `[ ]` todo, `[x]` done.
 - [x] Reopen reuses the analysis only if it succeeded (else investigates again)
 - [x] Reopened incidents get the grouping check too; a reopen after a fix ran investigates again (the analysis is stale)
 - [x] Verified in prod: demo re-broken (64Mi), ReplicasMismatch (#8) merged into the crash-loop incident (#18) by Haiku ($0.0017), same root cause
+- [x] Second GitOps fix verified (#30, commit e077cf7): approved from Telegram, synced by Argo, #9 and #18 resolved at 09:04
+- [x] Telegram recurrence line says what happens: analysis reused, investigating, or "the fix didn't hold"
+- [x] Daily AI cap raised to 150 (infra-argocd e1b7dd0, Lucas's choice)
 
 ## Follow-ups (not blocking the MVP)
 - [ ] Switch the UI's hand-written API types to the generated OpenAPI schema (`make web-client`)
