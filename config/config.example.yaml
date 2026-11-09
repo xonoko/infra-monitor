@@ -94,7 +94,7 @@ heartbeat:
 
 correlation:
   group_by: [alertname, cluster, namespace]   # signals with the same values share an incident
-  reopen_window: 30m       # a resolved incident that re-fires within this window is reopened
+  reopen_window: 24h       # a resolved incident that re-fires within this window is reopened (analysis reused)
   debounce: 45s            # wait for related signals before investigating
   resolve_grace: 2m        # all signals resolved for this long -> incident resolved
 

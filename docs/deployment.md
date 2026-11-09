@@ -167,7 +167,7 @@ config:
     ping_interval: 1m
   correlation:
     group_by: [alertname, cluster, namespace]
-    reopen_window: 30m
+    reopen_window: 24h
     debounce: 45s
     resolve_grace: 2m
   agent:

@@ -361,7 +361,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("heartbeat.ping_interval", time.Minute)
 
 	v.SetDefault("correlation.group_by", []string{"alertname", "cluster", "namespace"})
-	v.SetDefault("correlation.reopen_window", 30*time.Minute)
+	v.SetDefault("correlation.reopen_window", 24*time.Hour)
 	v.SetDefault("correlation.debounce", 45*time.Second)
 	v.SetDefault("correlation.resolve_grace", 2*time.Minute)
 

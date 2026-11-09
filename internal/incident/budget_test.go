@@ -199,3 +199,18 @@ func TestCostBreakdown(t *testing.T) {
 	require.InDelta(t, 3.2, c.Total.USD, 1e-9)
 	require.Equal(t, 2_200_000, c.Total.PromptTokens)
 }
+
+func TestRecurrenceReusesAnalysis(t *testing.T) {
+	e := newEnv(t, true, func(c *config.Config) { c.Correlation.ReopenWindow = 24 * time.Hour })
+	e.agent.result.ProposedActions = nil
+	for i := 0; i < 3; i++ {
+		e.ingest(alert("HostOomKillDetected", "", "firing", "oom"))
+		e.drain()
+		e.ingest(alert("HostOomKillDetected", "", "resolved", "oom"))
+		e.drain()
+		e.clock.Add(3 * time.Hour) // comes back every few hours
+	}
+	inc := e.onlyIncident()
+	require.Equal(t, 2, inc.ReopenCount)
+	require.Equal(t, 1, e.agent.calls, "one analysis, reused on every recurrence")
+}

@@ -448,6 +448,9 @@ func (d *Dispatcher) deliver(ctx context.Context, ch channel.Channel, inc *ent.I
 			msg += "\n```\n" + body + "\n```"
 		}
 		return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry, Body: msg, URL: url}, &evID)
+	case domain.EventIncidentReopened:
+		// Recurrence: one short line in the existing thread (the card is edited back to open).
+		return d.post(ctx, ch, t, channel.Message{Kind: channel.KindEntry, Body: fmt.Sprintf("🔁 Firing again · recurrence #%d · previous analysis reused", intVal(p, "reopen_count"))}, &evID)
 	case domain.EventInvestigationCompleted:
 		// One line: the card carries the summary, the UI the full analysis.
 		body := fmt.Sprintf("🔎 **%s** (%.0f%%) · %s", str(p, "verdict"), toFloat(p["confidence"])*100, sentences(str(p, "summary"), 280))
