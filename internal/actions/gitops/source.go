@@ -33,12 +33,14 @@ type Sources struct {
 	exec    *Executor
 	dynamic func(cluster string) (dynamic.Interface, error)
 
-	mu    sync.Mutex
-	at    time.Time
-	apps  []unstructured.Unstructured
-	err   error
-	ttl   time.Duration
-	files map[string]fileEntry
+	mu     sync.Mutex
+	at     time.Time
+	apps   []unstructured.Unstructured
+	err    error
+	ttl    time.Duration
+	files  map[string]fileEntry
+	treeAt time.Time
+	tree   []string
 }
 
 type fileEntry struct {
@@ -59,7 +61,12 @@ func (s *Sources) Context(ctx context.Context, cluster, ns string) (string, erro
 	}
 	apps, err := s.applications(ctx)
 	if err != nil {
-		return "", err
+		// No read access to the Applications: fall back to repo files named after the namespace.
+		text, ferr := s.candidates(ctx, ns)
+		if ferr != nil || text == "" {
+			return "", errors.Join(err, ferr)
+		}
+		return text, nil
 	}
 	matched := matchApps(apps, cluster, ns)
 	if len(matched) == 0 {
@@ -264,4 +271,69 @@ func (e *Executor) sameRepo(repoURL string) bool {
 		return false
 	}
 	return strings.EqualFold(rest, e.cfg.Repo)
+}
+
+// candidates finds values files for ns by name (values-<ns>.yaml, <ns>/values.yaml) when the Argo CD
+// Applications can't be read. They are only candidates: the agent must check they match the workload.
+func (s *Sources) candidates(ctx context.Context, ns string) (string, error) {
+	s.mu.Lock()
+	tree, fresh := s.tree, time.Since(s.treeAt) < 5*time.Minute
+	s.mu.Unlock()
+	if !fresh {
+		cctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		t, err := s.exec.gh.tree(cctx)
+		cancel()
+		if err != nil {
+			return "", err
+		}
+		s.mu.Lock()
+		s.tree, s.treeAt, tree = t, time.Now(), t
+		s.mu.Unlock()
+	}
+	var paths []string
+	for _, p := range tree {
+		if s.exec.allowedPath(p) != nil || !isValuesFile(p, ns) {
+			continue
+		}
+		paths = append(paths, p)
+	}
+	if len(paths) == 0 {
+		return "", nil
+	}
+	// Chart defaults first, then overrides (cluster values files), like helm precedence.
+	sort.SliceStable(paths, func(i, j int) bool {
+		return path.Base(paths[i]) == "values.yaml" && path.Base(paths[j]) != "values.yaml"
+	})
+	var b strings.Builder
+	fmt.Fprintf(&b, "Repo files of the GitOps repo %s (branch %s) that look like the configuration of namespace %s (found by name: "+
+		"infra-monitor could not read the Argo CD Applications, so check they match the workload). If the workload is Argo-managed, "+
+		"fix configuration with gitops.change on these files (paths relative to the repo root).\n", s.exec.cfg.Repo, s.exec.cfg.Branch, ns)
+	for i, p := range paths {
+		if i >= maxFiles {
+			fmt.Fprintf(&b, "- %s (not shown)\n", p)
+			continue
+		}
+		content, err := s.read(ctx, p)
+		if err != nil {
+			fmt.Fprintf(&b, "- %s (could not read: %s)\n", p, redact.Text(err.Error()))
+			continue
+		}
+		suffix := ""
+		if len(content) > maxFileBytes {
+			content, suffix = content[:maxFileBytes], "\n... (truncated)"
+		}
+		fmt.Fprintf(&b, "- %s\n```yaml\n%s%s\n```\n", p, strings.TrimRight(redact.Text(content), "\n"), suffix)
+	}
+	return b.String(), nil
+}
+
+// isValuesFile matches values-<ns>.yaml, <ns>.yaml / <ns>-values.yaml and <ns>/values.yaml.
+func isValuesFile(p, ns string) bool {
+	base, dir := path.Base(p), path.Base(path.Dir(p))
+	ext := path.Ext(base)
+	if ext != ".yaml" && ext != ".yml" {
+		return false
+	}
+	name := strings.TrimSuffix(base, ext)
+	return name == "values-"+ns || name == ns || name == ns+"-values" || (dir == ns && name == "values")
 }

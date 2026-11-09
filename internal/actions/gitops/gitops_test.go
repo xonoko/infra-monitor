@@ -66,6 +66,12 @@ func (f *fakeGitHub) handler(t *testing.T) http.Handler {
 		switch {
 		case rest == "branches/main":
 			_, _ = w.Write([]byte(`{"name":"main"}`))
+		case rest == "git/trees/main":
+			tree := []map[string]string{{"path": "gitops", "type": "tree"}}
+			for p := range f.files {
+				tree = append(tree, map[string]string{"path": p, "type": "blob"})
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"tree": tree})
 		case strings.HasPrefix(rest, "contents/") && r.Method == http.MethodGet:
 			require.Equal(t, "main", r.URL.Query().Get("ref"))
 			p := strings.TrimPrefix(rest, "contents/")

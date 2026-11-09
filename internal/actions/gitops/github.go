@@ -241,3 +241,38 @@ func (g *githubClient) currentToken() string {
 	g.tokenAt = time.Now()
 	return g.token
 }
+
+// tree lists the file paths on the branch (recursive git tree).
+func (g *githubClient) tree(ctx context.Context) ([]string, error) {
+	ctx, span := telemetry.Tracer().Start(ctx, "github.get_tree", trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(attribute.String("github.repo", g.owner+"/"+g.repo)))
+	defer span.End()
+	u := fmt.Sprintf("%s/repos/%s/%s/git/trees/%s?recursive=1", g.api, url.PathEscape(g.owner), url.PathEscape(g.repo), url.PathEscape(g.branch))
+	status, b, err := g.do(ctx, http.MethodGet, u, nil)
+	if err == nil {
+		err = g.authError(status, b)
+	}
+	if err == nil && status != http.StatusOK {
+		err = fmt.Errorf("github tree: HTTP %d: %s", status, githubMessage(b))
+	}
+	if err != nil {
+		telemetry.RecordError(span, err)
+		return nil, err
+	}
+	var t struct {
+		Tree []struct {
+			Path string `json:"path"`
+			Type string `json:"type"`
+		} `json:"tree"`
+	}
+	if err := json.Unmarshal(b, &t); err != nil {
+		return nil, fmt.Errorf("github tree: %w", err)
+	}
+	out := make([]string, 0, len(t.Tree))
+	for _, e := range t.Tree {
+		if e.Type == "blob" {
+			out = append(out, e.Path)
+		}
+	}
+	return out, nil
+}

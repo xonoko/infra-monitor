@@ -2,6 +2,8 @@ package gitops
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -95,4 +97,29 @@ func TestSameRepo(t *testing.T) {
 	for _, u := range []string{"https://github.com/xonoko/infra-monitor.git", "https://gitlab.com/lucasgalton/infra-argocd", ""} {
 		require.False(t, e.sameRepo(u), u)
 	}
+}
+
+func TestSourcesFallBackToRepoFilesWithoutArgoAccess(t *testing.T) {
+	e, gh := newTest(t, func(c *config.GitOpsConfig) {
+		c.ArgoCDNamespace = "argocd"
+		c.PathPrefixes = []string{"gitops/"}
+	})
+	gh.files["gitops/clusters/manager/values-demo-incident.yaml"] = "demoApi:\n  resources:\n    limits:\n      memory: 64Mi\n"
+	gh.files["gitops/charts/workloads/demo-incident/values.yaml"] = "demoApi: {}\n"
+	gh.files["gitops/clusters/manager/values-demo-incident-old.yaml"] = "no: match\n"
+	gh.files["other/demo-incident/values.yaml"] = "outside: prefix\n"
+	forbidden := errors.New(`applications.argoproj.io is forbidden: User "system:serviceaccount:infra-monitor:infra-monitor" cannot list resource "applications"`)
+	s := NewSources(e, func(string) (dynamic.Interface, error) { return nil, forbidden })
+
+	text, err := s.Context(context.Background(), "manager", "demo-incident")
+	require.NoError(t, err)
+	require.Contains(t, text, "could not read the Argo CD Applications")
+	require.Contains(t, text, "- gitops/clusters/manager/values-demo-incident.yaml\n```yaml\ndemoApi:")
+	require.Contains(t, text, "- gitops/charts/workloads/demo-incident/values.yaml")
+	require.Less(t, strings.Index(text, "workloads/demo-incident/values.yaml"), strings.Index(text, "values-demo-incident.yaml"), "chart defaults first")
+	require.NotContains(t, text, "values-demo-incident-old")
+	require.NotContains(t, text, "other/demo-incident")
+
+	_, err = s.Context(context.Background(), "manager", "nothing")
+	require.ErrorIs(t, err, forbidden, "no candidates: the lookup error is reported")
 }
