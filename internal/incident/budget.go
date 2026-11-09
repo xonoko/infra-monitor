@@ -45,12 +45,16 @@ type AgentUsage struct {
 
 // agentCalls counts agent calls since t: investigations started plus chat replies (incl. failures).
 func (s *Service) agentCalls(ctx context.Context, since time.Time) (int, error) {
-	inv, err := s.ent.Investigation.Query().Where(investigation.CreatedAtGT(since)).Count(ctx)
+	// Only calls that reached the model count: a call that failed before (DNS, connection) used no tokens.
+	inv, err := s.ent.Investigation.Query().Where(investigation.CreatedAtGT(since), investigation.Or(
+		investigation.StatusIn(investigation.StatusRunning, investigation.StatusSucceeded, investigation.StatusTimedOut),
+		investigation.PromptTokensGT(0),
+	)).Count(ctx)
 	if err != nil {
 		return 0, err
 	}
 	chat, err := s.ent.Message.Query().Where(message.CreatedAtGT(since), message.ReplyToIDNotNil(),
-		message.RoleIn(message.RoleAgent, message.RoleSystem)).Count(ctx)
+		message.RoleEQ(message.RoleAgent)).Count(ctx)
 	if err != nil {
 		return 0, err
 	}

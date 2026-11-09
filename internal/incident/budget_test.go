@@ -214,3 +214,14 @@ func TestRecurrenceReusesAnalysis(t *testing.T) {
 	require.Equal(t, 2, inc.ReopenCount)
 	require.Equal(t, 1, e.agent.calls, "one analysis, reused on every recurrence")
 }
+
+func TestFailedCallsDontCountTowardCaps(t *testing.T) {
+	e := newEnv(t, true, func(c *config.Config) { c.Agent.MaxPerHour = 1 })
+	e.agent.err = errors.New("holmes: connection error: Name has no usable address")
+	e.ingest(alert("A", "x", "firing", "1"))
+	e.drain()
+	e.agent.err = nil
+	e.ingest(alert("B", "y", "firing", "2"))
+	e.drain()
+	require.Equal(t, 2, e.agent.calls, "the failed call (no tokens) didn't use the hourly cap")
+}
